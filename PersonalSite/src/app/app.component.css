@@ -1,0 +1,20 @@
+table {
+/*  width:auto;*/
+  border: 0px;
+  border-spacing: 0px;
+  border-collapse: collapse;
+}
+
+table tr {
+  border-bottom: 1px solid #dddddd;
+}
+
+  table tr:nth-child(even) {
+    background-color: #f4f4f4;
+  }
+
+  table th, td {
+    text-align: left;
+    padding: 5px 10px;
+/*    color: red*/
+  }

@@ -11,10 +11,14 @@ import { environment } from "../environments/environment";
 export class AppComponent {
   public forecasts?: WeatherForecast[];
   constructor(http: HttpClient) {
-    console.log("Request: " + environment.baseUrl + 'api/weatherforecast')
-    http.get<WeatherForecast[]>(environment.baseUrl + 'api/weatherforecast').subscribe(result => {
-      this.forecasts = result;
-    }, error => console.error(error));
+    //console.log("Request: " + environment.baseUrl + 'api/weatherforecast')
+    http.get<WeatherForecast[]>(environment.baseUrl + 'api/weatherforecast').subscribe({
+      next: (result) => this.forecasts = result,
+      error: (err) => console.log(err)
+    });
+    // http.get<WeatherForecast[]>(environment.baseUrl + 'api/weatherforecast').subscribe(result => {
+    //   this.forecasts = result;
+    // }, error => console.error(error));
   }
 
   title = 'PersonalSite';
