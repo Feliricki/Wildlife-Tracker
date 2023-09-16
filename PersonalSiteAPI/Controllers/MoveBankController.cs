@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using PersonalSiteAPI.DTO;
 using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
@@ -7,29 +8,31 @@ using PersonalSiteAPI.Services;
 
 namespace PersonalSiteAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     [ApiController]
     public class MoveBankController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<AccountController> _logger;
         private readonly IMoveBankService _moveBankService;
+        private readonly IMemoryCache _memoryCache;
 
         public MoveBankController(
             ApplicationDbContext context, 
             ILogger<AccountController> logger,
-            IMoveBankService moveBankService) 
+            IMoveBankService moveBankService,
+            IMemoryCache memoryCache) 
         {
             _context = context;
             _logger = logger;
             _moveBankService = moveBankService;
+            _memoryCache = memoryCache;
         }
         // GET: api/<MoveBankController>
         [HttpGet(Name = "GetToken")]
         public async Task<ActionResult<ApiTokenResultDTO>> GetToken()
         {
-            try {
-                
+            try {                
                 var response = await _moveBankService.GetApiToken();
                 if (response == null)
                 {
@@ -37,11 +40,11 @@ namespace PersonalSiteAPI.Controllers
                 }
                 return response;
             }
-            catch
-            {
+            catch (Exception err)
+            {   
                 var exceptionDetails = new ProblemDetails
                 {
-                    Detail = "Error retrieving request token",
+                    Detail = "Error retrieving data: " + err.Message,
                     Status = StatusCodes.Status500InternalServerError,
                     Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"
                 };

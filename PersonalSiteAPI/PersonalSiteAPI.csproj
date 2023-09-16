@@ -8,6 +8,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Controllers\WeatherForecastController.cs" />
+    <Compile Remove="Services\AWSRoleService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.7" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.203.14" />
+    <PackageReference Include="AWSSDK.SecretsManager" Version="3.7.201.24" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.201.35" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.22" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.22" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.22">
@@ -16,7 +25,6 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.22" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="6.0.22" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.32.3" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 

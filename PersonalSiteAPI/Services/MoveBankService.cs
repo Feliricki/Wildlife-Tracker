@@ -2,16 +2,13 @@
 using Microsoft.AspNetCore.WebUtilities;
 using PersonalSiteAPI.DTO;
 using Microsoft.IdentityModel.Tokens;
-//using System.Buffers.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace PersonalSiteAPI.Services
 {
     public interface IMoveBankService
     {
-        //Task<ApiTokenResultDTO?> GetAttributes();
         Task<ApiTokenResultDTO?> GetApiToken();
+        Task GetJsonData(HttpRequestMessage request, Dictionary<string, string> queries);
     }
     public class MoveBankService : IMoveBankService
     {
@@ -19,7 +16,7 @@ namespace PersonalSiteAPI.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger<MoveBankService> _logger;
 
-        private string _userCredentials;
+        private readonly string _userCredentials;
 
         public MoveBankService(
             HttpClient httpClient,
@@ -42,32 +39,30 @@ namespace PersonalSiteAPI.Services
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", _userCredentials);
         }
         public async Task<ApiTokenResultDTO?> GetApiToken()
-        {
-            //var uri = new UriBuilder(_httpClient.BaseAddress!)
-            var uri = _httpClient!.BaseAddress!.OriginalString + "direct-read";
+        {           
+            var uri = _httpClient.BaseAddress!.OriginalString + "direct-read";
             uri = QueryHelpers.AddQueryString(uri, new Dictionary<string, string?>()
             {
                 { "service", "request-token" }
-            });
-            Console.WriteLine("Outgoing Uri = " + uri);
+            });          
+
             using var request = new HttpRequestMessage()
             {
                 RequestUri = new Uri(uri),
                 Method = HttpMethod.Get,
             };
             
-            using var response = await _httpClient.SendAsync(request);
-            Console.WriteLine($"Response Headers: {response.RequestMessage} DefaultHeaders: {_httpClient.DefaultRequestHeaders.ToString()}");
-            // This will throw an exception if the Http request failed
-            response.EnsureSuccessStatusCode();
-            //var contentStream = await response.Content.ReadAsStringAsync();                                  
-            //response.Content.Read
+            using var response = await _httpClient.SendAsync(request);            
+             
+            response.EnsureSuccessStatusCode();     
+            //Console.WriteLine("Headers: " + response.Headers.ToString());
             return await response.Content.ReadFromJsonAsync<ApiTokenResultDTO>();
         }
-
-        //public async Task<String> GetJsonRequest(HttpRequestMessage request, Dictionary<string, string> queries)
-        //{
-        //    return "";
-        //}
+            
+        public async Task GetJsonData(HttpRequestMessage request, Dictionary<string, string> queries)
+        {
+            
+            return;
+        }
     }
 }

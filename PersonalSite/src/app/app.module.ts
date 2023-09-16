@@ -9,6 +9,8 @@ import { NavBarComponent } from './nav-bar/nav-bar.component';
 
 import { AngularMaterialModule } from './angular-material.module';
 
+import { GoogleMapsModule } from '@angular/google-maps'; 
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -20,6 +22,7 @@ import { AngularMaterialModule } from './angular-material.module';
     HttpClientModule,
     AppRoutingModule,
     AngularMaterialModule,
+    GoogleMapsModule
   ],
   providers: [],
   bootstrap: [AppComponent]

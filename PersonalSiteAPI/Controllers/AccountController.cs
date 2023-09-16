@@ -2,6 +2,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PersonalSiteAPI.Models;
+using PersonalSiteAPI.Services;
+using System.IdentityModel.Tokens.Jwt;
+using PersonalSiteAPI.DTO;
 
 namespace PersonalSiteAPI.Controllers
 {
@@ -13,18 +16,45 @@ namespace PersonalSiteAPI.Controllers
         private readonly ApplicationDbContext _context;
         private readonly ILogger<AccountController> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly RoleManager<ApplicationUser> _roleManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly JwtHandler _jwtHandler;
 
         public AccountController(
             ApplicationDbContext context,
             ILogger<AccountController> logger,
             UserManager<ApplicationUser> userManager,
-            RoleManager<ApplicationUser> roleManager)
+            RoleManager<IdentityRole> roleManager,
+            JwtHandler jwtHandler)
         {
             _context = context;
             _logger = logger;
             _userManager = userManager;
             _roleManager = roleManager;
+            _jwtHandler = jwtHandler;
+        }
+
+        [HttpPost("Login")]
+        [ResponseCache(CacheProfileName = "NoCache")]
+        public async Task<IActionResult> Login(LoginRequest loginRequest)
+        {            
+            var user = await _userManager.FindByNameAsync(loginRequest.Email);
+            if (user == null || !await _userManager.CheckPasswordAsync(user, loginRequest.Password))
+
+                return Unauthorized(new LoginResultDTO()
+                {
+                    Success = false,
+                    Message = "Invalid Credentials"
+                });
+
+            var secToken = await _jwtHandler.GetTokenAsync(user);
+            var jwt = new JwtSecurityTokenHandler().WriteToken(secToken);
+
+            return Ok(new LoginResultDTO()
+            {
+                Success = true,
+                Message = "Login successful",
+                Token = jwt
+            });            
         }
     }
 }
