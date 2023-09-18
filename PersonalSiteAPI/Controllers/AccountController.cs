@@ -5,6 +5,7 @@ using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
 using System.IdentityModel.Tokens.Jwt;
 using PersonalSiteAPI.DTO;
+using static System.Net.WebRequestMethods;
 
 namespace PersonalSiteAPI.Controllers
 {
@@ -33,28 +34,56 @@ namespace PersonalSiteAPI.Controllers
             _jwtHandler = jwtHandler;
         }
 
-        [HttpPost("Login")]
+        [HttpPost(Name = "Login")]
         [ResponseCache(CacheProfileName = "NoCache")]
-        public async Task<IActionResult> Login(LoginRequest loginRequest)
-        {            
-            var user = await _userManager.FindByNameAsync(loginRequest.Email);
-            if (user == null || !await _userManager.CheckPasswordAsync(user, loginRequest.Password))
-
-                return Unauthorized(new LoginResultDTO()
-                {
-                    Success = false,
-                    Message = "Invalid Credentials"
-                });
-
-            var secToken = await _jwtHandler.GetTokenAsync(user);
-            var jwt = new JwtSecurityTokenHandler().WriteToken(secToken);
-
-            return Ok(new LoginResultDTO()
+        public async Task<IActionResult> Login(LoginRequestDTO loginRequest)
+        {   
+            try
             {
-                Success = true,
-                Message = "Login successful",
-                Token = jwt
-            });            
+                if (ModelState.IsValid)
+                {
+                    var user = await _userManager.FindByNameAsync(loginRequest.UserName);
+                    if (user == null || !await _userManager.CheckPasswordAsync(user, loginRequest.Password))
+                    {
+                        throw new Exception("Invalid login credentials.");
+                    }
+                    else
+                    {
+                        var sesssionToken = await _jwtHandler.GetTokenAsync(user);
+                        var jwt = new JwtSecurityTokenHandler().WriteToken(sesssionToken);
+                        return Ok(new LoginResultDTO()
+                        {
+                            Success = true,
+                            Message = "Login sucessful",
+                            Token = jwt
+                        });
+                    }
+                }
+                else
+                {
+                    var details = new ValidationProblemDetails(ModelState);
+                    details.Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1";
+                    details.Status = StatusCodes.Status400BadRequest;
+                    return new BadRequestObjectResult(details);
+                }
+            }
+            catch (Exception e)
+            {
+                var exceptionDetails = new ProblemDetails
+                {
+                    Detail = "Unauthorized",
+                    Status = StatusCodes.Status401Unauthorized,
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"                        
+                };
+                return StatusCode(StatusCodes.Status401Unauthorized, exceptionDetails);
+            }                     
+        }
+
+        [HttpPost(Name = "Register")]
+        [ResponseCache(CacheProfileName="NoCache")]
+        public async Task <IActionResult> Register(RegisterDTO registerDTO)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -24,7 +24,7 @@ namespace PersonalSiteAPI.Controllers
             _amazonSecretsManager = amazonSecretsManager;
         }
 
-        [HttpGet]
+        [HttpGet(Name = "GetSecrets")]
         public async Task<IActionResult> GetSecret()
         {
             try

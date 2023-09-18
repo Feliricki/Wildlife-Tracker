@@ -31,7 +31,7 @@ namespace PersonalSiteAPI.Controllers
         // GET: api/<MoveBankController>
         [HttpGet(Name = "GetToken")]
         public async Task<ActionResult<ApiTokenResultDTO>> GetToken()
-        {
+        {            
             try {                
                 var response = await _moveBankService.GetApiToken();
                 if (response == null)

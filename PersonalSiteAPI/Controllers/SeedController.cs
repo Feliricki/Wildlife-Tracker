@@ -3,10 +3,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Constants;
+using Microsoft.AspNetCore.Authorization;
 
 namespace PersonalSiteAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/[controller]/[action]")]
     [ApiController]
     public class SeedController : ControllerBase
     {
@@ -30,11 +31,13 @@ namespace PersonalSiteAPI.Controllers
             _configuration = configuration;
         }
 
-        [HttpPost]
+        [HttpPost(Name = "CreateDefaultUser")]
+        [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
         public async Task<IActionResult> CreateDefaultUsers()
         {
             int usersCreated = 0;
             int rolesCreated = 0;
+            // First portion will create the default administrator and moderator role if they don't already exist
             if (await _roleManager.FindByNameAsync(RoleNames.Administrator) == null)
             {
                 await _roleManager.CreateAsync(new IdentityRole(RoleNames.Administrator));
@@ -46,6 +49,7 @@ namespace PersonalSiteAPI.Controllers
                 await _roleManager.CreateAsync(new IdentityRole(RoleNames.Moderator));
                 rolesCreated++;
             }
+            // Creates the actual user if not already present in our database
             var addedUserList = new List<ApplicationUser>();
             if (await _userManager.FindByNameAsync(_configuration["DefaultUser:Username"]) == null)
             {

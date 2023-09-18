@@ -1,4 +1,5 @@
 using Amazon.SecretsManager;
+using Amazon.SecretsManager.Extensions.Caching;
 using Amazon.SecurityToken;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -95,11 +96,13 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddDataProtection();
 builder.Services.AddScoped<JwtHandler>();
 
 // Amazon Key Vault Services
 var options = builder.Configuration.GetAWSOptions();
 builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
+
 builder.Services.AddAWSService<IAmazonSecretsManager>();
 //builder.Services.AddAWSService<IAmazonSecurityTokenService>();
 

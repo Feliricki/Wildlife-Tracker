@@ -35,11 +35,9 @@ namespace PersonalSiteAPI.Services
 
         private SigningCredentials GetSigningCredentials()
         {
-            var key = Encoding.UTF8.GetBytes(
-                _configuration["JwtSettings:SecurityKey"]);
+            var key = Encoding.UTF8.GetBytes(_configuration["JwtSettings:SecurityKey"]);
             var secret = new SymmetricSecurityKey(key);
-            return new SigningCredentials(secret,
-                SecurityAlgorithms.HmacSha256);
+            return new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
         }
 
         private async Task<List<Claim>> GetClaimsAsync(ApplicationUser user)
