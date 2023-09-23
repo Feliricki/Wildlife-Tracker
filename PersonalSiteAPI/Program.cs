@@ -54,8 +54,8 @@ builder.Services.AddHttpClient<IMoveBankService, MoveBankService>();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    //Console.WriteLine(builder.Configuration["TestConnectionStrings:DefaultConnection"]);
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")); 
+    options.UseSqlServer(builder.Configuration["TestConnectionStrings:DefaultConnection"]);
+    //options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")); 
 });
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>

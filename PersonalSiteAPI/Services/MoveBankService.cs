@@ -9,6 +9,7 @@ using System.Net.Http.Headers;
 using Amazon.SecretsManager.Model;
 using System.Text.Json;
 using System.Globalization;
+using Microsoft.AspNetCore.Http.Extensions;
 
 namespace PersonalSiteAPI.Services
 {
@@ -16,7 +17,14 @@ namespace PersonalSiteAPI.Services
     public interface IMoveBankService
     {
         Task<ApiTokenResultDTO?> GetApiToken();
-        Task GetJsonData(HttpRequestMessage request, Dictionary<string, string> queries);
+        DateTime? GetDateTime(string dateString, string timeZone = "CET");
+        Task<HttpResponseMessage?> DirectRequest(
+            string entityType, 
+            Dictionary<string, string?>? parameters=null,
+            (string, string)[]? headers=null, 
+            bool authorizedUser = false
+            );
+
     }
     public class MoveBankService : IMoveBankService
     {
@@ -55,16 +63,9 @@ namespace PersonalSiteAPI.Services
                 });
 
             _httpClient.BaseAddress = new Uri("https://www.movebank.org/movebank/service/");
-
-            // Not secure but required by MoveBank's API implementation :/
-            //_userCredentials = Base64.EncodeToUtf8();
-            var _userCredentials = Convert.ToBase64String(
-                System.Text.Encoding.UTF8.GetBytes(
-                    $"{_configuration["MoveBank:Username"]}:{_configuration["MoveBank:Password"]}")
-                );
-
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", _userCredentials);
+            
         }
+        // Restrict this function
         public async Task<ApiTokenResultDTO?> GetApiToken()
         {
             // Check the cache for an existing API Token
@@ -76,7 +77,7 @@ namespace PersonalSiteAPI.Services
             SecretCacheItem? secretCache = _secretsCache.GetCachedSecret(_configuration["ConnectionStrings:AWSKeyVault2ARN"]);
             GetSecretValueResponse? secretValue = await secretCache.GetSecretValue(new CancellationToken());
             var secretObj = JsonSerializer.Deserialize<ApiTokenResultDTO>(secretValue.SecretString)!;
-            DateTime? expirationDate = getDateTime(secretObj.ExpirationDate!);            
+            DateTime? expirationDate = GetDateTime(secretObj.ExpirationDate!);            
             if (expirationDate != null && expirationDate > DateTime.Now)
             {
                 return secretObj;
@@ -99,17 +100,11 @@ namespace PersonalSiteAPI.Services
             response.EnsureSuccessStatusCode();     
             //Console.WriteLine("Headers: " + response.Headers.ToString());
             return await response.Content.ReadFromJsonAsync<ApiTokenResultDTO>();
-        }
-            
-        public async Task GetJsonData(HttpRequestMessage request, Dictionary<string, string> queries)
-        {
-            
-            return;
-        }
+        }            
 
-        public DateTime? getDateTime(string dateString, string timeZone="CET")
+        public DateTime? GetDateTime(string dateString, string timeZone="CET")
         {
-            // Hardcoded data - +1 is CEST
+            // Hardcoded data - +1 is CET
             string newDataString = dateString.Replace(timeZone, "+1");
             string formatString = $"ddd MMM dd HH:mm:ss z yyyy";
             
@@ -122,6 +117,52 @@ namespace PersonalSiteAPI.Services
             {
                 return null;
             }
+        }
+        //private AuthorizeRequest(HttpRequestMessage request)
+        //{            
+        //    var _userCredentials = Convert.ToBase64String(
+        //    System.Text.Encoding.UTF8.GetBytes($"{_configuration["MoveBank:Username"]}:{_configuration["MoveBank:Password"]}"));
+        //    _httpClient!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", _userCredentials);
+        //}
+        public async Task<HttpResponseMessage?> DirectRequest(string entityType, Dictionary<string, string?>? parameters=null, (string, string)[]? headers=null, bool authorizedUser=false)
+        {
+            // Catch potential exceptions
+            var secretObj = await GetApiToken();
+            var uri = _httpClient.BaseAddress!.OriginalString + "direct-read";
+
+            // Adding Parameters
+            uri = QueryHelpers.AddQueryString(uri, "entity_type", entityType);
+            if (parameters != null)
+            {
+                uri = QueryHelpers.AddQueryString(uri, parameters);
+            }
+            // Keep if this is enough to handle all requests
+            if (secretObj != null && !string.IsNullOrEmpty(secretObj.ApiToken))
+            {
+                uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
+            }
+            Console.WriteLine(uri);
+            using var request = new HttpRequestMessage()
+            {
+                RequestUri = new Uri(uri),
+                Method = HttpMethod.Get,
+            };
+            // Headers get set here
+            if (headers != null)
+            {
+                foreach (var header in headers)
+                {
+                    request.Headers.Add(header.Item1, header.Item2);
+                }
+            }
+            if (authorizedUser)
+            {                
+                //var _userCredentials = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{_configuration["MoveBank:Username"]}:{_configuration["MoveBank:Password"]}"));
+                //request.Headers.Authorization = new AuthenticationHeaderValue("Basic", _userCredentials);
+            }
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();            
+            return response;
         }
     }
 }

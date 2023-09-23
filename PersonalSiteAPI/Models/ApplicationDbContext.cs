@@ -14,7 +14,8 @@ namespace PersonalSiteAPI.Models
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
+            modelBuilder.Entity<Studies>().HasKey(o =>  o.Id);
         }
+        public DbSet<Studies> Studies => Set<Studies>();
     }
 }

@@ -13,11 +13,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Models\Data\Studies.csv" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.7" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.203.14" />
     <PackageReference Include="AWSSDK.SecretsManager" Version="3.7.201.24" />
     <PackageReference Include="AWSSDK.SecretsManager.Caching" Version="1.0.6" />
     <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.201.35" />
+    <PackageReference Include="CsvHelper" Version="30.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.22" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.22" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.22">
@@ -27,6 +32,10 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.22" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="6.0.22" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Migrations\" />
   </ItemGroup>
 
 </Project>

@@ -67,7 +67,7 @@ namespace PersonalSiteAPI.Controllers
                     return new BadRequestObjectResult(details);
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 var exceptionDetails = new ProblemDetails
                 {
@@ -83,6 +83,7 @@ namespace PersonalSiteAPI.Controllers
         [ResponseCache(CacheProfileName="NoCache")]
         public async Task <IActionResult> Register(RegisterDTO registerDTO)
         {
+            await Task.Delay(1000);
             throw new NotImplementedException();
         }
     }

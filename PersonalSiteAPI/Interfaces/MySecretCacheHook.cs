@@ -4,9 +4,6 @@ using Microsoft.AspNetCore.DataProtection;
 using System.Text;
 using System.Text.Json;
 using Amazon.SecretsManager.Model;
-using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Http;
-//using Newtonsoft.Json;
 
 namespace PersonalSiteAPI.Extensions
 {
@@ -19,8 +16,7 @@ namespace PersonalSiteAPI.Extensions
     public class MySecretCacheHook : ISecretCacheHook
     {
         private readonly ITimeLimitedDataProtector _dataProtector;
-        private readonly uint _duration;
-        public Type type;
+        private readonly uint _duration;        
         public MySecretCacheHook(
             ITimeLimitedDataProtector dataProtector, 
             uint duration=15)
@@ -28,7 +24,7 @@ namespace PersonalSiteAPI.Extensions
             _dataProtector = dataProtector;
             _duration = duration;
         }
-        // Input: string key
+
         public object? Get(object cachedObject)
         {
             try

@@ -4,6 +4,12 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Constants;
 using Microsoft.AspNetCore.Authorization;
+using PersonalSiteAPI.Services;
+using CsvHelper;
+using System.Text;
+using System.Globalization;
+using PersonalSiteAPI.DTO.MoveBankAttributes;
+using Microsoft.EntityFrameworkCore;
 
 namespace PersonalSiteAPI.Controllers
 {
@@ -16,19 +22,22 @@ namespace PersonalSiteAPI.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IWebHostEnvironment _env;
         private readonly IConfiguration _configuration;
-
+        private readonly IMoveBankService _moveBankService;
         public SeedController(
             ApplicationDbContext context,
             RoleManager<IdentityRole> roleManager,
             UserManager<ApplicationUser> userManager,
             IWebHostEnvironment env,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IMoveBankService moveBankService
+            )
         {
             _context = context;
             _roleManager = roleManager;
             _userManager = userManager;
             _env = env;
             _configuration = configuration;
+            _moveBankService = moveBankService;
         }
 
         [HttpPost(Name = "CreateDefaultUser")]
@@ -75,6 +84,54 @@ namespace PersonalSiteAPI.Controllers
                 RolesCreated = rolesCreated,
                 Users = addedUserList
             });
-        }   
+        }
+
+        [HttpPost(Name="GetAllStudies")]
+        public async Task<IActionResult> GetAllStudies()
+        {
+            try
+            {
+                var apiObj = _moveBankService.GetApiToken();
+                if (apiObj == null)
+                {
+                    throw new Exception("Couldn't get API token");
+                }
+                var response = await _moveBankService.DirectRequest(entityType: "study", parameters: null, headers: null, authorizedUser: true);
+                if (response == null)
+                {
+                    throw new Exception("Response error");
+                }
+                using var stream = new StreamReader(await response.Content.ReadAsStreamAsync(), Encoding.UTF8);
+                using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
+
+                var records = csvReader.GetRecordsAsync<StudiesRecord>();
+                var existingStudies = await _context.Studies.ToDictionaryAsync(o => o.Id);
+
+                int elementsAdded = 0;
+                int rowsSkipped = 0;
+                
+                await foreach( var record in records)
+                {
+                    if (record == null || !record.Id.HasValue || existingStudies.ContainsKey(record.Id.Value))
+                    {
+                        rowsSkipped++;
+                        continue;
+                    }
+
+                }
+
+                return Ok();
+            }
+            catch (Exception err)
+            {
+                var exceptionDetails = new ProblemDetails
+                {
+                    Detail = err.Message,
+                    Status = StatusCodes.Status401Unauthorized,
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"
+                };
+                return StatusCode(StatusCodes.Status401Unauthorized, exceptionDetails);
+            }
+        }
     }
 }

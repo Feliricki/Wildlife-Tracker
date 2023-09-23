@@ -12,8 +12,8 @@ using PersonalSiteAPI.Models;
 namespace PersonalSiteAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20230912234809_Identity")]
-    partial class Identity
+    [Migration("20230923013634_StudyTable")]
+    partial class StudyTable
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -220,6 +220,128 @@ namespace PersonalSiteAPI.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("PersonalSiteAPI.Models.Studies", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"), 1L, 1);
+
+                    b.Property<string>("Acknowledgements")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Citation")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ContactPersonName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GoPublicDate")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GrantsUsed")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IAmCollaborator")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IAmOwner")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ICanSeeData")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IHaveDownloadAccess")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsTest")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LicenseTerms")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MainLocationLat")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MainLocationLon")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NumberOfDeployedLocations")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NumberOfDeployments")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NumberOfIndividuals")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NumberOfTags")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PricipalInvestigatorName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PrincipalInvestigatorAddress")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PrincipalInvestigatorEmail")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SensorTypeIds")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StudyObjective")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StudyPermission")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StudyType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("SuspendLicenseTerms")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TaxonIds")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("ThereAreDataWhichICannotSee")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TimeStampFirstDeployedLocation")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TimeStampLastDeployedLocation")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Studies");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

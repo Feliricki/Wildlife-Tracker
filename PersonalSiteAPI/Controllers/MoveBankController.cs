@@ -31,8 +31,9 @@ namespace PersonalSiteAPI.Controllers
         // GET: api/<MoveBankController>
         [HttpGet(Name = "GetToken")]
         public async Task<ActionResult<ApiTokenResultDTO>> GetToken()
-        {            
-            try {                
+        {
+            try
+            {                
                 var response = await _moveBankService.GetApiToken();
                 if (response == null)
                 {
@@ -40,17 +41,16 @@ namespace PersonalSiteAPI.Controllers
                 }
                 return response;
             }
-            catch (Exception err)
+            catch (Exception)
             {   
                 var exceptionDetails = new ProblemDetails
                 {
-                    Detail = "Error retrieving data: " + err.Message,
+                    Detail = "Error retrieving Token",
                     Status = StatusCodes.Status500InternalServerError,
                     Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"
                 };
                 return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
             }
-        }
-
+        }       
     }
 }
