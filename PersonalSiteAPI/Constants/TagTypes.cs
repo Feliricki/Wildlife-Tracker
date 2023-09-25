@@ -1,5 +1,6 @@
 ﻿namespace PersonalSiteAPI.Constants
 {
+    
     public class TagInfo
     {
         public string? Description { get; set; }
@@ -10,6 +11,7 @@
     }
     public class TagTypes
     {
+        
         public List<TagInfo> SensorInformation = new List<TagInfo>()
         {
             new TagInfo()
@@ -157,5 +159,79 @@
                 Name = "Proximity"
             },
         };
+        public HashSet<string> locationSensors = new HashSet<string>()
+        {
+            "GPS",
+            "Bird Ring",
+            "Radio Transmitter",
+            "Argos Doppler Shift",
+            "Natural Mark",
+            "Solar Geolocator",
+            "Acoustic Telemetry",
+            "Sigfox Geolocation",
+            "Natural Mark",
+        };
+
+        public Dictionary<long, string> idToSensor = new Dictionary<long, string>()
+        {
+            [397] = "bird-ring",
+            [653] = "gps",
+            [673] = "radio-transmitter",
+            [82798] = "argos-doppler-shift",
+            [2365682] = "natural-mark",
+            [2365683] = "solar-geolocator",
+            [7842954] = "accessory-measurements",
+            [9301403] = "solar-geolocator-raw",
+            [77740391] = "barometer",
+            [77740402] = "magnetometer",
+            [819073350] = "orientation",
+            [914097241] = "solar-geolocator-twilight",
+            [1239574236] = "acoustic-telemetry",
+            [1297673380] = "gyroscope",
+            [2206221896] = "heart-rate",
+            [2299894820] = "sigfox-geolocation",
+            [2645090675] = "proximity"
+        };
+        public enum SensorType : long
+        {
+            BirdRing = 397,
+            GPS = 653,
+            RadioTransmitter = 673,
+            ArgosDopplerShift = 82798,
+            NaturalMark = 2365682,
+            SolarGeolocator = 2365683,
+            AccessoryMeasurements = 7842954,
+            SolarGeolocatorRaw = 9301403,
+            Barometer = 77740391,
+            Magnetometer = 77740402,
+            Orientation = 819073350,
+            SolarGeolocatorTwilight = 914097241,
+            AcousticTelemetry = 1239574236,
+            Gyroscope = 1297673380,
+            HeartRate = 2206221896,
+            SigfoxGeolocation = 2299894820,
+            Proximity = 2645090675
+        };
+        
+
+        public bool IsLocationSensor(string? location_sensor_ids)
+        {
+            if (location_sensor_ids == null)
+            {
+                return false;
+            }
+            var splitList = location_sensor_ids.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var sensor in  splitList)
+            {
+                if (!string.IsNullOrEmpty(sensor) && locationSensors.Contains(sensor.Trim()))
+                {
+                    Console.WriteLine("Found sensor: " + sensor.Trim());
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        
     }
 }

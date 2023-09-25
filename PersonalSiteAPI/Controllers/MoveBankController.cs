@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using PersonalSiteAPI.Constants;
 using PersonalSiteAPI.DTO;
 using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
@@ -29,7 +31,9 @@ namespace PersonalSiteAPI.Controllers
             _memoryCache = memoryCache;
         }
         // GET: api/<MoveBankController>
+
         [HttpGet(Name = "GetToken")]
+        [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
         public async Task<ActionResult<ApiTokenResultDTO>> GetToken()
         {
             try
@@ -51,6 +55,7 @@ namespace PersonalSiteAPI.Controllers
                 };
                 return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
             }
-        }       
+        }
+        //[HttpGet(Name = "GetAllStudies")]
     }
 }

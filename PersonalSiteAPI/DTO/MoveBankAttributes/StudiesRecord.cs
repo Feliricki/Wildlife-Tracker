@@ -13,8 +13,9 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes
         [Name("citation")]
         public string? Citation { get; set; }
         [Optional]
+        [TypeConverter(typeof(DateTimeConverter))]
         [Name("go_public_date")]
-        public string? GoPublicDate { get; set; }
+        public DateTime? GoPublicDate { get; set; }
         [Optional]
         [Name("grants_used")]
         public string? GrantsUsed { get; set; }
@@ -34,6 +35,9 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes
         [Optional]
         [Name("license_terms")]
         public string? LicenseTerms { get; set; }
+        [Optional]
+        [Name("license_type")]
+        public string? LicenseType { get; set; }
         [Optional]
         [Name("main_location_lat")]
         public string? MainLocationLat { get; set; }
@@ -60,7 +64,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes
         public string? PrincipalInvestigatorEmail { get; set; }
         [Optional]
         [Name("principle_investigator_name")]
-        public string? PricipalInvestigatorName { get; set; }
+        public string? PrincipalInvestigatorName { get; set; }
         [Optional]
         [Name("study_objective")]
         public string? StudyObjective { get; set; }
@@ -94,11 +98,13 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes
         [Name("study_permission")]
         public string? StudyPermission { get; set; }
         [Optional]
+        [TypeConverter(typeof(DateTimeConverter))]
         [Name("timestamp_first_deployed_location")]
-        public string? TimeStampFirstDeployedLocation {  get; set; }
+        public DateTime? TimeStampFirstDeployedLocation { get; set; } = null;
         [Optional]
+        [TypeConverter(typeof(DateTimeConverter))]
         [Name("timestamp_last_deployed_location")]
-        public string? TimeStampLastDeployedLocation { get; set; }
+        public DateTime? TimeStampLastDeployedLocation { get; set; } = null;
         [Optional]
         [Name("number_of_deployed_locations")]
         public int? NumberOfDeployedLocations { get; set; }

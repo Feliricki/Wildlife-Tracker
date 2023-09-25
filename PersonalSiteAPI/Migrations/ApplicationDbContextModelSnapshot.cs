@@ -240,9 +240,8 @@ namespace PersonalSiteAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("GoPublicDate")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<DateTime?>("GoPublicDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("GrantsUsed")
                         .IsRequired()
@@ -264,6 +263,10 @@ namespace PersonalSiteAPI.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("LicenseTerms")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LicenseType")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -291,15 +294,15 @@ namespace PersonalSiteAPI.Migrations
                     b.Property<int>("NumberOfTags")
                         .HasColumnType("int");
 
-                    b.Property<string>("PricipalInvestigatorName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("PrincipalInvestigatorAddress")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PrincipalInvestigatorEmail")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PrincipalInvestigatorName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -329,13 +332,11 @@ namespace PersonalSiteAPI.Migrations
                     b.Property<bool>("ThereAreDataWhichICannotSee")
                         .HasColumnType("bit");
 
-                    b.Property<string>("TimeStampFirstDeployedLocation")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<DateTime?>("TimeStampFirstDeployedLocation")
+                        .HasColumnType("datetime2");
 
-                    b.Property<string>("TimeStampLastDeployedLocation")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<DateTime?>("TimeStampLastDeployedLocation")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 

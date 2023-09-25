@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using CsvHelper.Configuration.Attributes;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace PersonalSiteAPI.Models
@@ -13,7 +14,7 @@ namespace PersonalSiteAPI.Models
         public string Citation { get; set; } = "";
 
         [JsonPropertyName("go_public_date")]
-        public string GoPublicDate { get; set; } = "";
+        public DateTime? GoPublicDate { get; set; } = null;
         
         [JsonPropertyName("grants_used")]
         public string GrantsUsed { get; set; } = "";
@@ -29,6 +30,8 @@ namespace PersonalSiteAPI.Models
         
         [JsonPropertyName("license_terms")]
         public string LicenseTerms { get; set; } = "";
+        [JsonPropertyName("license_type")]
+        public string LicenseType { get; set; } = "";
 
         [JsonPropertyName("main_location_lat")]
         public string MainLocationLat { get; set; } = "";
@@ -55,7 +58,7 @@ namespace PersonalSiteAPI.Models
         public string PrincipalInvestigatorEmail { get; set; } = "";
 
         [JsonPropertyName("principle_investigator_name")]
-        public string PricipalInvestigatorName { get; set; } = "";
+        public string PrincipalInvestigatorName { get; set; } = "";
 
         [JsonPropertyName("study_objective")]
         public string StudyObjective { get; set; } = "";

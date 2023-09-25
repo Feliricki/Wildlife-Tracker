@@ -5,11 +5,10 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
 using PersonalSiteAPI.DTO;
 using PersonalSiteAPI.Extensions;
-using System.Net.Http.Headers;
 using Amazon.SecretsManager.Model;
 using System.Text.Json;
 using System.Globalization;
-using Microsoft.AspNetCore.Http.Extensions;
+using System.Security.Cryptography;
 
 namespace PersonalSiteAPI.Services
 {
@@ -24,6 +23,11 @@ namespace PersonalSiteAPI.Services
             (string, string)[]? headers=null, 
             bool authorizedUser = false
             );
+        Task<HttpResponseMessage> JsonRequest(
+            string entityType,
+            Dictionary<string, string?>? parameters = null,
+            (string, string)[]? headers = null,
+            bool authorizedUser = false);
 
     }
     public class MoveBankService : IMoveBankService
@@ -101,7 +105,7 @@ namespace PersonalSiteAPI.Services
             //Console.WriteLine("Headers: " + response.Headers.ToString());
             return await response.Content.ReadFromJsonAsync<ApiTokenResultDTO>();
         }            
-
+        // Helper method
         public DateTime? GetDateTime(string dateString, string timeZone="CET")
         {
             // Hardcoded data - +1 is CET
@@ -110,7 +114,6 @@ namespace PersonalSiteAPI.Services
             
             if (DateTime.TryParseExact(newDataString, formatString, null, DateTimeStyles.None, out DateTime result))
             {
-                //var timeZoneInfo = result.
                 return result;
             }
             else
@@ -118,12 +121,7 @@ namespace PersonalSiteAPI.Services
                 return null;
             }
         }
-        //private AuthorizeRequest(HttpRequestMessage request)
-        //{            
-        //    var _userCredentials = Convert.ToBase64String(
-        //    System.Text.Encoding.UTF8.GetBytes($"{_configuration["MoveBank:Username"]}:{_configuration["MoveBank:Password"]}"));
-        //    _httpClient!.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", _userCredentials);
-        //}
+        
         public async Task<HttpResponseMessage?> DirectRequest(string entityType, Dictionary<string, string?>? parameters=null, (string, string)[]? headers=null, bool authorizedUser=false)
         {
             // Catch potential exceptions
@@ -140,8 +138,7 @@ namespace PersonalSiteAPI.Services
             if (secretObj != null && !string.IsNullOrEmpty(secretObj.ApiToken))
             {
                 uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
-            }
-            Console.WriteLine(uri);
+            }            
             using var request = new HttpRequestMessage()
             {
                 RequestUri = new Uri(uri),
@@ -154,14 +151,74 @@ namespace PersonalSiteAPI.Services
                 {
                     request.Headers.Add(header.Item1, header.Item2);
                 }
+            }            
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode(); 
+            
+            if (response.Headers.TryGetValues("Accept-License", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
+            {
+                response = await GetPermission(request, response);
             }
+            return response;
+        }
+        // This should request data in JSON format
+        // Use the provided DTOs to deserilize the response content
+        public async Task<HttpResponseMessage> JsonRequest(string entityType, Dictionary<string, string?>? parameters=null, (string, string)[]? headers=null, bool authorizedUser=false)
+        {
+            var secretObj = await GetApiToken();
+            var uri = _httpClient.BaseAddress!.AbsoluteUri + "public/json";
             if (authorizedUser)
-            {                
-                //var _userCredentials = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{_configuration["MoveBank:Username"]}:{_configuration["MoveBank:Password"]}"));
-                //request.Headers.Authorization = new AuthenticationHeaderValue("Basic", _userCredentials);
+            {
+                uri = _httpClient.BaseAddress.AbsoluteUri + "json-auth";
+            }
+            if (parameters != null)
+            {
+                uri = QueryHelpers.AddQueryString(uri, parameters);
+            }
+            if (secretObj != null && !string.IsNullOrEmpty(secretObj.ApiToken))
+            {
+                uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
+            }
+            using var request = new HttpRequestMessage()
+            {
+                RequestUri = new Uri(uri),
+                Method = HttpMethod.Get
+            };
+            if (headers != null)
+            {
+                foreach (var header in headers)
+                {
+                    request.Headers.Add(header.Item1, header.Item2);
+                }
             }
             var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();            
+            if (response.Headers.TryGetValues("Accept-License", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
+            {
+                response = await GetPermission(request, response);
+            }
+            response.EnsureSuccessStatusCode();
+            return response;
+        }
+
+        private async Task<HttpResponseMessage> GetPermission(HttpRequestMessage oldRequest, HttpResponseMessage oldResponse)
+        {
+            var uri = oldRequest.RequestUri!.AbsoluteUri;            
+
+            using var md5 = MD5.Create();
+            var checkSum = md5.ComputeHash(await oldRequest.Content!.ReadAsByteArrayAsync());
+            var md5_string = BitConverter.ToString(checkSum).Replace("-", string.Empty);
+
+            uri = QueryHelpers.AddQueryString(uri, "license-md5", md5_string);
+
+            var request = new HttpRequestMessage()
+            {
+                RequestUri = new Uri(uri),
+                Method = HttpMethod.Get,
+            };
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            Console.WriteLine("Accepted License Terms");
+
             return response;
         }
     }

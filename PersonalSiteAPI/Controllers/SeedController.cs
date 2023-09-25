@@ -10,6 +10,7 @@ using System.Text;
 using System.Globalization;
 using PersonalSiteAPI.DTO.MoveBankAttributes;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 
 namespace PersonalSiteAPI.Controllers
 {
@@ -90,13 +91,8 @@ namespace PersonalSiteAPI.Controllers
         public async Task<IActionResult> GetAllStudies()
         {
             try
-            {
-                var apiObj = _moveBankService.GetApiToken();
-                if (apiObj == null)
-                {
-                    throw new Exception("Couldn't get API token");
-                }
-                var response = await _moveBankService.DirectRequest(entityType: "study", parameters: null, headers: null, authorizedUser: true);
+            {                
+                using var response = await _moveBankService.DirectRequest(entityType: "study", parameters: null, headers: null, authorizedUser: true);
                 if (response == null)
                 {
                     throw new Exception("Response error");
@@ -105,33 +101,142 @@ namespace PersonalSiteAPI.Controllers
                 using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
 
                 var records = csvReader.GetRecordsAsync<StudiesRecord>();
-                var existingStudies = await _context.Studies.ToDictionaryAsync(o => o.Id);
+                var existingStudies = _context.Studies.ToDictionary(o => o.Id);
 
-                int elementsAdded = 0;
+                int rowsAdded = 0;
                 int rowsSkipped = 0;
-                
+                int rowsFiltered = 0;
+                var tagType = new TagTypes();
                 await foreach( var record in records)
                 {
-                    if (record == null || !record.Id.HasValue || existingStudies.ContainsKey(record.Id.Value))
+                    // Filter invalid rows
+                    if (record == null || 
+                        !record.Id.HasValue || 
+                        existingStudies.ContainsKey(record.Id.Value) || 
+                        string.IsNullOrEmpty(record.Name))
                     {
                         rowsSkipped++;
                         continue;
                     }
-
+                    // Filter rows that can't be displayed or downloaded
+                    if (string.IsNullOrEmpty(record.SensorTypeIds) ||
+                        !tagType.IsLocationSensor(record.SensorTypeIds) ||
+                        !record.IHaveDownloadAccess || 
+                        !record.ICanSeeData
+                        )
+                    {
+                        rowsSkipped++;
+                        rowsFiltered++;
+                        continue;
+                    }
+                    var study = new Studies()
+                    {
+                        Acknowledgements = record.Acknowledgements ?? "",
+                        Citation = record.Citation ?? "",
+                        GoPublicDate = record.GoPublicDate ?? null,
+                        GrantsUsed = record.GrantsUsed ?? "",
+                        IAmOwner = record.IAmOwner,
+                        Id = record.Id.Value,
+                        IsTest = record.IsTest,
+                        LicenseTerms = record.LicenseTerms ?? "",
+                        LicenseType = record.LicenseType ?? "",
+                        MainLocationLat = record.MainLocationLat ?? "",
+                        MainLocationLon = record.MainLocationLon ?? "",
+                        Name = record.Name ?? "",
+                        NumberOfDeployments = record.NumberOfDeployments ?? 0,
+                        NumberOfIndividuals = record.NumberOfIndividuals ?? 0,
+                        NumberOfTags = record.NumberOfTags ?? 0,
+                        PrincipalInvestigatorAddress = record.PrincipalInvestigatorAddress ?? "",
+                        PrincipalInvestigatorEmail = record.PrincipalInvestigatorEmail ?? "",
+                        PrincipalInvestigatorName = record.PrincipalInvestigatorName ?? "",
+                        StudyObjective = record.StudyObjective ?? "",
+                        StudyType = record.StudyType ?? "",
+                        SuspendLicenseTerms = record.SuspendLicenseTerms,
+                        ICanSeeData = record.ICanSeeData,
+                        ThereAreDataWhichICannotSee = record.ThereAreDataWhichICannotSee,
+                        IHaveDownloadAccess = record.IHaveDownloadAccess,
+                        IAmCollaborator = record.IAmCollaborator,
+                        StudyPermission = record.StudyPermission ?? "",
+                        TimeStampFirstDeployedLocation = record.TimeStampFirstDeployedLocation,
+                        TimeStampLastDeployedLocation = record.TimeStampLastDeployedLocation,
+                        NumberOfDeployedLocations = record.NumberOfDeployedLocations ?? 0,
+                        TaxonIds = record.TaxonIds ?? "",
+                        SensorTypeIds = record.SensorTypeIds ?? "",
+                        ContactPersonName = record.ContactPersonName ?? "",
+                    };
+                    _context.Studies.Add(study);
+                    rowsAdded++;
                 }
+                using var transaction = _context.Database.BeginTransaction();
+                _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies ON");
+                await _context.SaveChangesAsync();
+                _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies OFF");
+                transaction.Commit();
 
-                return Ok();
+                return new JsonResult(new
+                {
+                    RowsAdded = rowsAdded,
+                    RowsSkipped = rowsSkipped,
+                    RowsFiltered = rowsFiltered,
+                    StudiesAdded = _context.Studies.Count()
+                });
             }
             catch (Exception err)
             {
                 var exceptionDetails = new ProblemDetails
                 {
                     Detail = err.Message,
-                    Status = StatusCodes.Status401Unauthorized,
+                    Status = StatusCodes.Status500InternalServerError,
                     Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"
                 };
-                return StatusCode(StatusCodes.Status401Unauthorized, exceptionDetails);
+                return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
             }
+        }
+        // Not necessary
+        [HttpPost("GetPermissions")]
+        [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
+        public async Task<IActionResult> GetPermissions()
+        {
+
+            int licenseTermsAccepted = 0;
+            foreach (var study in _context.Studies)
+            {
+                try
+                {
+                    var study_param = new Dictionary<string, string?>() { { "study_id", study.Id.ToString() } };
+                    using var response = await _moveBankService.DirectRequest(entityType: "individual", parameters: study_param, headers: null, authorizedUser: true);
+                    if (response == null)
+                    {                        
+                        Console.WriteLine("Server response was null");
+                        continue;
+                    }
+                    string response_content = await response.Content.ReadAsStringAsync();
+                    if (response.StatusCode == System.Net.HttpStatusCode.OK && response_content.Contains("License Terms: "))
+                    {
+                        using var md5 = MD5.Create();
+                        
+                        var checkSum = md5.ComputeHash(await response.Content.ReadAsByteArrayAsync());
+                        var md5_string = BitConverter.ToString(checkSum).Replace("-", String.Empty);
+
+                        var licenseParam = new Dictionary<string, string?>() { { "study_id", study.Id.ToString() }, { "license-md5", md5_string } };
+                        //(string, string)[] licenseHeaders = { ("Cookie", cookie.FirstOrDefault() ?? "") };
+
+                        await _moveBankService.DirectRequest(entityType: "individual", parameters: licenseParam, headers: null, authorizedUser: true);
+                        licenseTermsAccepted++;
+                    }
+                    response.Dispose();
+                }
+                catch
+                {
+                    Console.WriteLine("Encountered error");
+                    continue;
+                }
+                
+            }
+            return new JsonResult(new
+            {
+                LicenseTermsAccepeted = licenseTermsAccepted,
+            });
         }
     }
 }

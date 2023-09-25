@@ -25,4 +25,6 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes
         [Name("name")]
         public string? Name { get; set; }
     }
+
+    
 }
