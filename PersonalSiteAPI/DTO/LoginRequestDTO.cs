@@ -3,8 +3,7 @@
 namespace PersonalSiteAPI.DTO
 {
     public class LoginRequestDTO
-    {
-        //[EmailAddress]
+    {            
         [Required(ErrorMessage = "Username is required.")]
         [MaxLength(255)]
         public string UserName { get; set; } = null!;

@@ -1,0 +1,13 @@
+
+.tool-bar-container {
+    height: 5%;
+}
+.spacer{
+    flex: 1 1 auto;
+}
+
+.mat-toolbar.mat-primary {
+    background-color: rgb(4, 131, 114);
+    height: 100%;
+    color: white;
+}

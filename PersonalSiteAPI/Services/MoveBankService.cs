@@ -77,9 +77,9 @@ namespace PersonalSiteAPI.Services
             // Incorporate rotation/retrieval/ and insertion of keys
             // Rotate when DateTime of API key expires
             // Implement time limit for cache
-            // Create DTO object for secrets
             SecretCacheItem? secretCache = _secretsCache.GetCachedSecret(_configuration["ConnectionStrings:AWSKeyVault2ARN"]);
             GetSecretValueResponse? secretValue = await secretCache.GetSecretValue(new CancellationToken());
+
             var secretObj = JsonSerializer.Deserialize<ApiTokenResultDTO>(secretValue.SecretString)!;
             DateTime? expirationDate = GetDateTime(secretObj.ExpirationDate!);            
             if (expirationDate != null && expirationDate > DateTime.Now)
@@ -88,10 +88,7 @@ namespace PersonalSiteAPI.Services
             }
 
             var uri = _httpClient.BaseAddress!.OriginalString + "direct-read";
-            uri = QueryHelpers.AddQueryString(uri, new Dictionary<string, string?>()
-            {
-                { "service", "request-token" }
-            });          
+            uri = QueryHelpers.AddQueryString(uri, "service", "request-token");                     
 
             using var request = new HttpRequestMessage()
             {
@@ -163,6 +160,7 @@ namespace PersonalSiteAPI.Services
         }
         // This should request data in JSON format
         // Use the provided DTOs to deserilize the response content
+        // TODO - Test this method
         public async Task<HttpResponseMessage> JsonRequest(string entityType, Dictionary<string, string?>? parameters=null, (string, string)[]? headers=null, bool authorizedUser=false)
         {
             var secretObj = await GetApiToken();

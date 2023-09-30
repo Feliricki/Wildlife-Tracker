@@ -6,5 +6,6 @@ import { Component } from '@angular/core';
   styleUrls: ['./home.component.css']
 })
 export class HomeComponent {
-
+  // @ViewChild(GoogleMap, { static: false }) map: GoogleMap;
+  constructor() {}
 }

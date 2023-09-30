@@ -15,6 +15,8 @@ namespace PersonalSiteAPI.Models
         {
             base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<Studies>().HasKey(o =>  o.Id);
+
+
         }
         public DbSet<Studies> Studies => Set<Studies>();
     }

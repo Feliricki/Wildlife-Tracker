@@ -1,9 +1,11 @@
-<header>
+<header class="tool-bar-container">
     <mat-toolbar color="primary">
-        <button mat-icon-button [routerLink]="['/']">
+        <button class="home_button" mat-icon-button [routerLink]="['/']">
             <mat-icon>
                 home
             </mat-icon>
         </button>
+        <span class="spacer"></span>
+        <a class="login-button" mat-flat-button [routerLink]="['/login']">Login</a>
     </mat-toolbar>
 </header>

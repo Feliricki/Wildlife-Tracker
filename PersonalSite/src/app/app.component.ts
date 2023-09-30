@@ -9,24 +9,19 @@ import { environment } from "../environments/environment";
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  public forecasts?: WeatherForecast[];
+  // public forecasts?: WeatherForecast[];
   constructor(http: HttpClient) {
-    //console.log("Request: " + environment.baseUrl + 'api/weatherforecast')
-    http.get<WeatherForecast[]>(environment.baseUrl + 'api/weatherforecast').subscribe({
-      next: (result) => this.forecasts = result,
-      error: (err) => console.log(err)
-    });
-    // http.get<WeatherForecast[]>(environment.baseUrl + 'api/weatherforecast').subscribe(result => {
-    //   this.forecasts = result;
-    // }, error => console.error(error));
+    // http.get<WeatherForecast[]>(environment.baseUrl + 'api/weatherforecast').subscribe({
+    //   next: (result) => this.forecasts = result,
+    //   error: (err) => console.log(err)
+    // });
   }
-
-  title = 'PersonalSite';
+  title = 'Animal tracker';
 }
 
-interface WeatherForecast {
-  date: string;
-  temperatureC: number;
-  temperatureF: number;
-  summary: string;
-}
+// interface WeatherForecast {
+//   date: string;
+//   temperatureC: number;
+//   temperatureF: number;
+//   summary: string;
+// }

@@ -1,9 +1,9 @@
-﻿using CsvHelper.Configuration.Attributes;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace PersonalSiteAPI.Models
 {
+
     public class Studies
     {
 

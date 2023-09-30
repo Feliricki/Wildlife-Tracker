@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using PersonalSiteAPI.Constants;
@@ -18,17 +19,20 @@ namespace PersonalSiteAPI.Controllers
         private readonly ILogger<AccountController> _logger;
         private readonly IMoveBankService _moveBankService;
         private readonly IMemoryCache _memoryCache;
+        private readonly UserManager<ApplicationUser> _userManager;
 
         public MoveBankController(
             ApplicationDbContext context, 
             ILogger<AccountController> logger,
             IMoveBankService moveBankService,
-            IMemoryCache memoryCache) 
+            IMemoryCache memoryCache, 
+            UserManager<ApplicationUser> userManager) 
         {
             _context = context;
             _logger = logger;
             _moveBankService = moveBankService;
             _memoryCache = memoryCache;
+            _userManager = userManager;
         }
         // GET: api/<MoveBankController>
 
@@ -56,6 +60,35 @@ namespace PersonalSiteAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
             }
         }
-        //[HttpGet(Name = "GetAllStudies")]
+        // Set proper authorization
+        [HttpGet(Name="GetStudy")]
+        public async Task<ActionResult<Studies?>> GetStudy(long studyId)
+        {
+            try
+            {
+                
+                if (_memoryCache.TryGetValue<Studies>(studyId, out var cachedStudy))
+                {
+                    return cachedStudy!;
+                }
+                var study = await _context.Studies.FindAsync(studyId);
+                if (study != null && !string.IsNullOrEmpty(study.LicenseType) && validLicense(study.LicenseType))
+                {
+                    _memoryCache.Set(studyId, study);
+                    return study;
+                }
+                return Unauthorized();
+            }
+            catch (Exception)
+            {
+                return NotFound();
+            }
+        }
+
+        private bool validLicense(string licenseType)
+        {
+            string[] licenses = { "CC_0", "CC_BY", "CC_BY_NC" };
+            return licenses.Contains(licenseType.Trim());
+        }
     }
 }

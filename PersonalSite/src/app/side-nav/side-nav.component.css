@@ -1,0 +1,21 @@
+/* .sidenav-container {
+    width: 400px;
+    height: 200px;
+    margin: 10px;
+    border: 1px solid #555;
+}   */
+
+.sidenav-container {
+    width: auto;
+    height: 900px;
+    border: 1px solid #555;
+}
+
+.sidenav {
+    /* background-color: rgb(158, 154, 154); */
+    width: 20%;
+}
+
+.sidenav-content {
+    height: 100%;
+}

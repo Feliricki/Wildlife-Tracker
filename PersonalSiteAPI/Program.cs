@@ -18,8 +18,7 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(cfg =>
     {
-        //cfg.WithOrigins(builder.Configuration["AllowedOrigins"]);
-        cfg.AllowAnyOrigin();
+        cfg.WithOrigins(builder.Configuration["AllowedOrigins"]);        
         cfg.AllowAnyHeader();
         cfg.AllowAnyMethod();
     });

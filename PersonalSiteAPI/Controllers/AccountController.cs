@@ -6,6 +6,8 @@ using PersonalSiteAPI.Services;
 using System.IdentityModel.Tokens.Jwt;
 using PersonalSiteAPI.DTO;
 using static System.Net.WebRequestMethods;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace PersonalSiteAPI.Controllers
 {
@@ -33,50 +35,60 @@ namespace PersonalSiteAPI.Controllers
             _roleManager = roleManager;
             _jwtHandler = jwtHandler;
         }
-
+        private bool IsValidEmail(string email){
+            try{
+                var address = new System.Net.Mail.MailAddress(email.Trim());
+                return address.Address == email;
+            }
+            catch(Exception){
+                return false;
+            }
+        }
+        
         [HttpPost(Name = "Login")]
         [ResponseCache(CacheProfileName = "NoCache")]
-        public async Task<IActionResult> Login(LoginRequestDTO loginRequest)
+        public async Task<ActionResult<LoginResultDTO>> Login(LoginRequestDTO loginRequest)
         {   
             try
             {
+                //Console.WriteLine($"Got login request {JsonSerializer.Serialize(loginRequest)}");
                 if (ModelState.IsValid)
                 {
-                    var user = await _userManager.FindByNameAsync(loginRequest.UserName);
-                    if (user == null || !await _userManager.CheckPasswordAsync(user, loginRequest.Password))
+                    var userByName = await _userManager.FindByNameAsync(loginRequest.UserName);
+                    var userByEmail = await _userManager.FindByEmailAsync(loginRequest.UserName);
+                    if (userByName == null && userByEmail == null)
                     {
-                        throw new Exception("Invalid login credentials.");
+                        throw new Exception("Invalid username or email.");
                     }
-                    else
+                    if ((userByName != null && await _userManager.CheckPasswordAsync(userByName, loginRequest.Password)) ||
+                        (userByEmail != null && await _userManager.CheckPasswordAsync(userByEmail, loginRequest.Password)))
                     {
-                        var sesssionToken = await _jwtHandler.GetTokenAsync(user);
+                        var sesssionToken = await _jwtHandler.GetTokenAsync(userByName ?? userByEmail);
                         var jwt = new JwtSecurityTokenHandler().WriteToken(sesssionToken);
                         return Ok(new LoginResultDTO()
                         {
                             Success = true,
-                            Message = "Login sucessful",
+                            Message = "Login successful",
                             Token = jwt
                         });
+                    }
+                    else
+                    {
+                        throw new Exception("Invalid password.");
                     }
                 }
                 else
                 {
-                    var details = new ValidationProblemDetails(ModelState);
-                    details.Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1";
-                    details.Status = StatusCodes.Status400BadRequest;
-                    return new BadRequestObjectResult(details);
+                    throw new Exception("Invalid username or password.");
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                var exceptionDetails = new ProblemDetails
-                {
-                    Detail = "Unauthorized",
-                    Status = StatusCodes.Status401Unauthorized,
-                    Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"                        
-                };
-                return StatusCode(StatusCodes.Status401Unauthorized, exceptionDetails);
-            }                     
+                return Unauthorized(new LoginResultDTO(){
+                    Success = false,
+                    Message = e.Message,
+                });                
+            }
         }
 
         [HttpPost(Name = "Register")]
