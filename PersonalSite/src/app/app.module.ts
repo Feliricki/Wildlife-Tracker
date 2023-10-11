@@ -16,6 +16,9 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { SideNavComponent } from './side-nav/side-nav.component';
 import { MapComponent } from './map/map.component';
+import { StudiesComponent } from './studies/studies.component';
+import { TimestampPipe } from './pipes/timestamp.pipe';
+import { DefaultPipe } from './pipes/default.pipe';
 
 @NgModule({
   declarations: [
@@ -25,6 +28,9 @@ import { MapComponent } from './map/map.component';
     LoginComponent,
     SideNavComponent,
     MapComponent,
+    StudiesComponent,
+    TimestampPipe,
+    DefaultPipe,
   ],
   imports: [
     BrowserModule,

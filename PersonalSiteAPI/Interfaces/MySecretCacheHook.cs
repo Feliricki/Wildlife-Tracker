@@ -62,10 +62,10 @@ namespace PersonalSiteAPI.Extensions
                    
         }
         public object? Put(object o)
-        {
-            Console.WriteLine("Placing object of type " + o.GetType().ToString() + " into cache.");
+        {           
             try
             {
+                Console.WriteLine($"Placing object of type {o.GetType().ToString()} into cache.");
                 var jsonString = o switch
                 {
                     DescribeSecretRequest request => JsonSerializer.Serialize(new KeyDTO<DescribeSecretRequest>() { KeyType = typeof(DescribeSecretRequest).ToString(), Data = request }),

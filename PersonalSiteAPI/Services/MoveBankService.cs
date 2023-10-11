@@ -29,6 +29,8 @@ namespace PersonalSiteAPI.Services
             (string, string)[]? headers = null,
             bool authorizedUser = false);
 
+        
+
     }
     public class MoveBankService : IMoveBankService
     {
@@ -197,13 +199,13 @@ namespace PersonalSiteAPI.Services
             response.EnsureSuccessStatusCode();
             return response;
         }
-
+        // TODO - Test this method with breakpoints
         private async Task<HttpResponseMessage> GetPermission(HttpRequestMessage oldRequest, HttpResponseMessage oldResponse)
         {
             var uri = oldRequest.RequestUri!.AbsoluteUri;            
 
             using var md5 = MD5.Create();
-            var checkSum = md5.ComputeHash(await oldRequest.Content!.ReadAsByteArrayAsync());
+            var checkSum = md5.ComputeHash(await oldResponse.Content!.ReadAsByteArrayAsync());
             var md5_string = BitConverter.ToString(checkSum).Replace("-", string.Empty);
 
             uri = QueryHelpers.AddQueryString(uri, "license-md5", md5_string);
@@ -219,5 +221,7 @@ namespace PersonalSiteAPI.Services
 
             return response;
         }
+        
+        //private async Task<Studies> GetStudiesAsync
     }
 }

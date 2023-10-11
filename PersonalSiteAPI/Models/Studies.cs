@@ -1,9 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace PersonalSiteAPI.Models
 {
-
+    [Index(nameof(Id), nameof(Name))]
     public class Studies
     {
 

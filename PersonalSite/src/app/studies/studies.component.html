@@ -1,0 +1,71 @@
+
+ <!-- <h2>Search for studies.</h2> -->
+<p *ngIf="!studies"><em>Loading ...</em></p>
+
+<br/>
+
+<div class="table-container">
+<mat-form-field *ngIf="studies" class="search-form">
+    <input matInput #filter
+           class="study-input"
+           (keyup)="onFilterTextChanged(filter.value)"
+           placeholder="Search" />
+    <button matSuffix mat-icon-button aria-label="Search" (click)="search()">
+        <mat-icon>search</mat-icon>
+    </button>
+</mat-form-field>
+
+
+<table mat-table
+       #table
+       [dataSource]="studies"
+       class="study-table"
+       *ngIf="studies"
+       matSort (matSortChange)="loadData()"
+       [matSortActive]="defaultSortColumn"
+       [matSortDirection]="defaultSortOrder"
+       matSortDisableClear>
+
+    <!-- Name -->
+    <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
+        <td mat-cell *matCellDef="let study" class="truncate">{{study.name | default }}</td>
+    </ng-container>
+    <!-- Id -->
+    <!-- TODO: Test all custom pipes. -->
+    <!-- TODO: implements custom validators and error messages as needed -->
+    <!-- FirstDeployment Timestamp -->
+    <ng-container matColumnDef="timestampFirstDeployedLocation">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>First Deployed</th>
+        <td mat-cell *matCellDef="let study" class="truncate">{{ study.timestampFirstDeployedLocation | default }}</td>
+    </ng-container>
+
+    <!-- Last Deployment timestamp -->
+    <ng-container matColumnDef="timestampLastDeployedLocation">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Last Deployed</th>
+        <td mat-cell *matCellDef="let study" class="truncate">{{ study.timestampLastDeployedLocation | default }}</td>
+    </ng-container>
+
+    <!-- Number Of Individuals -->
+    <ng-container matColumnDef="numberOfIndividuals">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Number Of Individuals</th>
+        <td mat-cell *matCellDef="let study" class="truncate">{{ study.numberOfIndividuals | default:"0" }}</td>
+    </ng-container>
+
+    <!-- Create a custom pipe for including the common name of a taxon. -->
+    <ng-container matColumnDef="taxonIds">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Taxons</th>
+        <td mat-cell *matCellDef="let study" class="truncate">{{ study.taxonIds | default }}</td>
+    </ng-container>
+
+    <tr mat-header-row class="header-row" *matHeaderRowDef="displayedColumns; sticky:true"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+</table>
+<mat-paginator [hidden]="!studies"
+                (page)="getData($event)"
+                [pageSize]="10"
+                [pageSizeOptions]="[10,20,50]"
+                showFirstLastButtons>
+</mat-paginator>
+</div>

@@ -13,7 +13,8 @@
 
 .sidenav {
     /* background-color: rgb(158, 154, 154); */
-    width: 20%;
+    width: 50%;
+    height: 100%;
 }
 
 .sidenav-content {

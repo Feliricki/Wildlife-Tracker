@@ -7,11 +7,11 @@ import { HttpClient } from '@angular/common/http';
   styleUrls: ['./side-nav.component.css']
 })
 export class SideNavComponent {
-  fixedInViewPort: boolean = true;
   options = {
     fixed: true,
     bottom: 0,
     top: 0
   };
-  constructor() { }
+  constructor() {
+  }
 }

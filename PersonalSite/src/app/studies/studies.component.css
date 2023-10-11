@@ -1,0 +1,50 @@
+
+
+.mat-form-field {
+  font-size: 14px;
+  width: 100%;
+}
+
+.search-form {
+  min-width: 150px;
+  max-width: 400px;
+/*  height: 200px;*/
+  height: 8%;
+  width: 100%;
+}
+.study-input {
+  height: 100%;
+  width: 100%;
+}
+
+.truncate {
+  width: 15px;
+/*  white-space: nowrap;*/
+  overflow: hidden;
+  text-overflow: ellipsis;
+/*  font-weight: bold;*/
+}
+
+.study-table {
+  width: 100%;
+
+  overflow: scroll;
+  text-overflow: ellipsis;
+}
+/*  .study-table ng-container th {
+    box-sizing: border-box;
+    border-bottom: 2px solid #000000;
+  }*/
+  
+  /* Header Row */
+  .study-table tr.header-row {
+    background-color: darkgray;
+    font-weight: bold;
+    border-bottom: solid;
+/*    border-bottom: 2px solid #000000;*/
+    
+  }
+
+.btn-add {
+  float: right;
+}

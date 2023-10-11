@@ -1,11 +1,19 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using MyBGList.Attributes;
+using PersonalSiteAPI.Attributes;
 using PersonalSiteAPI.Constants;
 using PersonalSiteAPI.DTO;
+using PersonalSiteAPI.DTO.MoveBankAttributes;
+using PersonalSiteAPI.Mappings;
 using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
+using System.ComponentModel.DataAnnotations;
+using System.Linq.Expressions;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -20,64 +28,99 @@ namespace PersonalSiteAPI.Controllers
         private readonly IMoveBankService _moveBankService;
         private readonly IMemoryCache _memoryCache;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IHttpContextAccessor _contextAccessor;
+        //private readonly IHttpContextAccessor 
 
         public MoveBankController(
             ApplicationDbContext context, 
             ILogger<AccountController> logger,
             IMoveBankService moveBankService,
             IMemoryCache memoryCache, 
-            UserManager<ApplicationUser> userManager) 
+            UserManager<ApplicationUser> userManager,
+            IHttpContextAccessor contextAccessor) 
         {
             _context = context;
             _logger = logger;
             _moveBankService = moveBankService;
             _memoryCache = memoryCache;
             _userManager = userManager;
+            _contextAccessor = contextAccessor;
         }
-        // GET: api/<MoveBankController>
 
+        // GET: api/<MoveBankController>
         [HttpGet(Name = "GetToken")]
         [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
         public async Task<ActionResult<ApiTokenResultDTO>> GetToken()
         {
             try
-            {                
-                var response = await _moveBankService.GetApiToken();
-                if (response == null)
-                {
-                    return new ApiTokenResultDTO();
-                }
-                return response;
+            {   
+                var response = await _moveBankService.GetApiToken() ?? throw new Exception("Unable to retrieve api token.");
+                return Ok(response);
             }
-            catch (Exception)
+            catch (Exception e)
             {   
                 var exceptionDetails = new ProblemDetails
                 {
-                    Detail = "Error retrieving Token",
+                    Detail = e.Message,
                     Status = StatusCodes.Status500InternalServerError,
-                    Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"
                 };
                 return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
             }
         }
         // Set proper authorization
         [HttpGet(Name="GetStudy")]
-        public async Task<ActionResult<Studies?>> GetStudy(long studyId)
+        public async Task<ActionResult<StudyDTO>> GetStudy(long studyId)
         {
             try
             {
-                
-                if (_memoryCache.TryGetValue<Studies>(studyId, out var cachedStudy))
+                // TODO: implement caching
+                Console.WriteLine("Calling GetStudy");
+                var cacheKey = $"GetStudy: {studyId}";
+                Studies? study = null;
+                if (!_memoryCache.TryGetValue<Studies>(cacheKey, out var storedResult))
                 {
-                    return cachedStudy!;
+                    study = await _context.Studies.Where(s => s.Id == studyId && s.IHaveDownloadAccess).FirstOrDefaultAsync();                    
                 }
-                var study = await _context.Studies.FindAsync(studyId);
-                if (study != null && !string.IsNullOrEmpty(study.LicenseType) && validLicense(study.LicenseType))
+                else
+                {                    
+                    study = storedResult;
+                }                
+                if (study == null)
                 {
-                    _memoryCache.Set(studyId, study);
-                    return study;
+                    return Unauthorized();
                 }
-                return Unauthorized();
+                bool authorized = User.IsInRole(RoleNames.Administrator);
+                var result = new StudyDTO()
+                {
+                    Acknowledgements = study.Acknowledgements,
+                    Citation = study.Citation,
+                    GrantsUsed = study.GrantsUsed,
+                    Id = study.Id,
+                    LicenseType = study.LicenseType,
+                    MainLocationLat = FloatParser(study.MainLocationLat),
+                    MainLocationLon = FloatParser(study.MainLocationLon),
+                    Name = study.Name,
+                    NumberOfDeployments = study.NumberOfDeployments,
+                    NumberOfIndividuals = study.NumberOfIndividuals,
+                    NumberOfTags = study.NumberOfTags,
+                    StudyObjective = study.StudyObjective,
+                    TimestampFirstDeployedLocation = study.TimeStampFirstDeployedLocation,
+                    TimestampLastDeployedLocation = study.TimeStampLastDeployedLocation,
+                    NumberOfDeployedLocations = study.NumberOfDeployedLocations,
+                    TaxonIds = study.TaxonIds,
+                    SensorTypeIds = study.SensorTypeIds,
+                    ContactPersonName = study.ContactPersonName
+                };
+                if (authorized)
+                {                    
+                    return result;
+                }
+                if (!ValidLicense(study))
+                {
+                    return Unauthorized("User is not authorized.");
+                }
+                _memoryCache.Set(cacheKey, study, new TimeSpan(0, 1, 0));
+                return result;
             }
             catch (Exception)
             {
@@ -85,10 +128,110 @@ namespace PersonalSiteAPI.Controllers
             }
         }
 
-        private bool validLicense(string licenseType)
+        // TODO: Create custom validators       
+        // TODO: Test this method with filterQueries and the sorting of different columns
+        [HttpGet(Name="GetStudies")]
+        public async Task<ActionResult<ApiResult<StudyDTO>>> GetStudies(
+            int pageIndex = 0,
+            [Range(1, 50)] int pageSize = 10,
+            string? sortColumn = "Name",
+            [SortOrderValidatorAttribute] string? sortOrder = "ASC",
+            string? filterColumn = null,
+            string? filterQuery = null)
+        {
+            try
+            {
+                Console.WriteLine("Calling GetStudies");
+                
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest();
+                }
+                //var currentQuery = from s in _context.Studies.AsNoTracking()
+                //                   where s.IHaveDownloadAccess select s;
+                IQueryable<Studies> source = _context.Studies
+                    .AsNoTracking()
+                    .Where(study => study.IHaveDownloadAccess);
+                
+                bool authorized = true;
+                if (!User.IsInRole(RoleNames.Administrator))
+                {
+                    Console.WriteLine("User is not authorized.");
+                    // Valid Licenses are: "CC_0", "CC_BY", "CC_BY_NC"                    
+                    source = source.Where(ValidLicenseExp);
+                    authorized = false;
+                }
+
+                var cacheKey = $"GetStudies: {authorized}-{pageIndex}-{pageSize}-{sortColumn}-{sortOrder}-{filterColumn}-{filterQuery}";
+                if (_memoryCache.TryGetValue<ApiResult<StudyDTO>>(cacheKey, out var storedResult))
+                {
+                    //Console.WriteLine("GetStudies: Cache hit.");
+                    return storedResult ?? throw new NullReferenceException();
+                }
+                //StudyMapper mapper = new StudyMapper();
+                //IEnumerable<StudyDTO> dataSource = mapper.EntityToDTO(await source.ToListAsync());
+                IQueryable<StudyDTO> dataSource = source.Select(study => new StudyDTO()
+                {
+                    Acknowledgements = study.Acknowledgements,
+                    Citation = study.Citation,
+                    GrantsUsed = study.GrantsUsed,
+                    Id = study.Id,
+                    LicenseType = study.LicenseType,
+                    MainLocationLat = FloatParser(study.MainLocationLat),
+                    MainLocationLon = FloatParser(study.MainLocationLon),
+                    Name = study.Name,
+                    NumberOfDeployments = study.NumberOfDeployments,
+                    NumberOfIndividuals = study.NumberOfIndividuals,
+                    NumberOfTags = study.NumberOfTags,
+                    StudyObjective = study.StudyObjective,
+                    TimestampFirstDeployedLocation = study.TimeStampFirstDeployedLocation,
+                    TimestampLastDeployedLocation = study.TimeStampLastDeployedLocation,
+                    NumberOfDeployedLocations = study.NumberOfDeployedLocations,
+                    TaxonIds = study.TaxonIds,
+                    SensorTypeIds = study.SensorTypeIds,
+                    ContactPersonName = study.ContactPersonName
+                });
+
+                ApiResult<StudyDTO> apiResult = await ApiResult<StudyDTO>.CreateAsync(
+                    dataSource,
+                    pageIndex,
+                    pageSize,
+                    sortColumn,
+                    sortOrder,
+                    filterColumn,
+                    filterQuery);
+
+                // Tentatively, cache the result for 1 minute.
+                _memoryCache.Set(cacheKey, apiResult, new TimeSpan(0, 1, 0));
+                return apiResult;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);                
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+        }
+
+        protected static float? FloatParser(string? num)
+        {
+            if (num == null)
+            {
+                return null;
+            }
+            if (float.TryParse(num, out var floatNum))
+            {
+                return floatNum;
+            }
+            else
+            {
+                return null;
+            }
+        }
+        private readonly Expression<Func<Studies, bool>> ValidLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
+        protected bool ValidLicense(Studies study)
         {
             string[] licenses = { "CC_0", "CC_BY", "CC_BY_NC" };
-            return licenses.Contains(licenseType.Trim());
+            return licenses.Contains(study.LicenseType.Trim());
         }
     }
 }

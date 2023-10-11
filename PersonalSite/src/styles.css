@@ -8,3 +8,21 @@ body {
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
 }
+
+table {
+  border: 0px;
+  border-spacing: 0px;
+  border-collapse: collapse;
+}
+
+  table tr {
+    border-bottom: 1px solid #dddddd;
+  }
+    table tr:nth-child(even) {
+      background-color: #f4f4f4;
+    }
+
+  table th tr {
+    text-align: left;
+    padding: 5px 10px;
+  }

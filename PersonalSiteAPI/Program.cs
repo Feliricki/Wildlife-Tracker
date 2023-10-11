@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using PersonalSiteAPI.DTO.MoveBankAttributes;
 using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
 
@@ -49,7 +50,13 @@ builder.Services.AddHealthChecks();
 // Custom Services 
 builder.Services.AddTransient<IMoveBankService, MoveBankService>();
 builder.Services.AddHttpClient<IMoveBankService, MoveBankService>();
+
+builder.Services.AddAutoMapper(options =>
+{
+    options.CreateMap<Studies, StudyDTO>();
+});
 //builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
@@ -128,7 +135,6 @@ else
 }
 
 app.UseHttpsRedirection();
-
 
 app.UseCors();
 
