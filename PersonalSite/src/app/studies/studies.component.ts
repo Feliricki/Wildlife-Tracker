@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit,  OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild } from '@angular/core';
 // import { HttpClient, HttpParams } from '@angular/common/http';
 //import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
@@ -8,7 +8,6 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MatSort } from '@angular/material/sort';
 import { MatPaginator, PageEvent } from '@angular/material/paginator';
 import { StudyService } from './study.service';
-import { ApiResult } from '../ApiResult';
 
 //interface StudyDTO {
 //  name: string;
@@ -26,6 +25,8 @@ import { ApiResult } from '../ApiResult';
 })
 export class StudiesComponent implements OnInit, OnDestroy {
   public displayedColumns: string[] = ['name', 'timestampFirstDeployedLocation', 'timestampLastDeployedLocation', 'numberOfIndividuals', 'taxonIds'];
+  public expandedRow: boolean[] = this.displayedColumns.map(() => false);
+
   public studies!: MatTableDataSource<StudyDTO>;
 
   defaultPageIndex: number = 0;
@@ -46,7 +47,8 @@ export class StudiesComponent implements OnInit, OnDestroy {
   isActive: boolean = false;
 
   constructor(
-    private studyService: StudyService
+    private studyService: StudyService,
+    //
   ) {
   }
   // TODO: implement
@@ -54,21 +56,24 @@ export class StudiesComponent implements OnInit, OnDestroy {
     this.isActive = true;
     this.loadData();
   }
+
   ngOnDestroy(): void {
     this.filterTextChanged.complete();
   }
 
-  search(): void {
-    console.log("clicked search button");
+  rowClicked(row: StudyDTO, curRow: any): void {
+    //this.studies.
+    console.log(curRow);
     return;
   }
+
 
   onFilterTextChanged(text: string) {
     if (!this.filterTextChanged.observed) {
       this.filterTextChanged
         .pipe(
           debounceTime(1000),
-          distinctUntilChanged()
+          distinctUntilChanged(),
         ).subscribe({
 
           next: (query) => {
@@ -80,6 +85,7 @@ export class StudiesComponent implements OnInit, OnDestroy {
     this.filterTextChanged.next(text);
   }
 
+  // This method when filtering and on start up.
   loadData(query?: string) {
     console.log("Calling loadData with query: " + query);
     let pageEvent = new PageEvent();
@@ -91,6 +97,7 @@ export class StudiesComponent implements OnInit, OnDestroy {
 
   // This function is called when the current page changes
   getData(event: PageEvent) {
+
     var sortColumn = (this.sort)
       ? this.sort.active
       : this.defaultSortColumn;
@@ -118,6 +125,7 @@ export class StudiesComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: apiResult => {
         console.log(apiResult);
+
 
         this.paginator.length = apiResult.totalCount;
         this.paginator.pageIndex = apiResult.pageIndex;

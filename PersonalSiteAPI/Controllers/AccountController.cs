@@ -50,7 +50,7 @@ namespace PersonalSiteAPI.Controllers
         public async Task<ActionResult<LoginResultDTO>> Login(LoginRequestDTO loginRequest)
         {   
             try
-            {
+            {                
                 //Console.WriteLine($"Got login request {JsonSerializer.Serialize(loginRequest)}");
                 if (ModelState.IsValid)
                 {
