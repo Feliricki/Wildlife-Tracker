@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿// using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
 using System.IdentityModel.Tokens.Jwt;
 using PersonalSiteAPI.DTO;
-using static System.Net.WebRequestMethods;
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
+// using static System.Net.WebRequestMethods;
+// using System.ComponentModel.DataAnnotations;
+// using System.Text.Json;
 
 namespace PersonalSiteAPI.Controllers
 {
@@ -63,7 +63,7 @@ namespace PersonalSiteAPI.Controllers
                     if ((userByName != null && await _userManager.CheckPasswordAsync(userByName, loginRequest.Password)) ||
                         (userByEmail != null && await _userManager.CheckPasswordAsync(userByEmail, loginRequest.Password)))
                     {
-                        var sesssionToken = await _jwtHandler.GetTokenAsync(userByName ?? userByEmail);
+                        var sesssionToken = await _jwtHandler.GetTokenAsync(user: userByName ?? userByEmail!);
                         var jwt = new JwtSecurityTokenHandler().WriteToken(sesssionToken);
                         return Ok(new LoginResultDTO()
                         {

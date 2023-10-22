@@ -1,0 +1,35 @@
+expansion_panel {
+  border-style:dashed;
+}
+.spacer{
+    flex: 1 1 auto;
+}
+
+.search-form {
+  width: 45%;
+  height: 10px;
+}
+
+mat-expansion-panel {
+  width: 100%;
+}
+
+.mat-cell {
+  padding: 0px;
+}
+.description-content {
+  /* overflow-wrap: break-words; */
+  word-break: break-all;
+
+}
+
+.spacer{
+    flex: 1 1 auto;
+}
+
+
+
+span {
+  /* overflow-wrap: break-words; */
+  /* word-break: break-all; */
+}

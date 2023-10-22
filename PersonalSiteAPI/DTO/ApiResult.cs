@@ -52,8 +52,9 @@ namespace PersonalSiteAPI.DTO
             string? filterQuery = null
             )
         {
-            
+
             // Prefix search
+            // Filter for columns that start with the 'filterQuery'
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery)
                 && IsValidProperty(filterColumn))
             {
@@ -61,7 +62,7 @@ namespace PersonalSiteAPI.DTO
                 source = source.Where(
                     string.Format("{0}.StartsWith(@0)",
                     filterColumn),
-                    filterQuery);                
+                    filterQuery);
             }
             Console.WriteLine("Count the number of records in the database.");
             var count = await source.CountAsync();
@@ -79,7 +80,7 @@ namespace PersonalSiteAPI.DTO
                         "{0} {1}",
                         sortColumn,
                         sortOrder)
-                    );                
+                    );
             }
 
             //public static async Task<ApiResult<TDTO>> CreateAndCastAsync<TEntity, TDTO>()

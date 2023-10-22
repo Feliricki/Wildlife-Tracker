@@ -10,29 +10,39 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatTableModule } from '@angular/material/table';
 import { MatSortModule } from '@angular/material/sort';
 import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatListModule } from '@angular/material/list';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatSelectModule } from '@angular/material/select';
+
 
 @NgModule({
-  imports: [
-    MatButtonModule,
-    MatIconModule,
-    MatToolbarModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSidenavModule,
-    MatTableModule,
-    MatSortModule,
-    MatPaginatorModule
-  ],
-  exports: [
-    MatButtonModule,
-    MatIconModule,
-    MatToolbarModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSidenavModule,
-    MatTableModule,
-    MatSortModule,
-    MatPaginatorModule
-  ]
+    imports: [
+        MatButtonModule,
+        MatIconModule,
+        MatToolbarModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSidenavModule,
+        MatTableModule,
+        MatSortModule,
+        MatPaginatorModule,
+        MatListModule,
+        MatExpansionModule,
+        MatSelectModule,
+    ],
+    exports: [
+        MatButtonModule,
+        MatIconModule,
+        MatToolbarModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSidenavModule,
+        MatTableModule,
+        MatSortModule,
+        MatPaginatorModule,
+        MatListModule,
+        MatExpansionModule,
+        MatSelectModule,
+    ]
 })
 export class AngularMaterialModule { }

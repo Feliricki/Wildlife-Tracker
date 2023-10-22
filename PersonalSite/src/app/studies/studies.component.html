@@ -6,13 +6,16 @@
 
 <div class="table-container">
 <mat-form-field *ngIf="studies" class="search-form">
-    <input matInput #filter
+
+     <input matInput #filter
            class="study-input"
            (keyup)="onFilterTextChanged(filter.value)"
            placeholder="Search" />
+
     <button matSuffix mat-icon-button aria-label="Search">
         <mat-icon>search</mat-icon>
     </button>
+
 </mat-form-field>
 
 
@@ -29,11 +32,8 @@
     <!-- Name -->
     <ng-container matColumnDef="name">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Name</th>
-        <td mat-cell *matCellDef="let study" class="truncate">{{study.name | default }}</td>
+        <td mat-cell *matCellDef="let study; let j = index;" class="truncate">{{study.name | default | truncate:sizeLimit:rowSignal()[j] }}</td>
     </ng-container>
-    <!-- Id -->
-    <!-- TODO: Test all custom pipes. -->
-    <!-- TODO: implements custom validators and error messages as needed -->
     <!-- FirstDeployment Timestamp -->
     <ng-container matColumnDef="timestampFirstDeployedLocation">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>First Deployed</th>
@@ -55,16 +55,17 @@
     <!-- Create a custom pipe for including the common name of a taxon. -->
     <ng-container matColumnDef="taxonIds">
         <th mat-header-cell *matHeaderCellDef mat-sort-header>Taxons</th>
-        <td mat-cell *matCellDef="let study" class="truncate">{{ study.taxonIds | default }}</td>
+        <td mat-cell *matCellDef="let study; let j = index;" class="truncate">{{ study.taxonIds | default | truncate:sizeLimit:rowSignal()[j] }}</td>
     </ng-container>
 
+    <!-- TODO: Add a column for sensors  -->
     <tr mat-header-row class="header-row" *matHeaderRowDef="displayedColumns; sticky:true" ></tr>
     <tr
         mat-row
         #cur_row
         class="study-row"
-        *matRowDef="let row; columns: displayedColumns;"
-        (click)="rowClicked(row, cur_row)"
+        *matRowDef="let row; let i = index; columns: displayedColumns;"
+        (click)="rowClicked(i)"
     ></tr>
 
 </table>

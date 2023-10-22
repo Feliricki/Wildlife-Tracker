@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, WritableSignal, signal } from '@angular/core';
 // import { HttpClient, HttpParams } from '@angular/common/http';
 //import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
@@ -9,14 +9,14 @@ import { MatSort } from '@angular/material/sort';
 import { MatPaginator, PageEvent } from '@angular/material/paginator';
 import { StudyService } from './study.service';
 
-//interface StudyDTO {
-//  name: string;
-//  id: bigint;
-//  timestampFirstDeployedLocation?: Date;
-//  timestampLastDeployedLocation?: Date;
-//  numberOfIndividuals: number;
-//  taxonIds: string;
-//}
+interface RowInfo {
+  name: string;
+  id: bigint;
+  timestampFirstDeployedLocation?: Date;
+  timestampLastDeployedLocation?: Date;
+  numberOfIndividuals: number;
+  taxonIds: string;
+}
 
 @Component({
   selector: 'app-studies',
@@ -24,13 +24,18 @@ import { StudyService } from './study.service';
   styleUrls: ['./studies.component.css']
 })
 export class StudiesComponent implements OnInit, OnDestroy {
-  public displayedColumns: string[] = ['name', 'timestampFirstDeployedLocation', 'timestampLastDeployedLocation', 'numberOfIndividuals', 'taxonIds'];
-  public expandedRow: boolean[] = this.displayedColumns.map(() => false);
+  // public displayedColumns: string[] = ['name', 'timestampFirstDeployedLocation',
+  //   'timestampLastDeployedLocation', 'numberOfIndividuals', 'taxonIds'];
+  public displayedColumns: string[] = ['name'];
+  // This parameters are for the truncate pipe
+  //public expandedRow: boolean[] = this.displayedColumns.map(() => false);
+  public sizeLimit = 50;
 
-  public studies!: MatTableDataSource<StudyDTO>;
+  public studies: MatTableDataSource<StudyDTO> | undefined;
 
   defaultPageIndex: number = 0;
   defaultPageSize: number = 10;
+  public rowSignal: WritableSignal<boolean[]> = signal([]);
 
   public defaultSortColumn: string = "name";
   public defaultSortOrder: "asc" | "desc" = "asc";
@@ -61,12 +66,13 @@ export class StudiesComponent implements OnInit, OnDestroy {
     this.filterTextChanged.complete();
   }
 
-  rowClicked(row: StudyDTO, curRow: any): void {
-    //this.studies.
-    console.log(curRow);
-    return;
+  rowClicked(curIndex: any): void {
+    // console.log(this.rowSignal());
+    this.rowSignal.update(rows => {
+      rows[curIndex] = !rows[curIndex];
+      return rows;
+    });
   }
-
 
   onFilterTextChanged(text: string) {
     if (!this.filterTextChanged.observed) {
@@ -114,7 +120,7 @@ export class StudiesComponent implements OnInit, OnDestroy {
       ? this.filterQuery
       : undefined;
 
-    console.log(`getData: event.page=${event.pageIndex} event.pageSize=${event.pageSize} sortColumn=${sortColumn} sortOrder=${sortOrder} filterColumn=${filterColumn} filterQuery=${filterQuery}`)
+    // console.log(`getData: event.page=${event.pageIndex} event.pageSize=${event.pageSize} sortColumn=${sortColumn} sortOrder=${sortOrder} filterColumn=${filterColumn} filterQuery=${filterQuery}`)
     this.studyService.getStudies(
       event.pageIndex,
       event.pageSize,
@@ -126,11 +132,15 @@ export class StudiesComponent implements OnInit, OnDestroy {
       next: apiResult => {
         console.log(apiResult);
 
-
         this.paginator.length = apiResult.totalCount;
         this.paginator.pageIndex = apiResult.pageIndex;
         this.paginator.pageSize = apiResult.pageSize;
 
+        let newRow: boolean[] = [];
+        for (let i = 0; i < this.paginator.pageSize; i += 1) {
+          newRow.push(false);
+        }
+        this.rowSignal.set(newRow);
         this.studies = new MatTableDataSource(apiResult.data);
       },
       error: (err) => {
@@ -139,15 +149,3 @@ export class StudiesComponent implements OnInit, OnDestroy {
     });
   }
 }
-
-//let asStudies: StudyDTO[] = apiResult.data.map(studyDTO => {
-//  let study: StudyDTO = {
-//    name: studyDTO.name,
-//    id: studyDTO.id,
-//    timestampFirstDeployedLocation: studyDTO.timestampFirstDeployedLocation,
-//    timestampLastDeployedLocation: studyDTO.timestampLastDeployedLocation,
-//    numberOfIndividuals: studyDTO.numberOfIndividuals,
-//    taxonIds: studyDTO.taxonIds ?? ""
-//  };
-//  return study;
-//});

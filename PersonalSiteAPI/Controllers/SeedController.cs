@@ -61,7 +61,8 @@ namespace PersonalSiteAPI.Controllers
             }
             // Creates the actual user if not already present in our database
             var addedUserList = new List<ApplicationUser>();
-            if (await _userManager.FindByNameAsync(_configuration["DefaultUser:Username"]) == null)
+            
+            if (await _userManager.FindByNameAsync(_configuration["DefaultUser:Username"]!) == null)
             {
                 var adminUser = new ApplicationUser()
                 {
@@ -69,7 +70,7 @@ namespace PersonalSiteAPI.Controllers
                     UserName = _configuration["DefaultUser:Username"],
                     Email = _configuration["DefaultUser:Email"],
                 };
-                await _userManager.CreateAsync(adminUser, _configuration["DefaultUser:Password"]);
+                await _userManager.CreateAsync(adminUser, _configuration["DefaultUser:Password"]!);
                 await _userManager.AddToRoleAsync(adminUser, RoleNames.Administrator);
                 await _userManager.AddToRoleAsync(adminUser, RoleNames.Moderator);
 
@@ -167,7 +168,7 @@ namespace PersonalSiteAPI.Controllers
                     _context.Studies.Add(study);
                     rowsAdded++;
                 }
-                using var transaction = _context.Database.BeginTransaction();
+                using var transaction = _context.Database.BeginTransaction();                
                 _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies ON");
                 await _context.SaveChangesAsync();
                 _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies OFF");
@@ -213,9 +214,9 @@ namespace PersonalSiteAPI.Controllers
                     string response_content = await response.Content.ReadAsStringAsync();
                     if (response.StatusCode == System.Net.HttpStatusCode.OK && response_content.Contains("License Terms: "))
                     {
-                        using var md5 = MD5.Create();
-                        
-                        var checkSum = md5.ComputeHash(await response.Content.ReadAsByteArrayAsync());
+                        // Previous solution below. 
+                        //var checkSum = md5.ComputeHash(await response.Content.ReadAsByteArrayAsync());
+                        byte[] checkSum = await MD5.HashDataAsync(await response.Content.ReadAsStreamAsync(), new CancellationToken());
                         var md5_string = BitConverter.ToString(checkSum).Replace("-", String.Empty);
 
                         var licenseParam = new Dictionary<string, string?>() { { "study_id", study.Id.ToString() }, { "license-md5", md5_string } };

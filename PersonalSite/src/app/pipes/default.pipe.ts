@@ -5,7 +5,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 })
 export class DefaultPipe implements PipeTransform {
 
-  transform(value?: string, arg?: string): unknown {
+  transform(value?: string, arg?: string): string {
     let defaultStr = arg ?? 'N/A';
     if (!value || value === '') {
       return defaultStr || 'N/A';

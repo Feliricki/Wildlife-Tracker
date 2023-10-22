@@ -13,15 +13,15 @@ export interface StudyDTO {
   numberOfIndividuals: number;
   numberOfTags: number;
 
-  StudyObjective: string;
+  studyObjective: string;
 
   timestampFirstDeployedLocation?: Date;
   timestampLastDeployedLocation?: Date;
-  NumberOfDeployedLocations: number;
+  numberOfDeployedLocations: number;
 
   // TODO: make this an array here and in the backend too
   taxonIds?: string;
-  SensorTypeIds?: string;
+  sensorTypeIds?: string;
 
-  ContactPersonName: string;
+  contactPersonName: string;
 }

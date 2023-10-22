@@ -1,12 +1,14 @@
-<div class="map_div"
-     *ngIf="apiLoaded | async as isLoaded; else LoadingOrError">
-    <google-map class="google_map"
-                
-                height="1080px"
-                width="100%"
-                [zoom]="zoom"
-                [center]="center"
-                [options]="options"></google-map>
-</div>
 
-<ng-template #LoadingOrError>Unavailable</ng-template>
+    <google-map
+      class="google_map"
+      *ngIf="apiLoaded | async as isLoaded; else LoadingOrError"
+      width="100%"
+      height="100%"
+      [zoom]="zoom"
+      [center]="center"
+      [options]="options"></google-map>
+
+<ng-template
+      width="100%"
+      height="100%"
+      #LoadingOrError>Unavailable</ng-template>

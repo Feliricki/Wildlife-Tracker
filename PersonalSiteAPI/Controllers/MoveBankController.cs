@@ -69,6 +69,7 @@ namespace PersonalSiteAPI.Controllers
         }
         // Set proper authorization
         [HttpGet(Name="GetStudy")]
+        [ResponseCache(CacheProfileName = "Any-60")]
         public async Task<ActionResult<StudyDTO>> GetStudy(long studyId)
         {
             try
@@ -124,13 +125,14 @@ namespace PersonalSiteAPI.Controllers
             }
             catch (Exception)
             {
-                return NotFound();
+                return Unauthorized();
             }
         }
 
         // TODO: Create custom validators       
         // TODO: Test this method with filterQueries and the sorting of different columns
         [HttpGet(Name="GetStudies")]
+        [ResponseCache(CacheProfileName = "Any-60")]
         public async Task<ActionResult<ApiResult<StudyDTO>>> GetStudies(
             int pageIndex = 0,
             [Range(1, 50)] int pageSize = 10,
@@ -164,8 +166,7 @@ namespace PersonalSiteAPI.Controllers
 
                 var cacheKey = $"GetStudies: {authorized}-{pageIndex}-{pageSize}-{sortColumn}-{sortOrder}-{filterColumn}-{filterQuery}";
                 if (_memoryCache.TryGetValue<ApiResult<StudyDTO>>(cacheKey, out var storedResult))
-                {
-                    //Console.WriteLine("GetStudies: Cache hit.");
+                {                    
                     return storedResult ?? throw new NullReferenceException();
                 }
                 //StudyMapper mapper = new StudyMapper();
@@ -202,7 +203,14 @@ namespace PersonalSiteAPI.Controllers
                     filterQuery);
 
                 // Tentatively, cache the result for 1 minute.
-                _memoryCache.Set(cacheKey, apiResult, new TimeSpan(0, 1, 0));
+                var cacheOptions = new MemoryCacheEntryOptions()
+                {
+                    Size = 1,
+                    SlidingExpiration = TimeSpan.FromMinutes(2),
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                };
+
+                _memoryCache.Set(cacheKey, apiResult, cacheOptions);
                 return apiResult;
             }
             catch (Exception e)

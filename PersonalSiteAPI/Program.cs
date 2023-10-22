@@ -18,7 +18,7 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(cfg =>
     {
-        cfg.WithOrigins(builder.Configuration["AllowedOrigins"]);        
+        cfg.WithOrigins(builder.Configuration["AllowedOrigins"]!);        
         cfg.AllowAnyHeader();
         cfg.AllowAnyMethod();
     });
@@ -38,6 +38,8 @@ builder.Services.AddControllers(options =>
         new CacheProfile() { NoStore = true });
     options.CacheProfiles.Add("Any-60",
         new CacheProfile() { Location = ResponseCacheLocation.Any, Duration = 60 });
+    options.CacheProfiles.Add("5-Minutes",
+        new CacheProfile() { Location = ResponseCacheLocation.Any, Duration = 60 * 5 });
 });
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -97,7 +99,7 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["JwtSettings:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
             System.Text.Encoding.UTF8.GetBytes(
-                builder.Configuration["JwtSettings:SecurityKey"]))
+                builder.Configuration["JwtSettings:SecurityKey"]!))
     };
 });
 
@@ -113,10 +115,13 @@ builder.Services.AddAWSService<IAmazonSecretsManager>();
 
 builder.Services.AddResponseCaching(options =>
 {
-    options.MaximumBodySize = 32 * 1024 * 1024;
-    options.SizeLimit = 50 * 1024 * 1024;
+    options.MaximumBodySize = 64 * 1024 * 1024; // 64 MB
+    options.SizeLimit = 100 * 1024 * 1024; // 100 MB
 });
-builder.Services.AddMemoryCache();
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 1024 * 1024 * 1024; // 1 GB    
+});
 
 var app = builder.Build();
 

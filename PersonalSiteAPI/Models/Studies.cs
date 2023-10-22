@@ -4,7 +4,8 @@ using System.Text.Json.Serialization;
 
 namespace PersonalSiteAPI.Models
 {
-    [Index(nameof(Id), nameof(Name))]
+    //[Index(nameof(Name))]
+    //[Index(nameof(LicenseType), nameof(IHaveDownloadAccess))]
     public class Studies
     {
 
@@ -32,6 +33,7 @@ namespace PersonalSiteAPI.Models
         [JsonPropertyName("license_terms")]
         public string LicenseTerms { get; set; } = "";
         [JsonPropertyName("license_type")]
+        [MaxLength(10)]
         public string LicenseType { get; set; } = "";
 
         [JsonPropertyName("main_location_lat")]

@@ -35,7 +35,7 @@ namespace PersonalSiteAPI.Services
 
         private SigningCredentials GetSigningCredentials()
         {
-            var key = Encoding.UTF8.GetBytes(_configuration["JwtSettings:SecurityKey"]);
+            var key = Encoding.UTF8.GetBytes(_configuration["JwtSettings:SecurityKey"]!);
             var secret = new SymmetricSecurityKey(key);
             return new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
         }
@@ -44,7 +44,7 @@ namespace PersonalSiteAPI.Services
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, user.Email)
+                new Claim(ClaimTypes.Name, user.Email!)
             };
 
             foreach (var role in await _userManager.GetRolesAsync(user))

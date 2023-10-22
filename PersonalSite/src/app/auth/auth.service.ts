@@ -28,7 +28,7 @@ export class AuthService {
     return localStorage.getItem(this.tokenKey);
   }
 
-  init() : void {
+  init(): void {
     if (this.isAuthenticated())
       this.setAuthStatus(true);
   }
@@ -39,13 +39,13 @@ export class AuthService {
     return this.httpClient.post<LoginResult>(url, loginRequest)
       .pipe(
         tap(loginResult => {
-          if (loginResult.success && loginResult.token){
+          if (loginResult.success && loginResult.token) {
             localStorage.setItem(this.tokenKey, loginResult.token);
             this.setAuthStatus(true);
           }
         }),
       );
-  } 
+  }
 
   logout(): void {
     localStorage.removeItem(this.tokenKey);
