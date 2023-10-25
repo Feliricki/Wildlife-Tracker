@@ -61,7 +61,7 @@ namespace PersonalSiteAPI.Controllers
             }
             // Creates the actual user if not already present in our database
             var addedUserList = new List<ApplicationUser>();
-            
+
             if (await _userManager.FindByNameAsync(_configuration["DefaultUser:Username"]!) == null)
             {
                 var adminUser = new ApplicationUser()
@@ -88,11 +88,11 @@ namespace PersonalSiteAPI.Controllers
             });
         }
 
-        [HttpPost(Name="GetAllStudies")]
-        public async Task<IActionResult> GetAllStudies()
+        [HttpPost(Name = "UpdateStudies")]
+        public async Task<IActionResult> UpdateStudies()
         {
             try
-            {                
+            {
                 using var response = await _moveBankService.DirectRequest(entityType: "study", parameters: null, headers: null, authorizedUser: true);
                 if (response == null)
                 {
@@ -108,12 +108,12 @@ namespace PersonalSiteAPI.Controllers
                 int rowsSkipped = 0;
                 int rowsFiltered = 0;
                 var tagType = new TagTypes();
-                await foreach( var record in records)
+                await foreach (var record in records)
                 {
                     // Filter invalid rows
-                    if (record == null || 
-                        !record.Id.HasValue || 
-                        existingStudies.ContainsKey(record.Id.Value) || 
+                    if (record == null ||
+                        !record.Id.HasValue ||
+                        existingStudies.ContainsKey(record.Id.Value) ||
                         string.IsNullOrEmpty(record.Name))
                     {
                         rowsSkipped++;
@@ -122,7 +122,7 @@ namespace PersonalSiteAPI.Controllers
                     // Filter rows that can't be displayed or downloaded
                     if (string.IsNullOrEmpty(record.SensorTypeIds) ||
                         !tagType.IsLocationSensor(record.SensorTypeIds) ||
-                        !record.IHaveDownloadAccess || 
+                        !record.IHaveDownloadAccess ||
                         !record.ICanSeeData
                         )
                     {
@@ -168,7 +168,7 @@ namespace PersonalSiteAPI.Controllers
                     _context.Studies.Add(study);
                     rowsAdded++;
                 }
-                using var transaction = _context.Database.BeginTransaction();                
+                using var transaction = _context.Database.BeginTransaction();
                 _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies ON");
                 await _context.SaveChangesAsync();
                 _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies OFF");
@@ -207,7 +207,7 @@ namespace PersonalSiteAPI.Controllers
                     var study_param = new Dictionary<string, string?>() { { "study_id", study.Id.ToString() } };
                     using var response = await _moveBankService.DirectRequest(entityType: "individual", parameters: study_param, headers: null, authorizedUser: true);
                     if (response == null)
-                    {                        
+                    {
                         Console.WriteLine("Server response was null");
                         continue;
                     }
@@ -232,7 +232,7 @@ namespace PersonalSiteAPI.Controllers
                     Console.WriteLine("Encountered error");
                     continue;
                 }
-                
+
             }
             return new JsonResult(new
             {

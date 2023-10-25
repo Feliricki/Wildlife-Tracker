@@ -18,7 +18,7 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(cfg =>
     {
-        cfg.WithOrigins(builder.Configuration["AllowedOrigins"]!);        
+        cfg.WithOrigins(builder.Configuration["AllowedOrigins"]!);
         cfg.AllowAnyHeader();
         cfg.AllowAnyMethod();
     });
@@ -136,6 +136,19 @@ else
     app.UseExceptionHandler("/Error");
     app.MapGet("/Error", () => Results.Problem());
     app.UseHsts();
+    app.Use(async (context, next) =>
+    {
+        // Prevent click hijacking
+        context.Response.Headers.Add("X-Frame-Options", "sameorigin");
+        context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
+        context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+        // Prevents XSS attacks
+        context.Response.Headers.Add("Content-Security-Policy", "default-src 'self' ;");
+        context.Response.Headers.Add("Referrer-Policy", "strict-origin");
+
+
+        await next();
+    });
 }
 
 app.UseHttpsRedirection();

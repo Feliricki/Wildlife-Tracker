@@ -38,10 +38,6 @@ export class SimpleSearchComponent implements OnInit {
   constructor(private studyService: StudyService) {
   }
 
-
-  entryClicked(index: number): void {
-  }
-
   ngOnInit(): void {
     this.panelExpanded = [];
     for (let i = 0; i < this.defaultPageSize; i += 1) {
@@ -73,7 +69,16 @@ export class SimpleSearchComponent implements OnInit {
       && this.panelExpanded[index];
   }
 
-  // TODO - display at most 3 columns of information
+  sortData(ordering: "asc" | "desc"): void {
+    console.log(`New ordering: ` + ordering);
+    this.searchForm.controls.dropDownList.setValue(ordering);
+
+    let pageEvent = new PageEvent();
+    pageEvent.pageIndex = 0;
+    pageEvent.pageSize = this.paginator?.pageSize ?? this.defaultPageSize;
+    this.getData(pageEvent);
+  }
+
   loadData(query?: string) {
     console.log("Calling loadData with query: " + query);
     let pageEvent = new PageEvent();
@@ -81,6 +86,9 @@ export class SimpleSearchComponent implements OnInit {
     pageEvent.pageSize = this.defaultPageSize
     this.getData(pageEvent);
   }
+  // TODO - Use external api to get the common name for displayed taxa
+  // Get to work on displaying events in google maps
+  // look up rates of API usage vs bing's api
 
   getData(event: PageEvent) {
     let pageIndex = event.pageIndex;

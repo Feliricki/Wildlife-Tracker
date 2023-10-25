@@ -14,7 +14,7 @@ mat-expansion-panel {
   width: 100%;
 }
 
-.mat-cell {
+.study-header-cell {
   padding: 0px;
 }
 .description-content {
@@ -28,8 +28,6 @@ mat-expansion-panel {
 }
 
 
-
-span {
-  /* overflow-wrap: break-words; */
-  /* word-break: break-all; */
-}
+/**/
+/* span { */
+/* } */

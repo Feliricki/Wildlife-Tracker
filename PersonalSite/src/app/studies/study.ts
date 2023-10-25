@@ -6,7 +6,7 @@ export interface StudyDTO {
   id: bigint;
   licenseType: string;
   mainLocationLat?: number;
-  mainLocationLong?: number;
+  mainLocationLon?: number;
   name: string;
 
   numberOfDeployments: number;
@@ -19,7 +19,6 @@ export interface StudyDTO {
   timestampLastDeployedLocation?: Date;
   numberOfDeployedLocations: number;
 
-  // TODO: make this an array here and in the backend too
   taxonIds?: string;
   sensorTypeIds?: string;
 

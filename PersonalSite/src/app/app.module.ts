@@ -1,4 +1,4 @@
-import { HttpClientModule, HttpClientJsonpModule } from '@angular/common/http';
+import { HttpClientModule, HttpClientJsonpModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { AppRoutingModule } from './app-routing.module';
@@ -21,34 +21,37 @@ import { TimestampPipe } from './pipes/timestamp.pipe';
 import { DefaultPipe } from './pipes/default.pipe';
 import { TruncatePipe } from './pipes/truncate.pipe';
 import { SimpleSearchComponent } from './simple-search/simple-search.component';
+import { AuthInterceptor } from './auth/auth.interceptor';
 
 @NgModule({
-    declarations: [
-        AppComponent,
-        HomeComponent,
-        NavBarComponent,
-        LoginComponent,
-        SideNavComponent,
-        MapComponent,
-        StudiesComponent,
-        TimestampPipe,
-        DefaultPipe,
-        TruncatePipe,
-        SimpleSearchComponent,
-    ],
-    imports: [
-        BrowserModule,
-        HttpClientModule,
-        HttpClientJsonpModule,
-        FormsModule,
-        ReactiveFormsModule,
-        AppRoutingModule,
-        AngularMaterialModule,
-        GoogleMapsModule,
-        AuthModule,
-        BrowserAnimationsModule,
-    ],
-    providers: [],
-    bootstrap: [AppComponent]
+  declarations: [
+    AppComponent,
+    HomeComponent,
+    NavBarComponent,
+    LoginComponent,
+    SideNavComponent,
+    MapComponent,
+    StudiesComponent,
+    TimestampPipe,
+    DefaultPipe,
+    TruncatePipe,
+    SimpleSearchComponent,
+  ],
+  imports: [
+    BrowserModule,
+    HttpClientModule,
+    HttpClientJsonpModule,
+    FormsModule,
+    ReactiveFormsModule,
+    AppRoutingModule,
+    AngularMaterialModule,
+    GoogleMapsModule,
+    AuthModule,
+    BrowserAnimationsModule,
+  ],
+  providers: [
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+  ],
+  bootstrap: [AppComponent]
 })
 export class AppModule { }

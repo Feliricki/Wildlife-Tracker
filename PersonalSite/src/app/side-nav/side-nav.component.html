@@ -1,16 +1,13 @@
-<mat-sidenav-container class="sidenav-container" hasBackdrop="true">
-    <mat-sidenav #sidenav
-    mode="side"
-    opened="true"
-    class="sidenav"
-    fixedInViewport="false"
-    [disableClose]="true">
-        <!-- <app-studies></app-studies> -->
-        <app-simple-search></app-simple-search>
-    </mat-sidenav>
 
-    <mat-sidenav-content class="sidenav-content">
-        <app-map></app-map>
-    </mat-sidenav-content>
+<mat-sidenav-container class="sidenav-container" [hasBackdrop]="true" overflow="auto">
+
+  <mat-sidenav #sidenav mode="side" opened="true" [fixedInViewport]="false" class="sidenav" [disableClose]="true">
+    <!-- <app-studies></app-studies> -->
+    <app-simple-search></app-simple-search>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="sidenav-content">
+    <app-map></app-map>
+  </mat-sidenav-content>
 
 </mat-sidenav-container>

@@ -32,12 +32,12 @@ namespace PersonalSiteAPI.Controllers
         //private readonly IHttpContextAccessor 
 
         public MoveBankController(
-            ApplicationDbContext context, 
+            ApplicationDbContext context,
             ILogger<AccountController> logger,
             IMoveBankService moveBankService,
-            IMemoryCache memoryCache, 
+            IMemoryCache memoryCache,
             UserManager<ApplicationUser> userManager,
-            IHttpContextAccessor contextAccessor) 
+            IHttpContextAccessor contextAccessor)
         {
             _context = context;
             _logger = logger;
@@ -53,12 +53,12 @@ namespace PersonalSiteAPI.Controllers
         public async Task<ActionResult<ApiTokenResultDTO>> GetToken()
         {
             try
-            {   
+            {
                 var response = await _moveBankService.GetApiToken() ?? throw new Exception("Unable to retrieve api token.");
                 return Ok(response);
             }
             catch (Exception e)
-            {   
+            {
                 var exceptionDetails = new ProblemDetails
                 {
                     Detail = e.Message,
@@ -68,7 +68,7 @@ namespace PersonalSiteAPI.Controllers
             }
         }
         // Set proper authorization
-        [HttpGet(Name="GetStudy")]
+        [HttpGet(Name = "GetStudy")]
         [ResponseCache(CacheProfileName = "Any-60")]
         public async Task<ActionResult<StudyDTO>> GetStudy(long studyId)
         {
@@ -80,12 +80,12 @@ namespace PersonalSiteAPI.Controllers
                 Studies? study = null;
                 if (!_memoryCache.TryGetValue<Studies>(cacheKey, out var storedResult))
                 {
-                    study = await _context.Studies.Where(s => s.Id == studyId && s.IHaveDownloadAccess).FirstOrDefaultAsync();                    
+                    study = await _context.Studies.Where(s => s.Id == studyId && s.IHaveDownloadAccess).FirstOrDefaultAsync();
                 }
                 else
-                {                    
+                {
                     study = storedResult;
-                }                
+                }
                 if (study == null)
                 {
                     return Unauthorized();
@@ -113,7 +113,7 @@ namespace PersonalSiteAPI.Controllers
                     ContactPersonName = study.ContactPersonName
                 };
                 if (authorized)
-                {                    
+                {
                     return result;
                 }
                 if (!ValidLicense(study))
@@ -131,7 +131,7 @@ namespace PersonalSiteAPI.Controllers
 
         // TODO: Create custom validators       
         // TODO: Test this method with filterQueries and the sorting of different columns
-        [HttpGet(Name="GetStudies")]
+        [HttpGet(Name = "GetStudies")]
         [ResponseCache(CacheProfileName = "Any-60")]
         public async Task<ActionResult<ApiResult<StudyDTO>>> GetStudies(
             int pageIndex = 0,
@@ -144,7 +144,7 @@ namespace PersonalSiteAPI.Controllers
             try
             {
                 Console.WriteLine("Calling GetStudies");
-                
+
                 if (!ModelState.IsValid)
                 {
                     return BadRequest();
@@ -154,7 +154,7 @@ namespace PersonalSiteAPI.Controllers
                 IQueryable<Studies> source = _context.Studies
                     .AsNoTracking()
                     .Where(study => study.IHaveDownloadAccess);
-                
+
                 bool authorized = true;
                 if (!User.IsInRole(RoleNames.Administrator))
                 {
@@ -166,7 +166,7 @@ namespace PersonalSiteAPI.Controllers
 
                 var cacheKey = $"GetStudies: {authorized}-{pageIndex}-{pageSize}-{sortColumn}-{sortOrder}-{filterColumn}-{filterQuery}";
                 if (_memoryCache.TryGetValue<ApiResult<StudyDTO>>(cacheKey, out var storedResult))
-                {                    
+                {
                     return storedResult ?? throw new NullReferenceException();
                 }
                 //StudyMapper mapper = new StudyMapper();
@@ -215,10 +215,75 @@ namespace PersonalSiteAPI.Controllers
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);                
+                Console.WriteLine(e.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
+        [HttpGet(Name = "GetAllStudies")]
+        [ResponseCache(CacheProfileName = "Any-60")]
+        public async Task<ActionResult<StudyDTO[]>> GetAllStudies()
+        {
+            try
+            {
+                IQueryable<Studies> source = _context.Studies
+                    .AsNoTracking()
+                    .Where(study => study.IHaveDownloadAccess);
+
+                if (!User.IsInRole(RoleNames.Administrator))
+                {
+                    Console.WriteLine("User is not authorized");
+                    source = source
+                      .Where(ValidLicenseExp);
+                }
+                var cacheKey = "GetAllStudies";
+                if (_memoryCache.TryGetValue<StudyDTO[]>(cacheKey, out var result))
+                {
+                    Console.WriteLine("Cache hit on GetAllStudies");
+                    return result!;
+                }
+
+                IQueryable<StudyDTO> dataSource = source.Select(study => new StudyDTO()
+                {
+                    Acknowledgements = study.Acknowledgements,
+                    Citation = study.Citation,
+                    GrantsUsed = study.GrantsUsed,
+                    Id = study.Id,
+                    LicenseType = study.LicenseType,
+                    MainLocationLat = FloatParser(study.MainLocationLat),
+                    MainLocationLon = FloatParser(study.MainLocationLon),
+                    Name = study.Name,
+                    NumberOfDeployments = study.NumberOfDeployments,
+                    NumberOfIndividuals = study.NumberOfIndividuals,
+                    NumberOfTags = study.NumberOfTags,
+                    StudyObjective = study.StudyObjective,
+                    TimestampFirstDeployedLocation = study.TimeStampFirstDeployedLocation,
+                    TimestampLastDeployedLocation = study.TimeStampLastDeployedLocation,
+                    NumberOfDeployedLocations = study.NumberOfDeployedLocations,
+                    TaxonIds = study.TaxonIds,
+                    SensorTypeIds = study.SensorTypeIds,
+                    ContactPersonName = study.ContactPersonName
+                });
+
+                // TODO: refactor to use default cache options? 
+                // Then I'll switch this only use a new TimeSpan Object
+                var cacheOptions = new MemoryCacheEntryOptions()
+                {
+                    Size = 1,
+                    SlidingExpiration = TimeSpan.FromMinutes(2),
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                };
+                result = await dataSource.ToArrayAsync();
+                _memoryCache.Set(cacheKey, result, cacheOptions);
+
+                return result;
+            }
+            catch (Exception error)
+            {
+                Console.WriteLine(error.Message);
+                return StatusCode(StatusCodes.Status503ServiceUnavailable);
+            }
+        }
+
 
         protected static float? FloatParser(string? num)
         {
