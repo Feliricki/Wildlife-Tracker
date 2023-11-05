@@ -9,7 +9,7 @@ import { NavBarComponent } from './nav-bar/nav-bar.component';
 
 import { AngularMaterialModule } from './angular-material.module';
 
-import { GoogleMapsModule } from '@angular/google-maps';
+// import { GoogleMapsModule } from '@angular/google-maps';
 import { AuthModule } from './auth/auth.module';
 import { LoginComponent } from './auth/login.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -22,6 +22,7 @@ import { DefaultPipe } from './pipes/default.pipe';
 import { TruncatePipe } from './pipes/truncate.pipe';
 import { SimpleSearchComponent } from './simple-search/simple-search.component';
 import { AuthInterceptor } from './auth/auth.interceptor';
+import { GetTaxaPipe } from './pipes/get-taxa.pipe';
 
 @NgModule({
   declarations: [
@@ -36,6 +37,7 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     DefaultPipe,
     TruncatePipe,
     SimpleSearchComponent,
+    GetTaxaPipe,
   ],
   imports: [
     BrowserModule,
@@ -45,7 +47,7 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     ReactiveFormsModule,
     AppRoutingModule,
     AngularMaterialModule,
-    GoogleMapsModule,
+    // GoogleMapsModule,
     AuthModule,
     BrowserAnimationsModule,
   ],

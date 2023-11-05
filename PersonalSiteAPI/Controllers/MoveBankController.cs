@@ -9,9 +9,11 @@ using PersonalSiteAPI.Attributes;
 using PersonalSiteAPI.Constants;
 using PersonalSiteAPI.DTO;
 using PersonalSiteAPI.DTO.MoveBankAttributes;
+using PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs;
 using PersonalSiteAPI.Mappings;
 using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
+using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Linq.Expressions;
 
@@ -281,6 +283,47 @@ namespace PersonalSiteAPI.Controllers
             {
                 Console.WriteLine(error.Message);
                 return StatusCode(StatusCodes.Status503ServiceUnavailable);
+            }
+        }
+
+        // TODO: Implement custom input validators here.
+        // Implement a authenticated version of the PublicJsonRequest method
+        [HttpGet(Name="GetEventData")]
+        [ResponseCache(CacheProfileName = "Any-60")]
+        public async Task<ActionResult<EventJsonDTO>> GetEventData(
+            string[] individual_local_identifiers,
+            long studyId,
+            string sensorType,
+            string[]? eventProfiles=null,
+            string[]? attributes=null)
+        {
+            try
+            {
+                // Use memory cache as always 
+                var cacheKey = $"GetEventData:{individual_local_identifiers}-{studyId}-{eventProfiles}-{sensorType}-{attributes}";
+                if (_memoryCache.TryGetValue<EventJsonDTO>(cacheKey, out var result))
+                {
+                    return result ?? throw new NullReferenceException();
+                }           
+                // The event profile is the only optional parameter being passed
+                // Use the EU_RING_01 profile in 
+                var response = await _moveBankService.PublicJsonRequest(studyId, sensorType, individual_local_identifiers.ToImmutableArray(), null, eventProfiles);
+                var data = await response.Content.ReadFromJsonAsync<EventJsonDTO>();
+                
+                if (data != null)
+                {
+                    _memoryCache.Set(cacheKey, data);
+                    return data;
+                }
+                else
+                {
+                    throw new Exception();
+                }
+
+            } catch (Exception error)
+            {
+                Console.WriteLine(error.Message);
+                return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
 

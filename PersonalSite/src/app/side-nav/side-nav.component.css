@@ -1,26 +1,28 @@
 .sidenav-container {
     position: fixed;
+    /* display: flex; */
     height: 100%;
     width: 100%;
     border-style: solid;
-}   
+}
 
 .sidenav {
-/* background-color: rgb(158, 154, 154); */
-/*    width: 500px;*/
-/*  width: 100%;*/
-/*  width: 100px;*/
-/*  width: fit-content;*/
-/*  height: fit-content;*/
-  width: 450px;
-  height: 100%;
+  /* margin: 1em; */
+  /*TODO: set up correct margins */
+  /* margin: 5em 1em; */
+  margin-top: 2em;
+  margin-left: 2em;
+  margin-bottom: 4em;
+  width: 500px;
+  min-width: 5%;
+  max-width: 60%;
+  border-radius: 25px;
 }
 
 .sidenav-content {
-
+  position: fixed;
+  background-color: blue;
   width: 100%;
-  height: 100%;
-  z-index: 10;
-
-  background-color:grey;
+  height: 95%;
+  /* z-index: 10; */
 }

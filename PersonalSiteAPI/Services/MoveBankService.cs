@@ -9,6 +9,7 @@ using Amazon.SecretsManager.Model;
 using System.Text.Json;
 using System.Globalization;
 using System.Security.Cryptography;
+using System.Collections.Immutable;
 
 namespace PersonalSiteAPI.Services
 {
@@ -23,13 +24,17 @@ namespace PersonalSiteAPI.Services
             (string, string)[]? headers=null, 
             bool authorizedUser = false
             );
-        Task<HttpResponseMessage> JsonRequest(
-            string entityType,
-            Dictionary<string, string?>? parameters = null,
-            (string, string)[]? headers = null,
-            bool authorizedUser = false);
+        // Paremeters are required for json requests
+        Task<HttpResponseMessage> PublicJsonRequest(
+            long studyId,
+            string sensorType,
+            ImmutableArray<string> individualLocalIdentifiers,
+            Dictionary<string, string?>? parameters,
+            string[]? eventProfiles = null,
+            (string, string)[]? headers = null);
 
-        
+
+
 
     }
     public class MoveBankService : IMoveBankService
@@ -154,36 +159,67 @@ namespace PersonalSiteAPI.Services
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode(); 
             
-            if (response.Headers.TryGetValues("Accept-License", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
+            if (response.Headers.TryGetValues("accept-license", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
             {
                 response = await GetPermission(request, response);
             }
             return response;
         }
-        // This should request data in JSON format
-        // Use the provided DTOs to deserilize the response content
-        // TODO - Test this method
-        public async Task<HttpResponseMessage> JsonRequest(string entityType, Dictionary<string, string?>? parameters=null, (string, string)[]? headers=null, bool authorizedUser=false)
+        
+        // Several inputs are required for events data to be returned
+        // If a license agreement has not accepted then the license agreements must be returned in a MD5 hash string
+        // The following parameters must be passed:
+        // 1) the study id
+        // 2) At least one 'individual_local_identifiers'
+        // 3) A sensor type (usually 'gps')
+        // times are provided in milliseconds since 1970-01-01 UTC 
+        // Coordinates are in WGS84 format
+        public async Task<HttpResponseMessage> PublicJsonRequest(
+            long studyId,
+            string sensorType,
+            ImmutableArray<string> individualLocalIdentifiers,
+            Dictionary<string, string?>? parameters,
+            string[]? eventProfiles = null,
+            (string, string)[]? headers=null)
         {
             var secretObj = await GetApiToken();
+            // Build up the actual uri
+
             var uri = _httpClient.BaseAddress!.AbsoluteUri + "public/json";
-            if (authorizedUser)
+            uri = QueryHelpers.AddQueryString(uri, new Dictionary<string, string?>()
             {
-                uri = _httpClient.BaseAddress.AbsoluteUri + "json-auth";
+                ["study_id"] = studyId.ToString(),
+                ["sensor_type"] = sensorType,
+            });
+            foreach (var localIdentifier in individualLocalIdentifiers)
+            {
+                uri = QueryHelpers.AddQueryString(uri, "individual_local_identifiers", localIdentifier);
             }
-            if (parameters != null)
+
+            if (parameters is not null)
             {
                 uri = QueryHelpers.AddQueryString(uri, parameters);
             }
+
+            if (eventProfiles is not null)
+            {
+                foreach (var profile in eventProfiles)
+                {
+                    uri = QueryHelpers.AddQueryString(uri, "event_reduction_profile", profile);
+                }
+            }
+                        
             if (secretObj != null && !string.IsNullOrEmpty(secretObj.ApiToken))
             {
                 uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
             }
+
             using var request = new HttpRequestMessage()
             {
                 RequestUri = new Uri(uri),
                 Method = HttpMethod.Get
             };
+
             if (headers != null)
             {
                 foreach (var header in headers)
@@ -192,20 +228,21 @@ namespace PersonalSiteAPI.Services
                 }
             }
             var response = await _httpClient.SendAsync(request);
-            if (response.Headers.TryGetValues("Accept-License", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
+            if (response.Headers.TryGetValues("accept-license", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
             {
+                Console.WriteLine("Response is awaiting license approval.");
                 response = await GetPermission(request, response);
             }
             response.EnsureSuccessStatusCode();
             return response;
         }
-        // TODO - Test this method with breakpoints
+
+
+        // NOTE: This method is untested
         private async Task<HttpResponseMessage> GetPermission(HttpRequestMessage oldRequest, HttpResponseMessage oldResponse)
         {
-            var uri = oldRequest.RequestUri!.AbsoluteUri;            
-
-            using var md5 = MD5.Create();
-            var checkSum = md5.ComputeHash(await oldResponse.Content!.ReadAsByteArrayAsync());
+            var uri = oldRequest.RequestUri!.AbsoluteUri;
+            var checkSum = MD5.HashData(await oldResponse.Content!.ReadAsByteArrayAsync());
             var md5_string = BitConverter.ToString(checkSum).Replace("-", string.Empty);
 
             uri = QueryHelpers.AddQueryString(uri, "license-md5", md5_string);
@@ -217,11 +254,16 @@ namespace PersonalSiteAPI.Services
             };
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
+
             Console.WriteLine("Accepted License Terms");
 
             return response;
         }
-        
-        //private async Task<Studies> GetStudiesAsync
+
+        private static string ToCommaSeparatedList(string[] collection)
+        {
+            return string.Join(",", collection.Select(str => str.Trim()));
+        }
+
     }
 }

@@ -7,7 +7,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
     {
         [Required]
         [JsonPropertyName("study_id")]
-        public long studyId { get; set; }
+        public long StudyId { get; set; }
         [Required]
         [JsonPropertyName("individual_local_identifier")]
         public string IndividualLocalIdentifier { get; set; } = string.Empty;

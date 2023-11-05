@@ -1,8 +1,8 @@
 import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, WritableSignal, signal } from '@angular/core';
 // import { HttpClient, HttpParams } from '@angular/common/http';
-//import { ActivatedRoute, Router } from '@angular/router';
+// import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, map, takeUntil } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { StudyDTO } from './study';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatSort } from '@angular/material/sort';
@@ -43,7 +43,7 @@ export class StudiesComponent implements OnInit, OnDestroy {
   defaultFilterColumn: string = "name";
   filterQuery?: string;
 
-  //filterTextChanged: WritableSignal<string> = signal("");
+  // This subject is meant to listen to changes in text the search text box every second a new change is made
   filterTextChanged: Subject<string> = new Subject<string>();
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -53,10 +53,9 @@ export class StudiesComponent implements OnInit, OnDestroy {
 
   constructor(
     private studyService: StudyService,
-    //
   ) {
   }
-  // TODO: implement
+
   ngOnInit(): void {
     this.isActive = true;
     this.loadData();

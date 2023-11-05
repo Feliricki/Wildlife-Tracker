@@ -1,9 +1,5 @@
-<google-map class="google_map" *ngIf="apiLoaded | async" [center]="center" [zoom]="defaultZoom" [options]="options">
-  <!-- TODO - Test for proper position of markers -->
+<!-- TODO: rewrite entire template+component -->
 
 
-</google-map>
-<!-- <div *ngIf="apiLoaded | async">Center: {{googleMap?.getCenter() ?? "Not defined"}}</div> -->
-<!-- <p *ngFor="let mapObj of currentMapMarkers$ | async | keyvalue"> -->
-<!--   {{mapObj.value.study.name}} -->
-<!-- </p> -->
+<div class="map-container" id="map"></div>
+<!-- <div *ngIf="apiLoaded | async as Loaded">Loading...</div> -->

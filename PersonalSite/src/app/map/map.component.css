@@ -10,7 +10,17 @@
 /*   height: 100%; */
 /* } */
 
-google_map {
-    width: 400px;
-    height: 400px;
+.map-container {
+  /* position: relative; */
+  /* position: fixed; */
+  /* display: flex; */
+  /* flex-direction:row; */
+  position: fixed;
+  /* width:fit-content; */
+  background:green;
+  height:100%;
+  /* width: 500px; */
+  /* display:flex; */
+  /* height: 500px; */
+  /* width: 500px; */
 }

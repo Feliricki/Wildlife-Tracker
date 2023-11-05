@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
 {
+    // The response when requesting for individuals local identifiers
     public class IndividualJsonDTO
     {
         [Required]

@@ -28,12 +28,7 @@ export class AuthInterceptor implements HttpInterceptor {
       console.log("Sending jsonp request with uri: " + cloned.url);
       return next.handle(cloned);
     }
-
-
     //let cloned = request.clone();
-
-    // console.log(cloned.headers.get("Content-Security-Policy"));
-    //console.log("Sending cloned request: " + cloned.method + " for " + cloned.url);
     return next.handle(request);
   }
 }

@@ -1,20 +1,23 @@
 <!-- TODO - Add a submit button with angular element -->
 
-<div class="search-container">
+<div class="search-container" *ngIf="studies">
   <form [formGroup]="searchForm">
+    <!-- <mat-label>Search: </mat-label> -->
     <mat-form-field class="search-form" appearance="outline">
-      <input matInput #filter (keyup)="filterEvent()" class="search-input" formControlName="filterQuery"
-        placeholder="Search" />
+      <mat-label>Search</mat-label>
+      <input matInput type="text" #filter (keyup)="filterEvent(filter.value)" class="search-input"
+        formControlName="filterQuery" />
 
-      <button matSuffix mat-icon-button aria-label="Search">
-        <mat-icon>search</mat-icon>
-      </button>
+      <!-- <button matSuffix mat-icon-button aria-label="Search"> -->
+      <!-- <mat-icon>search</mat-icon> -->
+      <!-- </button> -->
     </mat-form-field>
     <!-- <span class="spacer"></span> -->
     <!-- Drop down list input -->
     <mat-form-field class="dropList">
       <mat-label>Sort by</mat-label>
-      <mat-select #mat_select value="asc" formControlName="dropDownList" (selectionChange)="sortData(mat_select.value)">
+      <mat-select class="dropList-selector" #mat_select value="asc" formControlName="dropDownList"
+        (selectionChange)="sortData(mat_select.value)">
         <mat-option value="asc">Ascending</mat-option>
         <mat-option value="desc">Descending</mat-option>
       </mat-select>
@@ -22,9 +25,12 @@
   </form>
 </div>
 
-
+<!-- <p *ngIf="!studies" style="margin-left: 50%; margin-right: 50%;">Loading ...</p> -->
 <!-- TODO: Add pagination and sorting -->
 <table mat-table [dataSource]="studies" class="study-table" *ngIf="studies">
+
+  <!-- TODO: Row for no results found -->
+
   <!-- Name -->
   <ng-container matColumnDef="name" class="cell-container">
     <th mat-header-cell *matHeaderCellDef class="cell-header">Name</th>
@@ -40,42 +46,68 @@
 
         </mat-expansion-panel-header>
 
-        <!-- <mat-icon>navigate_next</mat-icon> -->
-        <!-- map icon	<mat-icon> map</mat-icon> -->
-        <!--  navigation icon	<mat-icon> navigation</mat-icon> -->
-        <!--  place icon	<mat-icon> place</mat-icon> -->
-        <!-- TODO: Create a custom pipe to convert to local date format -->
-        <div *ngIf="study.timestampFirstDeployedLocation && study.timestampLastDeployedLocation">
-          First Deployment: {{ study.timestampFirstDeployedLocation | date:"short" }} <br>
-          Last Deployment: {{ study.timestampLastDeployedLocation | date:"short" }} <br>
+        <ng-template matExpansionPanelContent>
+          <!-- <mat-icon>navigate_next</mat-icon> -->
+          <!-- map icon	<mat-icon> map</mat-icon> -->
+          <!--  navigation icon	<mat-icon> navigation</mat-icon> -->
+          <!--  place icon	<mat-icon> place</mat-icon> -->
+          <!-- TODO: Create a custom pipe to convert to local date format -->
+          <div *ngIf="study.timestampFirstDeployedLocation && study.timestampLastDeployedLocation">
+            First Deployment: {{ study.timestampFirstDeployedLocation | date:"short" }} <br>
+            Last Deployment: {{ study.timestampLastDeployedLocation | date:"short" }} <br>
 
-        </div>
+          </div>
 
-        <!-- Create a service and a custom pipe that gets the common name from an external API -->
-        <div *ngIf="study.taxonIds">Taxa: {{study.taxonIds}}</div><br>
+          <!-- Create a service and a custom pipe that gets the common name from an external API -->
+          <div *ngIf="study.taxonIds && commonNames[j] | async as commonName; else defaultCase">Taxa: {{ commonName
+            }}</div><br>
 
-        <h4>Objective</h4>
-        <p>{{study.studyObjective}}</p>
+          <ng-template #defaultCase>
+            <div *ngIf="study.taxonIds">Taxa: {{ study.taxonIds }}<br></div>
+          </ng-template>
+          <!-- <span *ngIf="study.taxonIds">{{ commonNames[j] | async }}</span> -->
 
-        <span>Deployments: {{study.numberOfDeployments}}</span><br>
-        <span>Individuals: {{study.numberOfIndividuals}}</span><br>
-        <span># Of Sensors: {{study.numberOfTags}}</span><br>
-        <span>Number of deployed locations: {{study.numberOfDeployedLocations}}</span><br>
+          <!-- <ng-template matExpansionPanelContent *ngIf="study.taxonIds">{{testFunc(study.taxonIds)}}</ng-template> -->
+          <!-- <ng-template matExpansionPanelContent *ngIf="study.taxonIds">Taxa: {{ study.taxonIds -->
+          <!--   }}</ng-template> -->
 
-        <span *ngIf="study.sensorTypeIds"><br>Sensors Used: {{study.sensorTypeIds}}</span>
+          <h4>Objective</h4>
+          <p>{{study.studyObjective}}</p>
 
-        <div *ngIf="study.acknowledgements">
-          <br>
-          <h4>Acknowledgements</h4>
-          <p>{{study.acknowledgements}}</p>
-        </div>
+          <span>Deployments: {{study.numberOfDeployments}}</span><br>
+          <span>Individuals: {{study.numberOfIndividuals}}</span><br>
+          <span># Of Sensors: {{study.numberOfTags}}</span><br>
+          <span>Number of deployed locations: {{study.numberOfDeployedLocations}}</span><br>
 
-        <div *ngIf="study.grantsUsed">
-          <br>
-          <h4>Supported by</h4>
-          <p>{{study.grantsUsed}}</p>
-        </div>
+          <span *ngIf="study.sensorTypeIds"><br>Sensors Used: {{study.sensorTypeIds}}</span>
 
+          <div *ngIf="study.acknowledgements">
+            <br>
+            <h4>Acknowledgements</h4>
+            <p>{{study.acknowledgements}}</p>
+          </div>
+
+          <div *ngIf="study.grantsUsed">
+            <br>
+            <h4>Supported by</h4>
+            <p>{{study.grantsUsed}}</p>
+          </div>
+
+          <!-- <div *ngIf="wikipediaLinks[j] | async as Links"> -->
+          <!--   <br> -->
+          <!--   <h4>Links</h4> -->
+          <!--   <div *ngFor="let curLink of Links"><a [href]="curLink.link">{{curLink.link}}</a></div> -->
+          <!-- </div> -->
+          <div *ngIf="wikipediaLinks[j] | async as Links">
+            <br>
+            <h4>Links</h4>
+            <div *ngFor="let curLink of Links">
+              <!-- <span>{{curLink.title}}</span> -->
+              <a [href]="curLink.link">{{curLink.link}}</a>
+            </div>
+          </div>
+
+        </ng-template>
       </mat-expansion-panel>
     </td>
   </ng-container>

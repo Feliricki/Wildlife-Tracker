@@ -1,0 +1,96 @@
+<!-- TODO - Add a submit button with angular element -->
+
+<div class="search-container" *ngIf="studies">
+  <form [formGroup]="searchForm">
+    <!-- <mat-label>Search: </mat-label> -->
+    <mat-form-field class="search-form" appearance="outline">
+      <mat-label>Search</mat-label>
+      <input matInput type="text" #filter (keyup)="filterEvent(filter.value)" class="search-input"
+        formControlName="filterQuery" />
+
+      <!-- <button matSuffix mat-icon-button aria-label="Search"> -->
+      <!-- <mat-icon>search</mat-icon> -->
+      <!-- </button> -->
+    </mat-form-field>
+    <!-- <span class="spacer"></span> -->
+    <!-- Drop down list input -->
+    <mat-form-field class="dropList">
+      <mat-label>Sort by</mat-label>
+      <mat-select class="dropList-selector" #mat_select value="asc" formControlName="dropDownList"
+        (selectionChange)="sortData(mat_select.value)">
+        <mat-option value="asc">Ascending</mat-option>
+        <mat-option value="desc">Descending</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </form>
+</div>
+
+<p *ngIf="!studies" style="margin-left: 50%; margin-right: 50%;">Loading ...</p>
+<!-- TODO: Add pagination and sorting -->
+<table mat-table [dataSource]="studies" class="study-table" *ngIf="studies">
+
+  <!-- TODO: Row for no results found -->
+
+  <!-- Name -->
+  <ng-container matColumnDef="name" class="cell-container">
+    <th mat-header-cell *matHeaderCellDef class="cell-header">Name</th>
+    <td mat-cell *matCellDef="let study; let j = index;" class="study-header-cell">
+      <mat-expansion-panel class="mat-elevation-z0">
+        <!-- Class of mat-expansion-panel = "mat-elevation-z0" -->
+        <mat-expansion-panel-header>
+          <!-- <mat-icon>navigation</mat-icon> -->
+          <span>{{study.name}}</span>
+          <!-- <mat-panel-description> -->
+          <!--   <mat-icon>navigation</mat-icon> -->
+          <!-- </mat-panel-description> -->
+
+        </mat-expansion-panel-header>
+
+        <!-- <mat-icon>navigate_next</mat-icon> -->
+        <!-- map icon	<mat-icon> map</mat-icon> -->
+        <!--  navigation icon	<mat-icon> navigation</mat-icon> -->
+        <!--  place icon	<mat-icon> place</mat-icon> -->
+        <!-- TODO: Create a custom pipe to convert to local date format -->
+        <div *ngIf="study.timestampFirstDeployedLocation && study.timestampLastDeployedLocation">
+          First Deployment: {{ study.timestampFirstDeployedLocation | date:"short" }} <br>
+          Last Deployment: {{ study.timestampLastDeployedLocation | date:"short" }} <br>
+
+        </div>
+
+        <!-- Create a service and a custom pipe that gets the common name from an external API -->
+        <div *ngIf="study.taxonIds">Taxa: {{study.taxonIds}}</div><br>
+
+        <h4>Objective</h4>
+        <p>{{study.studyObjective}}</p>
+
+        <span>Deployments: {{study.numberOfDeployments}}</span><br>
+        <span>Individuals: {{study.numberOfIndividuals}}</span><br>
+        <span># Of Sensors: {{study.numberOfTags}}</span><br>
+        <span>Number of deployed locations: {{study.numberOfDeployedLocations}}</span><br>
+
+        <span *ngIf="study.sensorTypeIds"><br>Sensors Used: {{study.sensorTypeIds}}</span>
+
+        <div *ngIf="study.acknowledgements">
+          <br>
+          <h4>Acknowledgements</h4>
+          <p>{{study.acknowledgements}}</p>
+        </div>
+
+        <div *ngIf="study.grantsUsed">
+          <br>
+          <h4>Supported by</h4>
+          <p>{{study.grantsUsed}}</p>
+        </div>
+
+      </mat-expansion-panel>
+    </td>
+  </ng-container>
+
+
+  <tr mat-header-row class="header-row" *matHeaderRowDef="displayedColumns; sticky:true">Test</tr>
+  <tr mat-row class="study-row" *matRowDef="let row; let i = index; columns: displayedColumns;">
+  </tr>
+</table>
+<mat-paginator [hidden]="!studies" (page)="getData($event)" [pageSize]="10" [pageSizeOptions]="[10,20,50]"
+  showFirstLastButtons>
+</mat-paginator>
