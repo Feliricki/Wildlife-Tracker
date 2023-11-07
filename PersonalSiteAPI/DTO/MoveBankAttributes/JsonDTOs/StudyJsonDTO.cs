@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
 {
+    // entity_type=study
     public class StudyJsonDTO
     {
         [Required]
@@ -13,6 +14,6 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
         [JsonPropertyName("name")]
         public string Name { get; set; } = null!;
         [JsonPropertyName("sensor_type_ids")]
-        public string SensorTypeIds { get; set; } = "";
+        public string SensorTypeIds { get; set; } = string.Empty;
     }
 }

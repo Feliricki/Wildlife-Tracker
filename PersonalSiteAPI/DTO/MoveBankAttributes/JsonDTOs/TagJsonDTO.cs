@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
 {
+    // entity_type=tag
     public class TagJsonDTO
     {
         [Required]

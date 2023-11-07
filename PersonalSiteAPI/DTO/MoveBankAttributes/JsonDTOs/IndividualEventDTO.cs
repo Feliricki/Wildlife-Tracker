@@ -25,6 +25,6 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
         public long IndividualId { get; set; }
 
         [JsonPropertyName("locations")]
-        public List<LocationDTO> Locations { get; set; } = new List<LocationDTO>();
+        public List<LocationJsonDTO> Locations { get; set; } = new List<LocationJsonDTO>();
     }
 }

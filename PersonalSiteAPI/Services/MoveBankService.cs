@@ -10,6 +10,8 @@ using System.Text.Json;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Collections.Immutable;
+using Microsoft.AspNetCore.Http.Extensions;
+using System;
 
 namespace PersonalSiteAPI.Services
 {
@@ -18,20 +20,28 @@ namespace PersonalSiteAPI.Services
     {
         Task<ApiTokenResultDTO?> GetApiToken();
         DateTime? GetDateTime(string dateString, string timeZone = "CET");
+        // Direct and Json request must specify an entity_type
+        // Some entities are "individual, tag_type ,study"
         Task<HttpResponseMessage?> DirectRequest(
             string entityType, 
             Dictionary<string, string?>? parameters=null,
             (string, string)[]? headers=null, 
             bool authorizedUser = false
-            );
+            );        
+        Task<HttpResponseMessage> JsonRequest(
+            string entityType,
+            Dictionary<string, string?>? parameters = null,
+            (string, string)[]? headers = null,
+            bool authorizedUser = false);
         // Paremeters are required for json requests
-        Task<HttpResponseMessage> PublicJsonRequest(
+        Task<HttpResponseMessage> JsonEventData(
             long studyId,
             string sensorType,
             ImmutableArray<string> individualLocalIdentifiers,
             Dictionary<string, string?>? parameters,
             string[]? eventProfiles = null,
-            (string, string)[]? headers = null);
+            (string, string)[]? headers = null,
+            bool authorizedUser = false);
 
 
 
@@ -134,6 +144,7 @@ namespace PersonalSiteAPI.Services
 
             // Adding Parameters
             uri = QueryHelpers.AddQueryString(uri, "entity_type", entityType);
+
             if (parameters != null)
             {
                 uri = QueryHelpers.AddQueryString(uri, parameters);
@@ -157,13 +168,67 @@ namespace PersonalSiteAPI.Services
                 }
             }            
             var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode(); 
+            response.EnsureSuccessStatusCode();
             
             if (response.Headers.TryGetValues("accept-license", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
             {
                 response = await GetPermission(request, response);
             }
             return response;
+        }
+
+        public async Task<HttpResponseMessage> JsonRequest(
+            string entityType,
+            Dictionary<string, string?>? parameters = null,
+             (string, string)[]? headers = null,
+             bool authorizedUser = false)
+        {
+            var secretObj = await GetApiToken();
+            var uri = _httpClient.BaseAddress!.OriginalString;
+
+            if (!authorizedUser)
+            {
+                uri += "public/json";
+            }
+            else
+            {
+                uri += "json-auth";
+            }
+
+            uri = QueryHelpers.AddQueryString(uri, "entity_type", entityType);
+
+            if (parameters != null)
+            {
+                uri = QueryHelpers.AddQueryString(uri, parameters);
+            }
+            // Keep if this is enough to handle all requests
+            if (secretObj != null && !string.IsNullOrEmpty(secretObj.ApiToken))
+            {
+                uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
+            }
+
+            using var request = new HttpRequestMessage()
+            {
+                RequestUri = new Uri(uri),
+                Method = HttpMethod.Get,
+            };
+            // Headers get set here
+            if (headers != null)
+            {
+                foreach (var header in headers)
+                {
+                    request.Headers.Add(header.Item1, header.Item2);
+                }
+            }
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            if (response.Headers.TryGetValues("accept-license", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
+            {
+                response = await GetPermission(request, response);
+            }
+            return response;
+
         }
         
         // Several inputs are required for events data to be returned
@@ -174,18 +239,30 @@ namespace PersonalSiteAPI.Services
         // 3) A sensor type (usually 'gps')
         // times are provided in milliseconds since 1970-01-01 UTC 
         // Coordinates are in WGS84 format
-        public async Task<HttpResponseMessage> PublicJsonRequest(
+
+
+        // NOTE: For now we ditch the parameters goes unsused
+        public async Task<HttpResponseMessage> JsonEventData(
             long studyId,
             string sensorType,
             ImmutableArray<string> individualLocalIdentifiers,
-            Dictionary<string, string?>? parameters,
+            Dictionary<string, string?>? parameters = null,
             string[]? eventProfiles = null,
-            (string, string)[]? headers=null)
+            (string, string)[]? headers = null,
+            bool authorizedUser = false)
         {
+            var uri = _httpClient.BaseAddress!.OriginalString;
             var secretObj = await GetApiToken();
-            // Build up the actual uri
 
-            var uri = _httpClient.BaseAddress!.AbsoluteUri + "public/json";
+            if (!authorizedUser)
+            {
+                uri += "public/json";
+            }
+            else
+            {
+                uri += "json-auth";
+            }
+
             uri = QueryHelpers.AddQueryString(uri, new Dictionary<string, string?>()
             {
                 ["study_id"] = studyId.ToString(),
@@ -209,7 +286,7 @@ namespace PersonalSiteAPI.Services
                 }
             }
                         
-            if (secretObj != null && !string.IsNullOrEmpty(secretObj.ApiToken))
+            if (secretObj is not null && !string.IsNullOrEmpty(secretObj.ApiToken))
             {
                 uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
             }
@@ -260,10 +337,10 @@ namespace PersonalSiteAPI.Services
             return response;
         }
 
-        private static string ToCommaSeparatedList(string[] collection)
-        {
-            return string.Join(",", collection.Select(str => str.Trim()));
-        }
+        //private static string ToCommaSeparatedList(string[] collection)
+        //{
+        //    return string.Join(",", collection.Select(str => str.Trim()));
+        //}
 
     }
 }
