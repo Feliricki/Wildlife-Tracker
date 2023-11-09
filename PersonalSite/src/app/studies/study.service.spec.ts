@@ -1,16 +1,36 @@
+import { HttpClient } from '@angular/common/http';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-
 import { StudyService } from './study.service';
 
 describe('StudyService', () => {
-  let service: StudyService;
+  let httpSpy: jasmine.SpyObj<HttpClient>;
+  let studyService: StudyService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(StudyService);
+    httpSpy = jasmine.createSpyObj('HttpClient', ['get']);
+    studyService = new StudyService(httpSpy);
   });
 
   it('should be created', () => {
-    expect(service).toBeTruthy();
+    expect(studyService).toBeTruthy();
   });
+
+  it('#jsonRequest should return a valid jsonDTO', (done: DoneFn) => {
+    let entityType: "study" | "individual" | "tag" = "study";
+    let studyId: bigint = 2911040n;
+    let sub = studyService.jsonRequest(entityType, studyId);
+
+    sub.subscribe({
+      next: (value) => {
+        expect(value).toBeTruthy();
+        done();
+      },
+      error: (err) => {
+        console.error(err);
+        done.fail;
+      }
+    })
+  })
+
 });

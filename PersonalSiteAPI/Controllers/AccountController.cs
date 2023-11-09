@@ -35,22 +35,25 @@ namespace PersonalSiteAPI.Controllers
             _roleManager = roleManager;
             _jwtHandler = jwtHandler;
         }
-        private bool IsValidEmail(string email){
-            try{
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
                 var address = new System.Net.Mail.MailAddress(email.Trim());
                 return address.Address == email;
             }
-            catch(Exception){
+            catch (Exception)
+            {
                 return false;
             }
         }
-        
+
         [HttpPost(Name = "Login")]
         [ResponseCache(CacheProfileName = "NoCache")]
         public async Task<ActionResult<LoginResultDTO>> Login(LoginRequestDTO loginRequest)
-        {   
+        {
             try
-            {                
+            {
                 //Console.WriteLine($"Got login request {JsonSerializer.Serialize(loginRequest)}");
                 if (ModelState.IsValid)
                 {
@@ -84,16 +87,17 @@ namespace PersonalSiteAPI.Controllers
             }
             catch (Exception e)
             {
-                return Unauthorized(new LoginResultDTO(){
+                return Unauthorized(new LoginResultDTO()
+                {
                     Success = false,
                     Message = e.Message,
-                });                
+                });
             }
         }
 
         [HttpPost(Name = "Register")]
-        [ResponseCache(CacheProfileName="NoCache")]
-        public async Task <IActionResult> Register(RegisterDTO registerDTO)
+        [ResponseCache(CacheProfileName = "NoCache")]
+        public async Task<IActionResult> Register(RegisterDTO registerDTO)
         {
             await Task.Delay(1000);
             throw new NotImplementedException();

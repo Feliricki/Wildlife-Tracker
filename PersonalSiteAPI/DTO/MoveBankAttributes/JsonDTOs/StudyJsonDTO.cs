@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using ThirdParty.Json.LitJson;
 
 namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
 {
@@ -7,7 +8,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
     public class StudyJsonDTO
     {
         [Required]
-        [JsonPropertyName("id")]
+        [JsonPropertyName("id")]    
         public long StudyId { get; set; }
 
         [Required]

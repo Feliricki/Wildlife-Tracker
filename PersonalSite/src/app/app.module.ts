@@ -47,7 +47,6 @@ import { GetTaxaPipe } from './pipes/get-taxa.pipe';
     ReactiveFormsModule,
     AppRoutingModule,
     AngularMaterialModule,
-    // GoogleMapsModule,
     AuthModule,
     BrowserAnimationsModule,
   ],

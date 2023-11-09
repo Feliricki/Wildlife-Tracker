@@ -7,7 +7,7 @@ namespace PersonalSiteAPI.Attributes.MoveBankAttributes
         public string[] AllowedValues { get; set; } = new string[] { 
             "study", "STUDY", "INDIVIDUAL", "TAG" ,"individual", "tag", string.Empty };
 
-        public EntityTypeValidatorAttribute(): base("Value must be one of the following: {0}.") { }
+        public EntityTypeValidatorAttribute(): base("Invalid entity type.") { }
 
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
@@ -16,7 +16,7 @@ namespace PersonalSiteAPI.Attributes.MoveBankAttributes
             {
                 return ValidationResult.Success;
             }
-            return new ValidationResult(FormatErrorMessage(string.Join(",", AllowedValues)));
+            return new ValidationResult(ErrorMessage);
         }
     }
 }

@@ -14,7 +14,6 @@ export class SideNavComponent {
     top: 0
   };
   constructor(
-    private studyService: StudyService
   ) {
   }
 

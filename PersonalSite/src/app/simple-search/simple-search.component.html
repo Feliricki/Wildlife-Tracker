@@ -1,29 +1,6 @@
 <!-- TODO - Add a submit button with angular element -->
 
-<div class="search-container" *ngIf="studies">
-  <form [formGroup]="searchForm">
-    <!-- <mat-label>Search: </mat-label> -->
-    <mat-form-field class="search-form" appearance="outline">
-      <mat-label>Search</mat-label>
-      <input matInput type="text" #filter (keyup)="filterEvent(filter.value)" class="search-input"
-        formControlName="filterQuery" />
 
-      <!-- <button matSuffix mat-icon-button aria-label="Search"> -->
-      <!-- <mat-icon>search</mat-icon> -->
-      <!-- </button> -->
-    </mat-form-field>
-    <!-- <span class="spacer"></span> -->
-    <!-- Drop down list input -->
-    <mat-form-field class="dropList">
-      <mat-label>Sort by</mat-label>
-      <mat-select class="dropList-selector" #mat_select value="asc" formControlName="dropDownList"
-        (selectionChange)="sortData(mat_select.value)">
-        <mat-option value="asc">Ascending</mat-option>
-        <mat-option value="desc">Descending</mat-option>
-      </mat-select>
-    </mat-form-field>
-  </form>
-</div>
 
 <!-- <p *ngIf="!studies" style="margin-left: 50%; margin-right: 50%;">Loading ...</p> -->
 <!-- TODO: Add pagination and sorting -->
@@ -33,7 +10,33 @@
 
   <!-- Name -->
   <ng-container matColumnDef="name" class="cell-container">
-    <th mat-header-cell *matHeaderCellDef class="cell-header">Name</th>
+    <th mat-header-cell *matHeaderCellDef class="cell-header">
+      <div class="search-container" *ngIf="studies">
+        <form [formGroup]="searchForm">
+          <!-- <mat-label>Search: </mat-label> -->
+          <mat-form-field class="search-form" appearance="outline">
+            <mat-label>Search</mat-label>
+            <input matInput type="text" #filter (keyup)="filterEvent(filter.value)" class="search-input"
+              formControlName="filterQuery" />
+
+            <!-- <button matSuffix mat-icon-button aria-label="Search"> -->
+            <!-- <mat-icon>search</mat-icon> -->
+            <!-- </button> -->
+          </mat-form-field>
+          <!-- <span class="spacer"></span> -->
+          <!-- Drop down list input -->
+          <mat-form-field class="dropList">
+            <mat-label>Sort by</mat-label>
+            <mat-select class="dropList-selector" #mat_select value="asc" formControlName="dropDownList"
+              (selectionChange)="sortData(mat_select.value)">
+              <mat-option value="asc">Ascending</mat-option>
+              <mat-option value="desc">Descending</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </form>
+      </div>
+
+    </th>
     <td mat-cell *matCellDef="let study; let j = index;" class="study-header-cell">
       <mat-expansion-panel class="mat-elevation-z0">
         <!-- Class of mat-expansion-panel = "mat-elevation-z0" -->
@@ -70,9 +73,10 @@
           <!-- <ng-template matExpansionPanelContent *ngIf="study.taxonIds">{{testFunc(study.taxonIds)}}</ng-template> -->
           <!-- <ng-template matExpansionPanelContent *ngIf="study.taxonIds">Taxa: {{ study.taxonIds -->
           <!--   }}</ng-template> -->
-
-          <h4>Objective</h4>
-          <p>{{study.studyObjective}}</p>
+          <div *ngIf="study.studyObjective">
+            <h4>Objective</h4>
+            <p>{{study.studyObjective}}</p>
+          </div>
 
           <span>Deployments: {{study.numberOfDeployments}}</span><br>
           <span>Individuals: {{study.numberOfIndividuals}}</span><br>
