@@ -1,46 +1,44 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, WritableSignal, signal } from '@angular/core';
-// import { HttpClient, HttpParams } from '@angular/common/http';
-// import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subject } from 'rxjs';
+import { Component, OnInit, OnDestroy, ViewChild, WritableSignal, signal } from '@angular/core';
+import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { StudyDTO } from './study';
-import { MatTableDataSource } from '@angular/material/table';
-import { MatSort } from '@angular/material/sort';
-import { MatPaginator, PageEvent } from '@angular/material/paginator';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatPaginator, PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { StudyService } from './study.service';
+import { TruncatePipe } from '../pipes/truncate.pipe';
+import { DefaultPipe } from '../pipes/default.pipe';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { NgIf } from '@angular/common';
 
-interface RowInfo {
-  name: string;
-  id: bigint;
-  timestampFirstDeployedLocation?: Date;
-  timestampLastDeployedLocation?: Date;
-  numberOfIndividuals: number;
-  taxonIds: string;
-}
 
 @Component({
   selector: 'app-studies',
   templateUrl: './studies.component.html',
-  styleUrls: ['./studies.component.css']
+  styleUrls: ['./studies.component.css'],
+  standalone: true,
+  imports: [NgIf, MatFormFieldModule, MatInputModule,
+    MatButtonModule, MatIconModule,
+    MatTableModule, MatSortModule,
+    MatPaginatorModule, DefaultPipe, TruncatePipe]
 })
 export class StudiesComponent implements OnInit, OnDestroy {
-  // public displayedColumns: string[] = ['name', 'timestampFirstDeployedLocation',
-  //   'timestampLastDeployedLocation', 'numberOfIndividuals', 'taxonIds'];
   public displayedColumns: string[] = ['name'];
-  // This parameters are for the truncate pipe
-  //public expandedRow: boolean[] = this.displayedColumns.map(() => false);
   public sizeLimit = 50;
 
   public studies: MatTableDataSource<StudyDTO> | undefined;
 
-  defaultPageIndex: number = 0;
-  defaultPageSize: number = 10;
+  defaultPageIndex = 0;
+  defaultPageSize = 10;
   public rowSignal: WritableSignal<boolean[]> = signal([]);
 
-  public defaultSortColumn: string = "name";
+  public defaultSortColumn = "name";
   public defaultSortOrder: "asc" | "desc" = "asc";
 
-  defaultFilterColumn: string = "name";
+  defaultFilterColumn = "name";
   filterQuery?: string;
 
   // This subject is meant to listen to changes in text the search text box every second a new change is made
@@ -49,7 +47,7 @@ export class StudiesComponent implements OnInit, OnDestroy {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
-  isActive: boolean = false;
+  isActive = false;
 
   constructor(
     private studyService: StudyService,
@@ -65,7 +63,7 @@ export class StudiesComponent implements OnInit, OnDestroy {
     this.filterTextChanged.complete();
   }
 
-  rowClicked(curIndex: any): void {
+  rowClicked(curIndex: number): void {
     // console.log(this.rowSignal());
     this.rowSignal.update(rows => {
       rows[curIndex] = !rows[curIndex];
@@ -93,7 +91,7 @@ export class StudiesComponent implements OnInit, OnDestroy {
   // This method when filtering and on start up.
   loadData(query?: string) {
     console.log("Calling loadData with query: " + query);
-    let pageEvent = new PageEvent();
+    const pageEvent = new PageEvent();
     pageEvent.pageIndex = this.defaultPageIndex;
     pageEvent.pageSize = this.defaultPageSize;
     this.filterQuery = query;
@@ -103,19 +101,19 @@ export class StudiesComponent implements OnInit, OnDestroy {
   // This function is called when the current page changes
   getData(event: PageEvent) {
 
-    var sortColumn = (this.sort)
+    const sortColumn = (this.sort)
       ? this.sort.active
       : this.defaultSortColumn;
 
-    var sortOrder = (this.sort)
+    const sortOrder = (this.sort)
       ? this.sort.direction
       : this.defaultSortOrder;
 
-    var filterColumn = (this.filterQuery)
+    const filterColumn = (this.filterQuery)
       ? this.defaultFilterColumn
       : undefined;
 
-    var filterQuery = (this.filterQuery)
+    const filterQuery = (this.filterQuery)
       ? this.filterQuery
       : undefined;
 
@@ -135,7 +133,7 @@ export class StudiesComponent implements OnInit, OnDestroy {
         this.paginator.pageIndex = apiResult.pageIndex;
         this.paginator.pageSize = apiResult.pageSize;
 
-        let newRow: boolean[] = [];
+        const newRow: boolean[] = [];
         for (let i = 0; i < this.paginator.pageSize; i += 1) {
           newRow.push(false);
         }

@@ -7,7 +7,8 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "prestart": "node aspnetcore-https"
+    "prestart": "node aspnetcore-https",
+    "lint": "ng lint"
   },
   "private": true,
   "dependencies": {
@@ -29,11 +30,18 @@
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "16.2.7",
+    "@angular-eslint/builder": "16.3.1",
+    "@angular-eslint/eslint-plugin": "16.3.1",
+    "@angular-eslint/eslint-plugin-template": "16.3.1",
+    "@angular-eslint/schematics": "16.3.1",
+    "@angular-eslint/template-parser": "16.3.1",
     "@angular/cli": "~16.2.1",
     "@angular/compiler-cli": "^16.2.4",
     "@types/google.maps": "^3.54.4",
     "@types/jasmine": "~4.3.0",
-    "eslint": "^8.49.0",
+    "@typescript-eslint/eslint-plugin": "5.62.0",
+    "@typescript-eslint/parser": "5.62.0",
+    "eslint": "^8.51.0",
     "jasmine-core": "~4.5.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.1.0",

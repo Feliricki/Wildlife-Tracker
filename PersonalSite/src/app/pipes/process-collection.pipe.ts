@@ -7,7 +7,7 @@ import { Pipe, PipeTransform } from '@angular/core';
 export class ProcessCollectionPipe implements PipeTransform {
 
   transform(collection: string, delimiter = ","): string[] {
-    let splitList = collection.split(delimiter);
+    const splitList = collection.split(delimiter);
     console.log("Split collection is" + splitList.toString());
     return splitList
   }

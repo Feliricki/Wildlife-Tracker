@@ -1,7 +1,8 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'truncate'
+  name: 'truncate',
+  standalone: true
 })
 export class TruncatePipe implements PipeTransform {
 
@@ -12,7 +13,7 @@ export class TruncatePipe implements PipeTransform {
     if (!value || value === '' || value === 'N/A') {
       return value;
     }
-    var subStr = value.slice(0, Math.min(value.length, defaultSize))
+    let subStr = value.slice(0, Math.min(value.length, defaultSize))
     if (subStr.length === value.length) {
       return value;
     }

@@ -16,11 +16,12 @@ export class WikipediaSearchService {
   constructor(
     private httpClient: HttpClient
   ) {
+    return;
   }
 
   search(searchQuery: string, numberOfResults = 2, languageCode = "en"): Observable<Pages> {
-    let url = this.baseUrl + languageCode + this.endpoint;
-    let parameters = new HttpParams()
+    const url = this.baseUrl + languageCode + this.endpoint;
+    const parameters = new HttpParams()
       .set('q', searchQuery)
       .set('limit', numberOfResults);
 
@@ -28,8 +29,8 @@ export class WikipediaSearchService {
   }
 
   searchTitles(query: string, reqLimit = 2): Observable<SearchResult> {
-    let url = this.openSearchUrl;
-    let parameters = new HttpParams()
+    const url = this.openSearchUrl;
+    const parameters = new HttpParams()
       .set('action', 'opensearch')
       .set('namespace', '0')
       .set('limit', reqLimit.toString())

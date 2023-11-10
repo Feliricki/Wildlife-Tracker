@@ -14,10 +14,10 @@ export class AuthService {
 
   private _authStatus = new Subject<boolean>();
   public authStatus = this._authStatus.asObservable();
-  public tokenKey: string = "tokenKey";
+  public tokenKey = "tokenKey";
 
   constructor(private httpClient: HttpClient) {
-    ;
+    
   }
 
   isAuthenticated(): boolean {
@@ -34,7 +34,7 @@ export class AuthService {
   }
 
   login(loginRequest: LoginRequest): Observable<LoginResult> {
-    var url = environment.baseUrl + "api/Account/Login";
+    const url = environment.baseUrl + "api/Account/Login";
     // The generic type 'LoginResult' is the return type of the response
     return this.httpClient.post<LoginResult>(url, loginRequest)
       .pipe(

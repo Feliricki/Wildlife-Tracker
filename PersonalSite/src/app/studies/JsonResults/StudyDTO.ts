@@ -1,5 +1,6 @@
 export interface StudyDTO {
-    id: number;
+    type: "study";
+    id: number;    
     name: string;
     sensorTypeIds: string;
 }

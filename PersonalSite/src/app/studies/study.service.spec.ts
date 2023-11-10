@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+//import { HttpClientTestingModule } from '@angular/common/http/testing';
+//import { TestBed } from '@angular/core/testing';
 import { StudyService } from './study.service';
 
 describe('StudyService', () => {
@@ -17,9 +17,9 @@ describe('StudyService', () => {
   });
 
   it('#jsonRequest should return a valid jsonDTO', (done: DoneFn) => {
-    let entityType: "study" | "individual" | "tag" = "study";
-    let studyId: bigint = 2911040n;
-    let sub = studyService.jsonRequest(entityType, studyId);
+    const entityType: "study" | "individual" | "tag" = "study";
+    const studyId = 2911040n;
+    const sub = studyService.jsonRequest(entityType, studyId);
 
     sub.subscribe({
       next: (value) => {

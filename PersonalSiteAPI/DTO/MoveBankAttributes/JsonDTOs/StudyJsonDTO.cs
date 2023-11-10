@@ -7,6 +7,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
     // entity_type=study
     public class StudyJsonDTO
     {
+        public readonly string type = "study";
         [Required]
         [JsonPropertyName("id")]    
         public long StudyId { get; set; }

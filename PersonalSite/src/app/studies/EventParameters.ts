@@ -1,7 +1,7 @@
-export interface EventRequest {
-  studyId: bigint;
-  localIdentifiers: string[];
-  sensorType?: string;
+export interface EventOptions {
+  // studyId: bigint;
+  // localIdentifiers: string[];
+  // sensorType: string;
   milliBetweenEvents?: string;
   maxEventsPerIndividual?: number;
   maxKmBetweenEvents?: number;

@@ -10,10 +10,12 @@ import { Observable } from 'rxjs';
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
 
-  constructor() { }
+  constructor() {
+    return;
+  }
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    let cloned = request.clone();
+    const cloned = request.clone();
     if (request.method === "JSONP") {
       // TODO : finish implementing CSP here.
       // let cloned = request.clone({

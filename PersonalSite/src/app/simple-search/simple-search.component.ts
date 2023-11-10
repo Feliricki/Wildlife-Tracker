@@ -1,12 +1,18 @@
 import { Component, OnInit, ViewChild, signal, WritableSignal } from '@angular/core';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
-import { Observable, Subject, filter, reduce, distinctUntilChanged, debounceTime, map, catchError, of, concat, EMPTY } from 'rxjs';
-import { FormGroup, FormControl } from '@angular/forms';
-import { MatPaginator, PageEvent } from '@angular/material/paginator';
-import { MatTableDataSource } from '@angular/material/table'
+import { Observable, Subject, reduce, distinctUntilChanged, debounceTime, map, catchError, of, concat, EMPTY } from 'rxjs';
+import { FormGroup, FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { MatPaginator, PageEvent, MatPaginatorModule } from '@angular/material/paginator';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table'
 import { ENAAPIService } from '../ENA-API/ena-api.service';
 import { WikipediaSearchService } from '../wikipedia/wikipedia-search.service';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatOptionModule } from '@angular/material/core';
+import { MatSelectModule } from '@angular/material/select';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { NgIf, NgFor, AsyncPipe, DatePipe } from '@angular/common';
 
 interface WikiLinks {
   title: string;
@@ -16,7 +22,12 @@ interface WikiLinks {
 @Component({
   selector: 'app-simple-search',
   templateUrl: './simple-search.component.html',
-  styleUrls: ['./simple-search.component.scss']
+  styleUrls: ['./simple-search.component.scss'],
+  standalone: true,
+  imports: [NgIf, MatTableModule, FormsModule, ReactiveFormsModule,
+    MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatOptionModule, MatExpansionModule,
+    NgFor, MatPaginatorModule, AsyncPipe, DatePipe]
 })
 export class SimpleSearchComponent implements OnInit {
 
@@ -27,11 +38,11 @@ export class SimpleSearchComponent implements OnInit {
   commonNames: (Observable<string> | undefined)[] = [];
   wikipediaLinks: (Observable<WikiLinks[]> | undefined)[] = [];
 
-  defaultPageIndex: number = 0;
-  defaultPageSize: number = 10;
+  defaultPageIndex = 0;
+  defaultPageSize = 10;
 
-  defaultSortColumn: string = "name";
-  defaultFilterColumn: string = "name";
+  defaultSortColumn = "name";
+  defaultFilterColumn = "name";
   filterTextChanged: Subject<string> = new Subject<string>();
 
   studiesLoaded: WritableSignal<boolean> = signal(false);
@@ -93,14 +104,14 @@ export class SimpleSearchComponent implements OnInit {
 
   // TODO: Change this method to use the concat functions
   getTaxa(taxaStr: string): Observable<string> {
-    let taxaList = taxaStr.trim().split(",");
+    const taxaList = taxaStr.trim().split(",");
     if (!taxaStr || taxaList.length === 0) {
       console.log("empty observable in getTaxa");
       return EMPTY;
       // return of('');
     }
 
-    let combined$ = concat(...taxaList.map(taxon => {
+    const combined$ = concat(...taxaList.map(taxon => {
 
       return this.enaService.getCommonName(taxon.trim()).pipe(
 
@@ -111,7 +122,7 @@ export class SimpleSearchComponent implements OnInit {
             return [taxon, null];
           }
         }),
-        catchError(_ => {
+        catchError(() => {
           console.error("Caught error in ENA service with taxon: " + taxon);
           return of([taxon, null]);
         }),
@@ -135,25 +146,25 @@ export class SimpleSearchComponent implements OnInit {
 
 
   searchWikipedia(taxaStr: string): Observable<WikiLinks[]> {
-    let taxaList = taxaStr.trim().split(',');
+    const taxaList = taxaStr.trim().split(',');
     if (!taxaStr || taxaList.length === 0) {
       return of([]);
     }
     // This function ensures that requests are done in sequence to avoid overloading the external server
-    let results = concat(...taxaList.map(taxa => {
+    const results = concat(...taxaList.map(taxa => {
       return this.wikipediaService.searchTitles(taxa).pipe(
 
         map(responses => {
-          let ret: WikiLinks[] = [];
+          const ret: WikiLinks[] = [];
 
           responses[1].forEach((value, index) => {
-            let obj: WikiLinks = { title: value, link: responses[3][index] };
+            const obj: WikiLinks = { title: value, link: responses[3][index] };
             ret.push(obj);
           });
           return ret;
         }),
 
-        catchError(_ => {
+        catchError(() => {
           console.error("Error searching for wikipedia article.")
           return of([]);
         }),
@@ -182,7 +193,7 @@ export class SimpleSearchComponent implements OnInit {
     console.log(`New ordering: ` + ordering);
     this.searchForm.controls.dropDownList.setValue(ordering);
 
-    let pageEvent = new PageEvent();
+    const pageEvent = new PageEvent();
     pageEvent.pageIndex = 0;
     pageEvent.pageSize = this.paginator?.pageSize ?? this.defaultPageSize;
     this.getData(pageEvent);
@@ -190,7 +201,7 @@ export class SimpleSearchComponent implements OnInit {
 
   loadData(query?: string) {
     console.log("Calling loadData with query: " + query);
-    let pageEvent = new PageEvent();
+    const pageEvent = new PageEvent();
     pageEvent.pageIndex = this.defaultPageIndex;
     pageEvent.pageSize = this.defaultPageSize
     this.getData(pageEvent);
@@ -198,14 +209,14 @@ export class SimpleSearchComponent implements OnInit {
 
   // look up rates of API usage vs bing's api
   getData(event: PageEvent) {
-    let pageIndex = event.pageIndex;
-    let pageSize = event.pageSize;
+    const pageIndex = event.pageIndex;
+    const pageSize = event.pageSize;
     // sortColumn should always be 'name'
-    let sortColumn = this.defaultSortColumn;
-    let sortOrder = this.dropDownList.value;
+    const sortColumn = this.defaultSortColumn;
+    const sortOrder = this.dropDownList.value;
     // filterColumn should alwawys be 'name'
-    let filterColumn = this.defaultFilterColumn;
-    let filterQuery = this.filterQuery.value;
+    const filterColumn = this.defaultFilterColumn;
+    const filterQuery = this.filterQuery.value;
 
     this.studyService.getStudies(
       pageIndex,

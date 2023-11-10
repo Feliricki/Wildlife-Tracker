@@ -1,7 +1,7 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 // import { GoogleMap, } from '@angular/google-maps';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, of, catchError, tap, from, filter } from 'rxjs';
+import { Observable, map, of, tap, from } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
 import { Loader } from '@googlemaps/js-api-loader';
@@ -20,7 +20,8 @@ import { Loader } from '@googlemaps/js-api-loader';
 @Component({
   selector: 'app-map',
   templateUrl: './map.component.html',
-  styleUrls: ['./map.component.css']
+  styleUrls: ['./map.component.css'],
+  standalone: true
 })
 export class MapComponent implements OnInit {
 
@@ -83,7 +84,7 @@ export class MapComponent implements OnInit {
       tap(result => {
         if (result) {
           // TODO:  load studies and markers here
-          this.loadData();
+          // this.loadData();
         } else {
           return;
         }
@@ -113,7 +114,7 @@ export class MapComponent implements OnInit {
 
       map(StudyDTOs => {
 
-        let mappings = new Map<bigint, StudyDTO>();
+        const mappings = new Map<bigint, StudyDTO>();
         StudyDTOs.forEach(studyDTO => {
           mappings.set(studyDTO.id, studyDTO);
         })
@@ -134,16 +135,18 @@ export class MapComponent implements OnInit {
       }),
 
       map(studyDTOs => {
-        let mappings = new Map<bigint, google.maps.Marker>();
+        const mappings = new Map<bigint, google.maps.Marker>();
 
         for (const studyDTO of studyDTOs) {
-          let marker = new google.maps.Marker();
-          let pos: google.maps.LatLngLiteral = {
-            lat: studyDTO.mainLocationLat!,
-            lng: studyDTO.mainLocationLon!,
+          const marker = new google.maps.Marker();
+          const pos: google.maps.LatLngLiteral = {
+            lat: studyDTO.mainLocationLat ?? 0,
+            lng: studyDTO.mainLocationLon ?? 0,
           };
 
-          marker.setMap(this.map!);
+          if (this.map) {
+            marker.setMap(this.map);
+          }
           marker.setPosition(pos);
           mappings.set(studyDTO.id, marker);
         }
@@ -152,6 +155,6 @@ export class MapComponent implements OnInit {
     );
   }
 
-  loadData(): void {
-  }
+  // loadData(): void {
+  // }
 }

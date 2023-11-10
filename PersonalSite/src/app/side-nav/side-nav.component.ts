@@ -1,11 +1,14 @@
 import { Component } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { StudyService } from '../studies/study.service';
+import { MapComponent } from '../map/map.component';
+import { SimpleSearchComponent } from '../simple-search/simple-search.component';
+import { MatSidenavModule } from '@angular/material/sidenav';
 
 @Component({
   selector: 'app-side-nav',
   templateUrl: './side-nav.component.html',
-  styleUrls: ['./side-nav.component.css']
+  styleUrls: ['./side-nav.component.css'],
+  standalone: true,
+  imports: [MatSidenavModule, SimpleSearchComponent, MapComponent]
 })
 export class SideNavComponent {
   options = {
@@ -15,9 +18,10 @@ export class SideNavComponent {
   };
   constructor(
   ) {
+    return;
   }
 
   switchSearchMode(): void {
-
+    return;
   }
 }

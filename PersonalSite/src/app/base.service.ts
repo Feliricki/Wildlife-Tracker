@@ -9,7 +9,7 @@ import { environment } from '../environments/environment';
 })
 export abstract class BaseService<T> {
 
-  constructor(protected httpClient: HttpClient) {}
+  constructor(protected httpClient: HttpClient) { }
 
   abstract getData(
     pageIndex: number,
@@ -18,7 +18,7 @@ export abstract class BaseService<T> {
     sortOrder: string,
     filterColumn: string | undefined,
     filterQuery: string | undefined
-  ) : Observable<T>;
+  ): Observable<T>;
 
   abstract get(id: number): Observable<T>;
 

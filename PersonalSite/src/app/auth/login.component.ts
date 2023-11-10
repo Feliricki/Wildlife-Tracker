@@ -1,27 +1,33 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { FormGroup, FormControl, Validators, AbstractControl, AsyncValidatorFn } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { FormGroup, FormControl, Validators, AbstractControl, AsyncValidatorFn, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { BaseFormComponent } from '../base-form.component';
 import { AuthService } from './auth.service';
 import { LoginRequest } from './login-request';
 import { LoginResult } from './login-result';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatInputModule } from '@angular/material/input';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { NgIf, NgFor } from '@angular/common';
 
 @Component({
   selector: 'app-login',
   templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css']
+  styleUrls: ['./login.component.css'],
+  standalone: true,
+  imports: [FormsModule, ReactiveFormsModule, NgIf, MatFormFieldModule, MatInputModule, NgFor, MatButtonModule, MatIconModule, RouterLink]
 })
 export class LoginComponent extends BaseFormComponent implements OnInit {
   title?: string;
   loginResult?: LoginResult;
-  hide: boolean = true;
+  hide = true;
 
   constructor(
     private activatedRoute: ActivatedRoute,
     private router: Router,
-    private authService: AuthService)
-  {
+    private authService: AuthService) {
     super();
   }
 
@@ -33,17 +39,17 @@ export class LoginComponent extends BaseFormComponent implements OnInit {
   }
 
   onSubmit() {
-    let loginRequest = <LoginRequest>{};
+    const loginRequest = <LoginRequest>{};
     loginRequest.username = this.form.controls['username'].value;
     loginRequest.password = this.form.controls['password'].value;
-    
+
     this.authService
       .login(loginRequest)
       .subscribe({
         next: (response) => {
           console.log(response);
           this.loginResult = response;
-          if (response.success){
+          if (response.success) {
             this.router.navigate(['/']);
           }
         },

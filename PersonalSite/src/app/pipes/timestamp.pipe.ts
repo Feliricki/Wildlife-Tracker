@@ -2,7 +2,8 @@ import { formatDate } from '@angular/common';
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'timestamp'
+    name: 'timestamp',
+    standalone: true
 })
 export class TimestampPipe implements PipeTransform {
 
@@ -11,7 +12,7 @@ export class TimestampPipe implements PipeTransform {
       console.log("Invalid timestamp");
       return 'N/A';
     }
-    let formatted = formatDate(value, args, 'en-US', 'CET');
+    const formatted = formatDate(value, args, 'en-US', 'CET');
     if (formatted) {  
       return formatted;
     } else {

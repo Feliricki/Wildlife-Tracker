@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { TaxaInfo } from './taxa-info';
-import { Observable, retry } from 'rxjs';
+import { Observable } from 'rxjs';
 import { TaxaSuggestion } from './suggestions-dto';
 
 @Injectable({
@@ -9,9 +9,9 @@ import { TaxaSuggestion } from './suggestions-dto';
 })
 export class ENAAPIService {
   // Can be used with a scientific or common name
-  EnaBaseUrl: string = "https://www.ebi.ac.uk/ena/taxonomy/rest/";
-  generalTaxaUrl: string = "https://www.ebi.ac.uk/ena/taxonomy/rest/";
-  suggestTaxaUrl: string = "https://www.ebi.ac.uk/ena/taxonomy/rest/suggest-for-submission/";
+  EnaBaseUrl = "https://www.ebi.ac.uk/ena/taxonomy/rest/";
+  generalTaxaUrl = "https://www.ebi.ac.uk/ena/taxonomy/rest/";
+  suggestTaxaUrl = "https://www.ebi.ac.uk/ena/taxonomy/rest/suggest-for-submission/";
 
 
   constructor(
@@ -24,14 +24,14 @@ export class ENAAPIService {
   }
 
   getScientificName(commonName: string): Observable<TaxaInfo[]> {
-    let parameters = new HttpParams()
+    const parameters = new HttpParams()
       .set("any-name", commonName);
 
     return this.httpClient.get<TaxaInfo[]>(this.EnaBaseUrl, { params: parameters })
   }
 
   suggestName(suggestion: string): Observable<TaxaSuggestion[]> {
-    let parameters = new HttpParams()
+    const parameters = new HttpParams()
       .set("suggest-for-submission", suggestion);
 
     return this.httpClient.get<TaxaSuggestion[]>(this.EnaBaseUrl, { params: parameters });

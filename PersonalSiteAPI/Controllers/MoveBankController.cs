@@ -150,8 +150,7 @@ namespace PersonalSiteAPI.Controllers
                 {
                     return BadRequest();
                 }
-                //var currentQuery = from s in _context.Studies.AsNoTracking()
-                //                   where s.IHaveDownloadAccess select s;
+
                 IQueryable<Studies> source = _context.Studies
                     .AsNoTracking()
                     .Where(study => study.IHaveDownloadAccess);
@@ -266,7 +265,6 @@ namespace PersonalSiteAPI.Controllers
                 });
 
                 // TODO: refactor to use default cache options? 
-                // Then I'll switch this only use a new TimeSpan Object
                 var cacheOptions = new MemoryCacheEntryOptions()
                 {
                     Size = 1,
@@ -316,24 +314,15 @@ namespace PersonalSiteAPI.Controllers
                 {
                     case "study":
                         data = await response.Content.ReadFromJsonAsync<List<StudyJsonDTO>>();
-                        // data = await response.Content.ReadAsStringAsync();
                         break;
-                    // var studyData = await response.Content.ReadFromJsonAsync<List<StudyJsonDTO>>();
-                    // return Ok(studyData);
 
                     case "individual":
                         data = await response.Content.ReadFromJsonAsync<List<IndividualJsonDTO>>();
-                        // data = await response.Content.ReadAsStringAsync();
                         break;
-                    // var individualData = await response.Content.ReadFromJsonAsync<List<IndividualJsonDTO>>();
-                    // return Ok(individualData);
 
                     case "tag":
                         data = await response.Content.ReadFromJsonAsync<List<TagJsonDTO>>();
-                        // data = await response.Content.ReadAsStringAsync();
                         break;
-                    // var tagData = await response.Content.ReadFromJsonAsync<List<TagJsonDTO>>();
-                    // return Ok(tagData);
 
                     default:
                         return BadRequest("Invalid entity type.");
@@ -376,15 +365,11 @@ namespace PersonalSiteAPI.Controllers
             [Required][FromQuery] List<string> individualLocalIdentifiers,
             [Required] long studyId,
             [Required] string sensorType,
-            [GreaterThanZero] int? milliBetweenEvents = null,
             [GreaterThanZero] int? maxEventsPerIndividual = null,
-            [GreaterThanZero] int? minKmBetweenEvents = null,
-            [GreaterThanZero] int? maxDurationDays = null,
-            [GreaterThanZero] float? coordinateTrailingDigits = null,
             long? timestampStart = null,
             long? timestampEnd = null,
             string? attributes = null,
-            [FromQuery] List<string>? eventProfiles = null)
+            string? eventProfiles = null)
         {
             try
             {
@@ -394,22 +379,7 @@ namespace PersonalSiteAPI.Controllers
                 {
                     parameters.Add("max_events_per_individual", numEvents.ToString());
                 }
-                if (milliBetweenEvents is int time)
-                {
-                    parameters.Add("minMillisBetweenEvents", time.ToString());
-                }
-                if (minKmBetweenEvents is int distance)
-                {
-                    parameters.Add("minKmBetweenEvents", distance.ToString());
-                }
-                if (maxDurationDays is int days)
-                {
-                    parameters.Add("maxDurationDays", days.ToString());
-                }
-                if (coordinateTrailingDigits is float degDistance)
-                {
-                    parameters.Add("coordinateTrailingDigits", degDistance.ToString());
-                }
+
                 if (attributes is not null)
                 {
                     parameters.Add("attributes", attributes);
@@ -426,7 +396,7 @@ namespace PersonalSiteAPI.Controllers
                     sensorType: sensorType,
                     individualLocalIdentifiers: individualLocalIdentifiers.ToImmutableArray(),
                     parameters: parameters,
-                    eventProfiles: eventProfiles?.ToArray<string>() ?? null,
+                    eventProfile: eventProfiles,
                     headers: null,
                     authorizedUser: User.IsInRole(RoleNames.Administrator));
 
@@ -438,7 +408,7 @@ namespace PersonalSiteAPI.Controllers
                 }
                 else
                 {
-                    throw new Exception("Data was null");
+                    throw new Exception("Data was null.");
                 }
 
             }
@@ -448,7 +418,7 @@ namespace PersonalSiteAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
-
+        // private static EventJsonDTO CombineResults()
 
         protected static float? FloatParser(string? num)
         {

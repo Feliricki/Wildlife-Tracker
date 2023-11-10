@@ -23,11 +23,11 @@ namespace PersonalSiteAPI.Services
         // Direct and Json request must specify an entity_type
         // Some entities are "individual, tag_type ,study"
         Task<HttpResponseMessage?> DirectRequest(
-            string entityType, 
-            Dictionary<string, string?>? parameters=null,
-            (string, string)[]? headers=null, 
+            string entityType,
+            Dictionary<string, string?>? parameters = null,
+            (string, string)[]? headers = null,
             bool authorizedUser = false
-            );        
+            );
         Task<HttpResponseMessage> JsonRequest(
             string entityType,
             Dictionary<string, string?>? parameters = null,
@@ -39,7 +39,7 @@ namespace PersonalSiteAPI.Services
             string sensorType,
             ImmutableArray<string> individualLocalIdentifiers,
             Dictionary<string, string?>? parameters,
-            string[]? eventProfiles = null,
+            string? eventProfile = null,
             (string, string)[]? headers = null,
             bool authorizedUser = false);
 
@@ -69,22 +69,22 @@ namespace PersonalSiteAPI.Services
             _logger = logger;
             _amazonSecretsManager = amazonSecretsManager;
             _provider = provider;
-            
+
             _protector = _provider.CreateProtector("API Token").ToTimeLimitedDataProtector();
             uint durationMinutes = 1;
             _secretsCache = new SecretsManagerCache(
                 _amazonSecretsManager,
                 new SecretCacheConfiguration
-            {
-                CacheItemTTL = durationMinutes,
-                MaxCacheSize = 1024,
-                VersionStage = "AWSCURRENT",
-                Client = _amazonSecretsManager,
-                CacheHook = new MySecretCacheHook(_protector, durationMinutes)
+                {
+                    CacheItemTTL = durationMinutes,
+                    MaxCacheSize = 1024,
+                    VersionStage = "AWSCURRENT",
+                    Client = _amazonSecretsManager,
+                    CacheHook = new MySecretCacheHook(_protector, durationMinutes)
                 });
 
             _httpClient.BaseAddress = new Uri("https://www.movebank.org/movebank/service/");
-            
+
         }
         // Restrict this function
         public async Task<ApiTokenResultDTO?> GetApiToken()
@@ -98,34 +98,34 @@ namespace PersonalSiteAPI.Services
             GetSecretValueResponse? secretValue = await secretCache.GetSecretValue(new CancellationToken());
 
             var secretObj = JsonSerializer.Deserialize<ApiTokenResultDTO>(secretValue.SecretString)!;
-            DateTime? expirationDate = GetDateTime(secretObj.ExpirationDate!);            
+            DateTime? expirationDate = GetDateTime(secretObj.ExpirationDate!);
             if (expirationDate != null && expirationDate > DateTime.Now)
             {
                 return secretObj;
             }
 
             var uri = _httpClient.BaseAddress!.OriginalString + "direct-read";
-            uri = QueryHelpers.AddQueryString(uri, "service", "request-token");                     
+            uri = QueryHelpers.AddQueryString(uri, "service", "request-token");
 
             using var request = new HttpRequestMessage()
             {
                 RequestUri = new Uri(uri),
                 Method = HttpMethod.Get,
             };
-            
-            using var response = await _httpClient.SendAsync(request);            
-             
-            response.EnsureSuccessStatusCode();     
+
+            using var response = await _httpClient.SendAsync(request);
+
+            response.EnsureSuccessStatusCode();
             //Console.WriteLine("Headers: " + response.Headers.ToString());
             return await response.Content.ReadFromJsonAsync<ApiTokenResultDTO>();
-        }            
+        }
         // Helper method
-        public DateTime? GetDateTime(string dateString, string timeZone="CET")
+        public DateTime? GetDateTime(string dateString, string timeZone = "CET")
         {
             // Hardcoded data - +1 is CET
             string newDataString = dateString.Replace(timeZone, "+1");
             string formatString = $"ddd MMM dd HH:mm:ss z yyyy";
-            
+
             if (DateTime.TryParseExact(newDataString, formatString, null, DateTimeStyles.None, out DateTime result))
             {
                 return result;
@@ -135,8 +135,8 @@ namespace PersonalSiteAPI.Services
                 return null;
             }
         }
-        
-        public async Task<HttpResponseMessage?> DirectRequest(string entityType, Dictionary<string, string?>? parameters=null, (string, string)[]? headers=null, bool authorizedUser=false)
+
+        public async Task<HttpResponseMessage?> DirectRequest(string entityType, Dictionary<string, string?>? parameters = null, (string, string)[]? headers = null, bool authorizedUser = false)
         {
             // Catch potential exceptions
             var secretObj = await GetApiToken();
@@ -153,7 +153,7 @@ namespace PersonalSiteAPI.Services
             if (secretObj != null && !string.IsNullOrEmpty(secretObj.ApiToken))
             {
                 uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
-            }            
+            }
             using var request = new HttpRequestMessage()
             {
                 RequestUri = new Uri(uri),
@@ -166,10 +166,10 @@ namespace PersonalSiteAPI.Services
                 {
                     request.Headers.Add(header.Item1, header.Item2);
                 }
-            }            
+            }
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            
+
             if (response.Headers.TryGetValues("accept-license", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
             {
                 response = await GetPermission(request, response);
@@ -230,7 +230,7 @@ namespace PersonalSiteAPI.Services
             return response;
 
         }
-        
+
         // Several inputs are required for events data to be returned
         // If a license agreement has not accepted then the license agreements must be returned in a MD5 hash string
         // The following parameters must be passed:
@@ -247,7 +247,7 @@ namespace PersonalSiteAPI.Services
             string sensorType,
             ImmutableArray<string> individualLocalIdentifiers,
             Dictionary<string, string?>? parameters = null,
-            string[]? eventProfiles = null,
+            string? eventProfile = null,
             (string, string)[]? headers = null,
             bool authorizedUser = false)
         {
@@ -278,14 +278,11 @@ namespace PersonalSiteAPI.Services
                 uri = QueryHelpers.AddQueryString(uri, parameters);
             }
 
-            if (eventProfiles is not null)
+            if (eventProfile is not null)
             {
-                foreach (var profile in eventProfiles)
-                {
-                    uri = QueryHelpers.AddQueryString(uri, "event_reduction_profile", profile);
-                }
+                uri = QueryHelpers.AddQueryString(uri, "event_reduction_profile", eventProfile);
             }
-                        
+
             if (secretObj is not null && !string.IsNullOrEmpty(secretObj.ApiToken))
             {
                 uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);

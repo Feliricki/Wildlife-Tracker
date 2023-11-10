@@ -8,8 +8,8 @@ describe('SimpleSearchComponent', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      declarations: [SimpleSearchComponent]
-    });
+    imports: [SimpleSearchComponent]
+});
     fixture = TestBed.createComponent(SimpleSearchComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();

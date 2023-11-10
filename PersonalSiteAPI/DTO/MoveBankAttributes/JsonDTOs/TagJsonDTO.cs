@@ -6,6 +6,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
     // entity_type=tag
     public class TagJsonDTO
     {
+        public readonly string type = "tag";
         [Required]
         [JsonPropertyName("id")]
         public long TagId { get; set; }
