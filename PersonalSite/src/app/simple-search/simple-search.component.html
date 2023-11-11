@@ -1,12 +1,5 @@
-<!-- TODO - Add a submit button with angular element -->
 
-
-
-<!-- <p *ngIf="!studies" style="margin-left: 50%; margin-right: 50%;">Loading ...</p> -->
-<!-- TODO: Add pagination and sorting -->
 <table mat-table [dataSource]="studies" class="study-table" *ngIf="studies">
-
-  <!-- TODO: Row for no results found -->
 
   <!-- Name -->
   <ng-container matColumnDef="name" class="cell-container">
@@ -62,7 +55,7 @@
           </div>
 
           <!-- Create a service and a custom pipe that gets the common name from an external API -->
-          <div *ngIf="study.taxonIds && commonNames[j] | async as commonName; else defaultCase">Taxa: {{ commonName
+          <div *ngIf="study.taxonIds && commonNames$[j] | async as commonName; else defaultCase">Taxa: {{ commonName
             }}</div><br>
 
           <ng-template #defaultCase>
@@ -97,12 +90,7 @@
             <p>{{study.grantsUsed}}</p>
           </div>
 
-          <!-- <div *ngIf="wikipediaLinks[j] | async as Links"> -->
-          <!--   <br> -->
-          <!--   <h4>Links</h4> -->
-          <!--   <div *ngFor="let curLink of Links"><a [href]="curLink.link">{{curLink.link}}</a></div> -->
-          <!-- </div> -->
-          <div *ngIf="wikipediaLinks[j] | async as Links">
+          <div *ngIf="wikipediaLinks$[j] | async as Links">
             <br>
             <h4>Links</h4>
             <div *ngFor="let curLink of Links">

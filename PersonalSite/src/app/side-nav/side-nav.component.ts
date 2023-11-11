@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { MapComponent } from '../map/map.component';
+import { MapComponent } from '../google-maps/google-map.component';
 import { SimpleSearchComponent } from '../simple-search/simple-search.component';
 import { MatSidenavModule } from '@angular/material/sidenav';
 

@@ -35,8 +35,8 @@ export class SimpleSearchComponent implements OnInit {
   displayedColumns = ["name"];
 
   panelExpanded: boolean[] | undefined;
-  commonNames: (Observable<string> | undefined)[] = [];
-  wikipediaLinks: (Observable<WikiLinks[]> | undefined)[] = [];
+  commonNames$: (Observable<string> | undefined)[] = [];
+  wikipediaLinks$: (Observable<WikiLinks[]> | undefined)[] = [];
 
   defaultPageIndex = 0;
   defaultPageSize = 10;
@@ -64,8 +64,8 @@ export class SimpleSearchComponent implements OnInit {
     // this.panelExpanded = [];
     for (let i = 0; i < this.defaultPageSize; i += 1) {
       // this.panelExpanded.push(false);
-      this.commonNames.push(undefined);
-      this.wikipediaLinks.push(undefined);
+      this.commonNames$.push(undefined);
+      this.wikipediaLinks$.push(undefined);
     }
     this.loadData();
   }
@@ -232,15 +232,15 @@ export class SimpleSearchComponent implements OnInit {
         this.paginator.pageSize = apiResult.pageSize;
         console.log(apiResult.data);
         this.studies = new MatTableDataSource(apiResult.data);
-        this.commonNames = [];
-        this.wikipediaLinks = [];
+        this.commonNames$ = [];
+        this.wikipediaLinks$ = [];
         for (let i = 0; i < Math.min(this.paginator.pageSize, apiResult.data.length); i++) {
           if (this.studies.data[i].taxonIds) {
-            this.commonNames.push(this.getTaxa(this.studies.data[i].taxonIds ?? ""));
-            this.wikipediaLinks.push(this.searchWikipedia(this.studies.data[i].taxonIds ?? ""));
+            this.commonNames$.push(this.getTaxa(this.studies.data[i].taxonIds ?? ""));
+            this.wikipediaLinks$.push(this.searchWikipedia(this.studies.data[i].taxonIds ?? ""));
           } else {
-            this.commonNames.push(undefined);
-            this.wikipediaLinks.push(undefined);
+            this.commonNames$.push(undefined);
+            this.wikipediaLinks$.push(undefined);
           }
         }
       },
