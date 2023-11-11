@@ -1,10 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 // import { GoogleMap, } from '@angular/google-maps';
-import { HttpClient } from '@angular/common/http';
-import { Observable, map, of, tap, from } from 'rxjs';
+import { map, of, from } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
 import { Loader } from '@googlemaps/js-api-loader';
+import { NgIf, AsyncPipe } from '@angular/common';
+// import { MarkerClusterer } from '@googlemaps/markerclusterer';
 
 // interface MarkerObject {
 //   // marker: google.maps.Marker;
@@ -21,21 +22,11 @@ import { Loader } from '@googlemaps/js-api-loader';
   selector: 'app-map',
   templateUrl: './map.component.html',
   styleUrls: ['./map.component.css'],
-  standalone: true
+  standalone: true,
+  imports: [NgIf, AsyncPipe]
 })
 export class MapComponent implements OnInit {
 
-  defaultCenter: google.maps.LatLngAltitudeLiteral = {
-    lat: 0,
-    lng: 0,
-    altitude: 12
-  };
-
-  defaultZoom = 15;
-  defaultMapOptions: google.maps.MapOptions = {
-    mapTypeId: "hybrid",
-    zoom: 12,
-  };
 
   mapOptions: google.maps.MapOptions = {
     center: {
@@ -52,55 +43,41 @@ export class MapComponent implements OnInit {
   loader = new Loader({
     apiKey: "AIzaSyB3YlH9v4TYdeP8Qc3x-HA6jRNYiHJKz1s",
     version: "weekly",
-    // retries: 3,
+    libraries: ['marker']
   });
 
   map: google.maps.Map | undefined;
+  studies: Map<bigint, StudyDTO> | undefined;
+  // markers: Map<bigint, google.maps.Marker> | undefined;
+  markers: google.maps.marker.AdvancedMarkerElement[] = [];
+  mapCluster: MarkerClusterer | undefined;
 
   constructor(
-    private httpClient: HttpClient,
     private studyService: StudyService) {
   }
 
   ngOnInit(): void {
-    // if (navigator.geolocation) {
-    //   navigator.geolocation.getCurrentPosition(
-    //     (position: GeolocationPosition) => {
-    //       this.defaultCenter = {
-    //         lat: position.coords.latitude ?? 0,
-    //         lng: position.coords.longitude ?? 0,
-    //         altitude: 150
-    //       };
-    //       console.log("defaultCenter has been updated");
-    //     },
-    //
-    //     (error: GeolocationPositionError) => {
-    //       console.error(error);
-    //     }
-    //   )
-    // }
+    console.log("ngOnInit");
 
-    this.apiLoaded = from(this.initMap()).pipe(
-      tap(result => {
-        if (result) {
-          // TODO:  load studies and markers here
-          // this.loadData();
-        } else {
-          return;
-        }
-      }),
-    );
+    this.apiLoaded = from(this.initMap());
   }
 
   async initMap(): Promise<boolean> {
     try {
       console.log("Initializing map.");
-      this.loader.importLibrary("maps")
-        .then(({ Map }) => {
-          new Map(document.getElementById("map")!, this.mapOptions);
-        })
-        .catch((e) => console.log(e));
+      // await this.loader.importLibrary("maps")
+      //   .then(({ Map }) => {
+      //     console.log("loaded map");
+      //     new Map(document.getElementById("map")!, this.mapOptions);
+      //
+      //   })
+      //   .catch((e) => console.error(e));
 
+      this.loader.load().then((google) => {
+        this.map = new google.maps.Map(document.getElementById("map")!, this.mapOptions);
+        this.loadData();
+        this.mapCluster = new MarkerClusterer({ map: this.map, markers: this.markers })
+      })
       return true;
 
     } catch (error) {
@@ -109,8 +86,9 @@ export class MapComponent implements OnInit {
     }
   }
 
-  getStudies(): Observable<Map<bigint, StudyDTO>> {
-    return this.studyService.getAllStudies().pipe(
+  loadData(): void {
+    console.log("Calling getStudies");
+    this.studyService.getAllStudies().pipe(
 
       map(StudyDTOs => {
 
@@ -119,42 +97,58 @@ export class MapComponent implements OnInit {
           mappings.set(studyDTO.id, studyDTO);
         })
         return mappings;
-
       }),
 
-    );
-  }
-
-  // TODO: How to combine both the studies and the marker subscription?
-  // Use a higher order observable such as ConcatMap or MergeMap
-  getMarkers(): Observable<Map<bigint, google.maps.Marker>> {
-    return this.studyService.getAllStudies().pipe(
-      map(studyDTOs => {
-        return studyDTOs.filter(studyDTO => (studyDTO.mainLocationLat !== undefined || studyDTO.mainLocationLon !== undefined)
-          && (studyDTO.mainLocationLon !== 0 && studyDTO.mainLocationLat !== 0));
-      }),
-
-      map(studyDTOs => {
-        const mappings = new Map<bigint, google.maps.Marker>();
-
-        for (const studyDTO of studyDTOs) {
-          const marker = new google.maps.Marker();
-          const pos: google.maps.LatLngLiteral = {
-            lat: studyDTO.mainLocationLat ?? 0,
-            lng: studyDTO.mainLocationLon ?? 0,
-          };
-
-          if (this.map) {
-            marker.setMap(this.map);
+    ).subscribe({
+      next: mappings => {
+        this.studies = mappings;
+        const markers = [];
+        for (const studyDTO of this.studies.values()) {
+          // console.log("beginning marker loop");
+          if (studyDTO.mainLocationLon !== undefined && studyDTO.mainLocationLat !== undefined) {
+            const marker = new google.maps.marker.AdvancedMarkerElement({
+              map: this.map,
+              position: {
+                lat: studyDTO.mainLocationLat,
+                lng: studyDTO.mainLocationLon
+              }
+            });
+            markers.push(marker);
           }
-          marker.setPosition(pos);
-          mappings.set(studyDTO.id, marker);
         }
-        return mappings;
-      })
-    );
+        this.markers = markers;
+      },
+      error: err => {
+        console.error(err);
+      }
+    });
   }
 
-  // loadData(): void {
-  // }
+  async addMarkers(studies: Map<bigint, StudyDTO>): Promise<void> {
+    console.log(studies);
+    return this.loader.importLibrary("marker")
+      .then(({ AdvancedMarkerElement }) => {
+        const markers = [];
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        for (const [_, studyDTO] of studies.entries()) {
+          const studyLat = studyDTO.mainLocationLat;
+          const studyLon = studyDTO.mainLocationLon;
+          if (studyLat !== undefined && studyLon !== undefined) {
+            const pos = { lat: studyLat, lng: studyLon } as unknown as google.maps.LatLng;
+
+            // const position = { lat: -25.344, lng: 131.031 } as google.maps.LatLng;
+            const marker = new AdvancedMarkerElement({
+              map: this.map,
+              position: pos,
+              title: studyDTO.name ?? null,
+            });
+
+            markers.push(marker);
+          }
+        }
+        this.markers = markers;
+        console.log(this.markers);
+      })
+      .catch((e) => console.error(e))
+  }
 }
