@@ -5,7 +5,7 @@ import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
 import { Loader } from '@googlemaps/js-api-loader';
 import { NgIf, AsyncPipe } from '@angular/common';
-import { MarkerClusterer, Marker } from '@googlemaps/markerclusterer';
+import { MarkerClusterer, Marker, SuperClusterAlgorithm, SuperClusterOptions } from '@googlemaps/markerclusterer';
 import { Renderer1 } from './renderers';
 
 @Component({
@@ -26,6 +26,10 @@ export class MapComponent implements OnInit {
     mapId: "demo",
     mapTypeId: "hybrid",
   };
+
+  defaultAlgorithmOptions: SuperClusterOptions = {
+    radius: 120,
+  }
 
   defaultMarkerOptions: google.maps.MarkerOptions = {
     clickable: true,
@@ -48,7 +52,6 @@ export class MapComponent implements OnInit {
 
   map: google.maps.Map | undefined;
   studies: Map<bigint, StudyDTO> | undefined;
-  // markers: Map<bigint, google.maps.Marker> | undefined;
   markers: Marker[] = [];
   mapCluster: MarkerClusterer | undefined;
 
@@ -130,7 +133,7 @@ export class MapComponent implements OnInit {
             markers.push(marker);
           }
           this.markers = markers;
-          this.mapCluster = new MarkerClusterer({ map: this.map, markers: markers, renderer: new Renderer1() });
+          this.mapCluster = new MarkerClusterer({ map: this.map, markers: markers, renderer: new Renderer1(), algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions) });
         },
         error: err => console.error(err)
       });
@@ -142,10 +145,6 @@ export class MapComponent implements OnInit {
     })
 
   }
-
-  // toggleInfoWindow(marker: Marker, markerInfo: MarkerInfo): void {
-  //   return;
-  // }
 
   getMarkers(studies: Map<bigint, StudyDTO>, map: google.maps.Map): Marker[] {
     const markers = [];
