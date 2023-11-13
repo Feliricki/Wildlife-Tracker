@@ -3,14 +3,14 @@
     /* display: flex; */
     height: 100%;
     width: 100%;
-    border-style: solid;
+    /* border-style: solid; */
 }
 
 .sidenav {
   /* margin: 1em; */
   /*TODO: set up correct margins */
   /* margin: 5em 1em; */
-  margin-top: 2em;
+  margin-top: 6em;
   margin-left: 2em;
   margin-bottom: 4em;
   width: 500px;
@@ -24,5 +24,12 @@
   background-color: blue;
   width: 100%;
   height: 95%;
-  /* z-index: 10; */
 }
+
+.right-sidenav {
+  width: 300px;
+}
+/**/
+/* .toggle-button { */
+/**/
+/* } */

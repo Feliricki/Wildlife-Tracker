@@ -1,9 +1,10 @@
-import { Component, OnInit, ViewChild, signal, WritableSignal } from '@angular/core';
+import { Component, OnInit, ViewChild, signal, WritableSignal, Output, EventEmitter } from '@angular/core';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
 import { Observable, Subject, reduce, distinctUntilChanged, debounceTime, map, catchError, of, concat, EMPTY } from 'rxjs';
 import { FormGroup, FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginator, PageEvent, MatPaginatorModule } from '@angular/material/paginator';
+import { MatRadioModule } from '@angular/material/radio';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table'
 import { ENAAPIService } from '../ENA-API/ena-api.service';
 import { WikipediaSearchService } from '../wikipedia/wikipedia-search.service';
@@ -13,6 +14,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { NgIf, NgFor, AsyncPipe, DatePipe } from '@angular/common';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 
 interface WikiLinks {
   title: string;
@@ -24,10 +27,15 @@ interface WikiLinks {
   templateUrl: './simple-search.component.html',
   styleUrls: ['./simple-search.component.scss'],
   standalone: true,
-  imports: [NgIf, MatTableModule, FormsModule, ReactiveFormsModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatOptionModule, MatExpansionModule,
-    NgFor, MatPaginatorModule, AsyncPipe, DatePipe]
+  imports: [
+    NgIf, MatTableModule,
+    FormsModule, ReactiveFormsModule,
+    MatFormFieldModule, MatInputModule,
+    MatSelectModule, MatOptionModule,
+    MatExpansionModule, MatIconModule,
+    NgFor, MatPaginatorModule,
+    AsyncPipe, DatePipe,
+    MatRadioModule, MatButtonModule]
 })
 export class SimpleSearchComponent implements OnInit {
 
@@ -53,6 +61,8 @@ export class SimpleSearchComponent implements OnInit {
   });
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
+  // The variable name is the name of the event in the parent component
+  @Output() panToMarkerEvent = new EventEmitter<bigint>();
 
   constructor(
     private studyService: StudyService,
@@ -91,23 +101,29 @@ export class SimpleSearchComponent implements OnInit {
     this.filterTextChanged.next(text);
   }
 
+  hasLocation(studyDTO: StudyDTO): boolean {
+    return studyDTO.mainLocationLat !== undefined && studyDTO.mainLocationLon !== undefined;
+  }
+
+  // TODO: Find more testing methods
+  // Find a study with no vald location listed
+  panToMarker(studyId: bigint): void {
+    this.panToMarkerEvent.emit(studyId);
+  }
   // getters
   get filterQuery(): FormControl<string> {
     return this.searchForm.controls.filterQuery;
   }
 
-
   get dropDownList(): FormControl<"asc" | "desc"> {
     return this.searchForm.controls.dropDownList;
   }
 
-  // TODO: Change this method to use the concat functions
   getTaxa(taxaStr: string): Observable<string> {
     const taxaList = taxaStr.trim().split(",");
     if (!taxaStr || taxaList.length === 0) {
       console.log("empty observable in getTaxa");
       return EMPTY;
-      // return of('');
     }
 
     const combined$ = concat(...taxaList.map(taxon => {
@@ -177,7 +193,6 @@ export class SimpleSearchComponent implements OnInit {
         acc.push(...value);
         return acc;
       }, [] as WikiLinks[]));
-
   }
 
   isExpanded(index: number): boolean {

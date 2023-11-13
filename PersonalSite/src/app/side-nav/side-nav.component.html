@@ -1,12 +1,23 @@
 <!-- <div class="main-content"> -->
 <mat-sidenav-container class="sidenav-container" [hasBackdrop]="false">
 
-  <mat-sidenav #sidenav mode="over" [opened]="true" [fixedInViewport]="false" class="sidenav" [disableClose]="true">
-    <app-simple-search></app-simple-search>
+  <mat-sidenav #sidenav mode="over" [opened]="true" [fixedInViewport]="true" class="sidenav" [disableClose]="true">
+    <app-simple-search (panToMarkerEvent)="panToMarker($event)"></app-simple-search>
+    <!-- <button mat-button class="toggle-button">Button</button> -->
   </mat-sidenav>
 
   <mat-sidenav-content class="sidenav-content">
-    <app-google-map></app-google-map>
+
+    <mat-sidenav class="right-sidenav" #rightSidenav [opened]="true" position="end" [disableClose]="true" mode="side">
+      test
+    </mat-sidenav>
+
+    <mat-sidenav-content>
+      <!-- content -->
+      <app-google-map [focusedMarker]="currentMarker"></app-google-map>
+
+    </mat-sidenav-content>
+
   </mat-sidenav-content>
 
 </mat-sidenav-container>

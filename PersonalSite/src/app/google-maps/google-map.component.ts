@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnChanges, SimpleChanges, Input } from '@angular/core';
 // import { GoogleMap, } from '@angular/google-maps';
 import { map, of, from } from 'rxjs';
 import { StudyService } from '../studies/study.service';
@@ -15,7 +15,8 @@ import { Renderer1 } from './renderers';
   standalone: true,
   imports: [NgIf, AsyncPipe]
 })
-export class MapComponent implements OnInit {
+export class MapComponent implements OnInit, OnChanges {
+  @Input() focusedMarker: bigint | undefined;
 
   defaultMapOptions: google.maps.MapOptions = {
     center: {
@@ -52,7 +53,8 @@ export class MapComponent implements OnInit {
 
   map: google.maps.Map | undefined;
   studies: Map<bigint, StudyDTO> | undefined;
-  markers: Marker[] = [];
+  // markers: Marker[] = [];
+  markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> | undefined;
   mapCluster: MarkerClusterer | undefined;
 
   infoWindow: google.maps.InfoWindow | undefined;
@@ -63,8 +65,36 @@ export class MapComponent implements OnInit {
 
   ngOnInit(): void {
     console.log("ngOnInit");
-
     this.apiLoaded = from(this.initMap());
+  }
+
+  // NOTE: This method listens to values received from the parent component.
+  //  Only new values (actual changes) make it to this method.
+  ngOnChanges(changes: SimpleChanges): void {
+    for (const propertyName in changes) {
+      const currentValue = changes[propertyName].currentValue;
+      switch (propertyName) {
+        case "focusedMarker":
+          this.panToMarker(currentValue);
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  panToMarker(studyId: bigint): void {
+    const curMarker = this.markers?.get(studyId);
+    if (curMarker === undefined) {
+      return;
+    }
+    const markerPos = curMarker.position;
+    if (!markerPos) {
+      return;
+    }
+    this.map?.panTo(markerPos);
+    this.map?.setZoom(10);
+    google.maps.event.trigger(curMarker, "click");
   }
 
   async initMap(): Promise<boolean> {
@@ -91,7 +121,7 @@ export class MapComponent implements OnInit {
       ).subscribe({
         next: mappings => {
           this.studies = mappings;
-          const markers: Marker[] = [];
+          const markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> = new Map<bigint, google.maps.marker.AdvancedMarkerElement>();
 
           for (const studyDTO of this.studies.values()) {
 
@@ -114,6 +144,7 @@ export class MapComponent implements OnInit {
             });
             // NOTE: This is where the listener functions is defined.
             marker.addListener("click", () => {
+
               if (this.infoWindow === undefined) {
                 return;
               }
@@ -124,16 +155,26 @@ export class MapComponent implements OnInit {
                 this.infoWindow.set("toggle", false);
                 return;
               }
+              const content =
+                `<h5>${studyDTO.name}</h5>
+                    <p>latitude: ${studyDTO.mainLocationLat}<br>
+                    longitude: ${studyDTO.mainLocationLon}<p>`;
               this.infoWindow.close();
-              this.infoWindow.setContent(`latitude: ${studyDTO.mainLocationLat}<br>longitude: ${studyDTO.mainLocationLon}`);
+              this.infoWindow.setContent(content);
               this.infoWindow.set("toggle", !this.infoWindow.get("toggle"));
               this.infoWindow.set("studyId", studyDTO.id);
               this.infoWindow.open(this.map, marker);
-            })
-            markers.push(marker);
+            });
+            // markers.push(marker);
+            markers.set(studyDTO.id, marker);
           }
           this.markers = markers;
-          this.mapCluster = new MarkerClusterer({ map: this.map, markers: markers, renderer: new Renderer1(), algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions) });
+          this.mapCluster = new MarkerClusterer({
+            map: this.map,
+            markers: Array.from(markers.values()),
+            renderer: new Renderer1(),
+            algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions)
+          });
         },
         error: err => console.error(err)
       });

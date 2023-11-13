@@ -1,15 +1,23 @@
-
-.tool-bar-container {
-    height: 5%;
-    /* position: fixed; */
-  /* position:sticky; */
-}
+/**/
+/* .tool-bar-container { */
+/*   height: 5%; */
+/*     /* position: fixed; */ */
+/*   /* position:sticky; */ */
+/* } */
 .spacer{
     flex: 1 1 auto;
 }
+.toolbar {
+  /* display: flex; */
+  /* position:static; */
+}
 
 .mat-toolbar.mat-primary {
-    background-color: rgb(4, 131, 114);
-    height: 100%;
-    color: white;
+  background-color: rgb(4, 131, 114);
+  /* display: flexbox; */
+    /* position:fixed; */
+    /* height: 100%; */
 }
+/* .login-button { */
+/*   z-index: 1000; */
+/* } */

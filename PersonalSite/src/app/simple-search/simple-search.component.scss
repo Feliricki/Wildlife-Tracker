@@ -5,26 +5,34 @@
 .spacer{
     flex: 1 1 auto;
 }
-
 .search-container {
-  background-color: lightblue;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  // margin: .5em .5em .5em .5em;
+  margin-top: 1em;
+  margin-left: 1em;
   // @include mat.input-density(-2); // note: These lines may need to be moved
-  // @include mat.all-component-densenties(-2);
   // @include mat.all-component-densities(-2);
 }
 
-// .search-form {
-//   margin-top: 5px;
-//   margin-left: 5px;
-//   // width: 30%;
-//   background-color: lightseagreen;
-//   // @include mat.button-density(-3);
-// }
+button {
+  // outline: none;
+  background-color: #efefef;
+  color: black;
+  // opacity:1;
+}
 
 mat-form-field {
-  margin-top: 5px;
-  margin-left: 5px;
+  // margin-top: .5em;
   // @include mat.button-density(-2);
+}
+
+.drop-selector {
+  // margin-top: 5em;
+  // margin-top: 10em;
+  // height: 10px;
+  // @include mat.
 }
 // ::ng-deep .mat-form-field-flex > .mat-form-field-infix { padding: 0.1em 0px !important;}
 // .search-input {
