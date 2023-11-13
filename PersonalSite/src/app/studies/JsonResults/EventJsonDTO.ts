@@ -1,5 +1,5 @@
-import { IndividualEventDTO } from "./IndividualEventJsonDTO";
+import { IndividualEventJsonDTO } from "./IndividualEventJsonDTO";
 
 export interface EventJsonDTO {
-  IndividualEvents: IndividualEventDTO[];
+  IndividualEvents: IndividualEventJsonDTO[];
 }

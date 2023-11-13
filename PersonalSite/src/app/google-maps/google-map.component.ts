@@ -1,12 +1,15 @@
 import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter } from '@angular/core';
 // import { GoogleMap, } from '@angular/google-maps';
-import { map, of, from } from 'rxjs';
+import { map, of, from, Observable } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
 import { Loader } from '@googlemaps/js-api-loader';
 import { NgIf, AsyncPipe } from '@angular/common';
 import { MarkerClusterer, Marker, SuperClusterAlgorithm, SuperClusterOptions } from '@googlemaps/markerclusterer';
 import { Renderer1 } from './renderers';
+import { IndividualJsonDTO } from '../studies/JsonResults/IndividualJsonDTO';
+import { StudyJsonDTO } from '../studies/JsonResults/StudyJsonDTO';
+import { TagJsonDTO } from '../studies/JsonResults/TagJsonDTO';
 
 @Component({
   selector: 'app-google-map',
@@ -18,6 +21,7 @@ import { Renderer1 } from './renderers';
 export class MapComponent implements OnInit, OnChanges {
   @Input() focusedMarker: bigint | undefined;
   @Output() getEventRequest = new EventEmitter<StudyDTO>();
+  JsonEvents: Set<Observable<IndividualJsonDTO | StudyJsonDTO | TagJsonDTO>> | undefined;
 
   defaultMapOptions: google.maps.MapOptions = {
     center: {
