@@ -1,6 +1,6 @@
-export interface StudyDTO {
+export interface StudyJsonDTO {
     type: "study";
-    id: number;    
+    id: number;
     name: string;
     sensorTypeIds: string;
 }

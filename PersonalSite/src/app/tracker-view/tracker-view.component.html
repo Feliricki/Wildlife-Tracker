@@ -10,13 +10,16 @@
 
     <mat-sidenav class="right-sidenav" #rightSidenav [opened]="true" position="end" [disableClose]="true" mode="side"
       [fixedInViewport]="true">
-      <app-events></app-events>
+
+      <!-- NOTE: Here, a specific study is toggled and has it's events displaye or removed from the map. -->
+      <app-events [toggledStudy]="toggledStudy"></app-events>
+
     </mat-sidenav>
 
     <mat-sidenav-content>
+
       <!-- content -->
-      <!-- focusedMarker is an output property in the google maps component -->
-      <app-google-map [focusedMarker]="currentMarker"></app-google-map>
+      <app-google-map (getEventRequest)="toggleEventForStudy($event)" [focusedMarker]="currentMarker"></app-google-map>
 
     </mat-sidenav-content>
 

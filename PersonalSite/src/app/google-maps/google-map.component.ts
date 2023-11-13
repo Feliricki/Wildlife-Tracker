@@ -17,6 +17,7 @@ import { Renderer1 } from './renderers';
 })
 export class MapComponent implements OnInit, OnChanges {
   @Input() focusedMarker: bigint | undefined;
+  @Output() getEventRequest = new EventEmitter<StudyDTO>();
 
   defaultMapOptions: google.maps.MapOptions = {
     center: {

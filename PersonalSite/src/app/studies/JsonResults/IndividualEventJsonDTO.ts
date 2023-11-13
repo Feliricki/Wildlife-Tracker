@@ -1,6 +1,6 @@
 import { LocationJsonDTO } from "./LocationJsonDTO";
 
-export interface IndividualEventDTO {
+export interface IndividualEventJsonDTO {
   studyId: bigint;
   individualLocalIdentifier: string;
   individualTaxonCanonicalName: string;

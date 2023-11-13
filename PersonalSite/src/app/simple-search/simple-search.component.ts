@@ -73,7 +73,6 @@ export class SimpleSearchComponent implements OnInit {
 
   ngOnInit(): void {
     for (let i = 0; i < this.defaultPageSize; i += 1) {
-      // this.panelExpanded.push(false);
       this.commonNames$.push(undefined);
       this.wikipediaLinks$.push(undefined);
     }

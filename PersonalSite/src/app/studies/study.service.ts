@@ -5,10 +5,11 @@ import { environment } from '../../environments/environment';
 import { StudyDTO } from './study';
 import { ApiResult } from '../ApiResult';
 import { EventJsonDTO } from './JsonResults/EventJsonDTO';
-import { IndividualDTO } from './JsonResults/IndividualDTO';
-import { TagDTO } from './JsonResults/TagDTO';
+import { TagJsonDTO } from './JsonResults/TagJsonDTO';
 import { EventOptions } from './EventOptions';
 import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
+import { IndividualJsonDTO } from './JsonResults/IndividualJsonDTO';
+import { StudyJsonDTO } from './JsonResults/StudyJsonDTO';
 
 @Injectable({
   providedIn: 'root'
@@ -59,15 +60,15 @@ export class StudyService {
 
   // TODO: Test this function
   jsonRequest(entityType: "study" | "tag" | "individual", studyId: bigint):
-    Observable<(IndividualDTO | StudyDTO | TagDTO)[]> {
+    Observable<(IndividualJsonDTO | StudyJsonDTO | TagJsonDTO)[]> {
     const url = environment.baseUrl + "api/MoveBank/GetJsonData";
     const parameters = new HttpParams()
       .set("entityType", entityType)
       .set("studyId", studyId.toString());
 
 
-    let response: Observable<(IndividualDTO | StudyDTO | TagDTO)[]> = EMPTY;
-    response = this.httpClient.get<(Extract<IndividualDTO | StudyDTO | TagDTO, { type: typeof entityType }>)[]>(url, { params: parameters });
+    let response: Observable<(IndividualJsonDTO | StudyJsonDTO | TagJsonDTO)[]> = EMPTY;
+    response = this.httpClient.get<(Extract<IndividualJsonDTO | StudyJsonDTO | TagJsonDTO, { type: typeof entityType }>)[]>(url, { params: parameters });
     // switch (entityType) {
     //   case "study": {
     //     response = this.httpClient.get<StudyDTO[]>(url, { params: parameters });

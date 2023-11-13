@@ -1,4 +1,4 @@
-export interface IndividualDTO {
+export interface IndividualJsonDTO {
     type: "individual";
     id: number;
     localIdentifier: string;

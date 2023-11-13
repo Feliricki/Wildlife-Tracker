@@ -1,16 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { SideNavComponent } from './side-nav.component';
+import { TrackerViewComponent } from './tracker-view.component';
 
 describe('SideNavComponent', () => {
-  let component: SideNavComponent;
-  let fixture: ComponentFixture<SideNavComponent>;
+  let component: TrackerViewComponent;
+  let fixture: ComponentFixture<TrackerViewComponent>;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [SideNavComponent]
+      imports: [TrackerViewComponent]
     });
-    fixture = TestBed.createComponent(SideNavComponent);
+    fixture = TestBed.createComponent(TrackerViewComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

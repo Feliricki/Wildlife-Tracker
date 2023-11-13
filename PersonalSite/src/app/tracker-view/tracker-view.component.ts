@@ -5,6 +5,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
 import { EventsComponent } from '../events/events.component';
 import { StudyDTO } from '../studies/study';
+import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
 
 @Component({
   selector: 'app-tracker-view',
@@ -25,11 +26,21 @@ export class TrackerViewComponent implements OnInit {
   currentMarker: bigint | undefined;
   currentStudies: Map<bigint, StudyDTO> | undefined;
 
+  // toggledStudies: Map<bigint, StudyDTO> | undefined;
+  toggledStudy: StudyDTO | undefined;
+  displayedEvents: EventJsonDTO[] | undefined;
+
   constructor() {
+    return;
   }
 
   ngOnInit(): void {
     return;
+  }
+
+  toggleEventForStudy(studyDTO: StudyDTO): void {
+    console.log(`Sending request for study ${studyDTO.id}`);
+    this.toggledStudy = studyDTO;
   }
 
   updateMarkers(studies: Map<bigint, StudyDTO>): void {
@@ -41,7 +52,6 @@ export class TrackerViewComponent implements OnInit {
   }
 
   panToMarker(studyId: bigint): void {
-    // console.log(`Received ${studyId} in SideNav component.`);
     this.currentMarker = studyId;
   }
 
