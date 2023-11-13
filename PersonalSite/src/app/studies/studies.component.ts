@@ -20,10 +20,12 @@ import { NgIf } from '@angular/common';
   templateUrl: './studies.component.html',
   styleUrls: ['./studies.component.css'],
   standalone: true,
-  imports: [NgIf, MatFormFieldModule, MatInputModule,
+  imports: [NgIf,
+    MatFormFieldModule, MatInputModule,
     MatButtonModule, MatIconModule,
     MatTableModule, MatSortModule,
-    MatPaginatorModule, DefaultPipe, TruncatePipe]
+    MatPaginatorModule, DefaultPipe,
+    TruncatePipe]
 })
 export class StudiesComponent implements OnInit, OnDestroy {
   public displayedColumns: string[] = ['name'];
@@ -117,7 +119,6 @@ export class StudiesComponent implements OnInit, OnDestroy {
       ? this.filterQuery
       : undefined;
 
-    // console.log(`getData: event.page=${event.pageIndex} event.pageSize=${event.pageSize} sortColumn=${sortColumn} sortOrder=${sortOrder} filterColumn=${filterColumn} filterQuery=${filterQuery}`)
     this.studyService.getStudies(
       event.pageIndex,
       event.pageSize,

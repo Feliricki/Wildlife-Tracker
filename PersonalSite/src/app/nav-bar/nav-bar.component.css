@@ -8,6 +8,7 @@
     flex: 1 1 auto;
 }
 .toolbar {
+  height: 2.5em;
   /* display: flex; */
   /* position:static; */
 }

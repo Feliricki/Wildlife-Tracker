@@ -16,6 +16,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { NgIf, NgFor, AsyncPipe, DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 interface WikiLinks {
   title: string;
@@ -34,7 +35,7 @@ interface WikiLinks {
     MatSelectModule, MatOptionModule,
     MatExpansionModule, MatIconModule,
     NgFor, MatPaginatorModule,
-    AsyncPipe, DatePipe,
+    AsyncPipe, DatePipe, MatProgressSpinnerModule,
     MatRadioModule, MatButtonModule]
 })
 export class SimpleSearchComponent implements OnInit {
@@ -79,6 +80,13 @@ export class SimpleSearchComponent implements OnInit {
     this.loadData();
   }
 
+  hasLocation(study: StudyDTO): boolean {
+    if (!this.studies) {
+      return false;
+    }
+    return study.mainLocationLat !== undefined && study.mainLocationLon !== undefined;
+  }
+
 
   filterEvent(text?: string): void {
     if (!text) {
@@ -99,10 +107,6 @@ export class SimpleSearchComponent implements OnInit {
         });
     }
     this.filterTextChanged.next(text);
-  }
-
-  hasLocation(studyDTO: StudyDTO): boolean {
-    return studyDTO.mainLocationLat !== undefined && studyDTO.mainLocationLon !== undefined;
   }
 
   // TODO: Find more testing methods

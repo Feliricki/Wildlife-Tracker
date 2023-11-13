@@ -8,12 +8,14 @@
 
   <mat-sidenav-content class="sidenav-content">
 
-    <mat-sidenav class="right-sidenav" #rightSidenav [opened]="true" position="end" [disableClose]="true" mode="side">
-      test
+    <mat-sidenav class="right-sidenav" #rightSidenav [opened]="true" position="end" [disableClose]="true" mode="side"
+      [fixedInViewport]="true">
+      <app-events></app-events>
     </mat-sidenav>
 
     <mat-sidenav-content>
       <!-- content -->
+      <!-- focusedMarker is an output property in the google maps component -->
       <app-google-map [focusedMarker]="currentMarker"></app-google-map>
 
     </mat-sidenav-content>

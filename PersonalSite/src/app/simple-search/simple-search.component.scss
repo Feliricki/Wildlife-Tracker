@@ -1,12 +1,10 @@
-@use 'sass:map';
-@use '@angular/material' as mat;
-
 
 .spacer{
     flex: 1 1 auto;
 }
 .search-container {
   display: flex;
+  // position: relative;
   flex-direction: row;
   flex-wrap: wrap;
   // margin: .5em .5em .5em .5em;
@@ -23,6 +21,19 @@ button {
   // opacity:1;
 }
 
+.spinner {
+  margin-top: 60%;
+  margin-left: 40%;
+  margin-bottom:60%;
+}
+
+.paginator {
+  // flex-direction: column-reverse;
+  // position: relative;
+}
+mat-expansion-header {
+}
+
 mat-form-field {
   // margin-top: .5em;
   // @include mat.button-density(-2);
@@ -32,7 +43,6 @@ mat-form-field {
   // margin-top: 5em;
   // margin-top: 10em;
   // height: 10px;
-  // @include mat.
 }
 // ::ng-deep .mat-form-field-flex > .mat-form-field-infix { padding: 0.1em 0px !important;}
 // .search-input {

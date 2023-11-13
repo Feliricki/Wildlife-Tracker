@@ -1,4 +1,4 @@
-import { Component, OnInit, OnChanges, SimpleChanges, Input } from '@angular/core';
+import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter } from '@angular/core';
 // import { GoogleMap, } from '@angular/google-maps';
 import { map, of, from } from 'rxjs';
 import { StudyService } from '../studies/study.service';
@@ -53,7 +53,7 @@ export class MapComponent implements OnInit, OnChanges {
 
   map: google.maps.Map | undefined;
   studies: Map<bigint, StudyDTO> | undefined;
-  // markers: Marker[] = [];
+  studiesEmitter = new EventEmitter<Map<bigint, StudyDTO>>();
   markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> | undefined;
   mapCluster: MarkerClusterer | undefined;
 
@@ -185,6 +185,11 @@ export class MapComponent implements OnInit, OnChanges {
       return false;
     })
 
+  }
+
+  emitStudies(studies: Map<bigint, StudyDTO>): void {
+    console.log("emitting studies.")
+    this.studiesEmitter.emit(studies);
   }
 
   getMarkers(studies: Map<bigint, StudyDTO>, map: google.maps.Map): Marker[] {

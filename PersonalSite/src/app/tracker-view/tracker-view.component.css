@@ -21,13 +21,17 @@
 
 .sidenav-content {
   position: fixed;
-  background-color: blue;
+  /* background-color: blue; */
+  background-color: lightblue;
   width: 100%;
   height: 95%;
 }
 
 .right-sidenav {
   width: 300px;
+  margin-top:3.5em;
+  /* margin-top:6em; */
+  /* position:fixed; */
 }
 /**/
 /* .toggle-button { */

@@ -11,11 +11,11 @@ import { HTTP_INTERCEPTORS, withInterceptorsFromDi, provideHttpClient, HttpClien
 
 
 bootstrapApplication(AppComponent, {
-    providers: [
-        importProvidersFrom(BrowserModule, HttpClientJsonpModule, FormsModule, ReactiveFormsModule, AppRoutingModule),
-        { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
-        provideHttpClient(withInterceptorsFromDi()),
-        provideAnimations()
-    ]
+  providers: [
+    importProvidersFrom(BrowserModule, HttpClientJsonpModule, FormsModule, ReactiveFormsModule, AppRoutingModule),
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    provideHttpClient(withInterceptorsFromDi()),
+    provideAnimations()
+  ]
 })
   .catch(err => console.error(err));

@@ -86,7 +86,7 @@ export class StudyService {
     //   }
     // }
     return response.pipe(
-      // map(values => values.map(value => value)),
+
       catchError(() => {
         console.error("Error retrieving jsonData");
         return of([]);
