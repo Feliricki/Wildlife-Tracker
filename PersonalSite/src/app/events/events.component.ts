@@ -4,6 +4,7 @@ import { StudyDTO } from '../studies/study';
 import { StudyService } from '../studies/study.service';
 import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
 import { EMPTY, Observable } from 'rxjs';
+import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
 
 @Component({
   selector: 'app-events',
@@ -16,6 +17,7 @@ export class EventsComponent implements OnChanges {
   // NOTE: This collection is the studies that are currently toggled to display event data
   toggledStudies: Map<bigint, StudyDTO> | undefined;
   @Input() toggledStudy: StudyDTO | undefined;
+  @Input() jsonPayload: Observable<JsonResponseData[]> | undefined;
 
   currentEvents: EventJsonDTO[] = [];
   @Output() studyEventEmitter = new EventEmitter<Observable<EventJsonDTO>>();
@@ -25,13 +27,21 @@ export class EventsComponent implements OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    for (const propertyName in changes){
+    for (const propertyName in changes) {
 
       const currentValue = changes[propertyName].currentValue;
-      switch (propertyName){
+      if (currentValue === undefined) {
+        continue;
+      }
+      switch (propertyName) {
         // This message will toggle the given event's for a particular study.
         case "toggledStudy":
           this.toggleEventsForStudy(currentValue);
+          break;
+        case "jsonPayload":
+          // TODO: Implement a similar event to recieve actual event data
+          console.log("recieved json payload in events component");
+          this.jsonPayload = currentValue;
           break;
         default:
           break;
@@ -41,10 +51,10 @@ export class EventsComponent implements OnChanges {
   }
 
   toggleEventsForStudy(studyDTO: StudyDTO): void {
-    if (this.toggledStudies === undefined){
+    if (this.toggledStudies === undefined) {
       this.toggledStudies = new Map<bigint, StudyDTO>();
     }
-    if (!this.toggledStudies.has(studyDTO.id)){
+    if (!this.toggledStudies.has(studyDTO.id)) {
       this.toggledStudies.set(studyDTO.id, studyDTO);
       // Send api request here
     }

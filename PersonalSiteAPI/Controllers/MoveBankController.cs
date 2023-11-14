@@ -291,6 +291,7 @@ namespace PersonalSiteAPI.Controllers
         {
             try
             {
+                Console.WriteLine("Calling GetJsonData");
                 Dictionary<string, string?> parameters = new()
                 {
                     { "study_id", studyId.ToString() }
@@ -309,7 +310,12 @@ namespace PersonalSiteAPI.Controllers
                     headers: null,
                     authorizedUser: User.IsInRole(RoleNames.Administrator));
 
-                object? data;
+                if (response is not null && response.Content.Headers.ContentLength == 0)
+                {
+                    return StatusCode(StatusCodes.Status204NoContent);                    
+                }
+
+                object? data;              
                 switch (entityType)
                 {
                     case "study":

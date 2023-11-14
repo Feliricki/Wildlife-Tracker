@@ -1,5 +1,4 @@
 import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter } from '@angular/core';
-// import { GoogleMap, } from '@angular/google-maps';
 import { map, of, from, Observable } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
@@ -7,21 +6,20 @@ import { Loader } from '@googlemaps/js-api-loader';
 import { NgIf, AsyncPipe } from '@angular/common';
 import { MarkerClusterer, Marker, SuperClusterAlgorithm, SuperClusterOptions } from '@googlemaps/markerclusterer';
 import { Renderer1 } from './renderers';
-import { IndividualJsonDTO } from '../studies/JsonResults/IndividualJsonDTO';
-import { StudyJsonDTO } from '../studies/JsonResults/StudyJsonDTO';
-import { TagJsonDTO } from '../studies/JsonResults/TagJsonDTO';
+import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-google-map',
   templateUrl: './google-map.component.html',
   styleUrls: ['./google-map.component.css'],
   standalone: true,
-  imports: [NgIf, AsyncPipe]
+  imports: [NgIf, AsyncPipe, MatButtonModule, MatIconModule]
 })
 export class MapComponent implements OnInit, OnChanges {
   @Input() focusedMarker: bigint | undefined;
-  @Output() getEventRequest = new EventEmitter<StudyDTO>();
-  JsonEvents: Set<Observable<IndividualJsonDTO | StudyJsonDTO | TagJsonDTO>> | undefined;
+  @Output() JsonDataEmitter = new EventEmitter<Observable<JsonResponseData[]>>();
 
   defaultMapOptions: google.maps.MapOptions = {
     center: {
@@ -29,24 +27,29 @@ export class MapComponent implements OnInit, OnChanges {
       lng: 0,
     },
     zoom: 4,
-    mapId: "demo",
+    mapId: "initial_map",
     mapTypeId: "hybrid",
+    gestureHandling: "cooperative",
+    // restriction: { strictBounds: true }
   };
 
   defaultAlgorithmOptions: SuperClusterOptions = {
-    radius: 120,
+    radius: 150,
   }
 
   defaultMarkerOptions: google.maps.MarkerOptions = {
     clickable: true,
   };
+
   defaultPinOptions: google.maps.marker.PinElementOptions = {
     scale: 1, // default = 1
-  }
+  };
+
   defaultInfoWindowOptions: google.maps.InfoWindowOptions = {
-  }
+  };
+
   defaultInfoWindowOpenOptions: google.maps.InfoWindowOpenOptions = {
-  }
+  };
 
   apiLoaded = of(false);
   // this api key is restricted
@@ -80,6 +83,7 @@ export class MapComponent implements OnInit, OnChanges {
       const currentValue = changes[propertyName].currentValue;
       switch (propertyName) {
         case "focusedMarker":
+          console.log(`Panning to ${currentValue}`);
           this.panToMarker(currentValue);
           break;
         default:
@@ -88,19 +92,6 @@ export class MapComponent implements OnInit, OnChanges {
     }
   }
 
-  panToMarker(studyId: bigint): void {
-    const curMarker = this.markers?.get(studyId);
-    if (curMarker === undefined) {
-      return;
-    }
-    const markerPos = curMarker.position;
-    if (!markerPos) {
-      return;
-    }
-    this.map?.panTo(markerPos);
-    this.map?.setZoom(10);
-    google.maps.event.trigger(curMarker, "click");
-  }
 
   async initMap(): Promise<boolean> {
 
@@ -160,17 +151,13 @@ export class MapComponent implements OnInit, OnChanges {
                 this.infoWindow.set("toggle", false);
                 return;
               }
-              const content =
-                `<h5>${studyDTO.name}</h5>
-                    <p>latitude: ${studyDTO.mainLocationLat}<br>
-                    longitude: ${studyDTO.mainLocationLon}<p>`;
+              const content = this.buildInfoWindowContent(studyDTO);
               this.infoWindow.close();
               this.infoWindow.setContent(content);
               this.infoWindow.set("toggle", !this.infoWindow.get("toggle"));
               this.infoWindow.set("studyId", studyDTO.id);
               this.infoWindow.open(this.map, marker);
             });
-            // markers.push(marker);
             markers.set(studyDTO.id, marker);
           }
           this.markers = markers;
@@ -178,8 +165,22 @@ export class MapComponent implements OnInit, OnChanges {
             map: this.map,
             markers: Array.from(markers.values()),
             renderer: new Renderer1(),
-            algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions)
+            algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
+            onClusterClick: (_, cluster, map) => {
+              // If any cluster is clicked, then the infowindow is restored to its initial state more or less
+              console.log("Recording cluster click event");
+              if (this.infoWindow && this.infoWindow.get("toggle") === true) {
+                this.infoWindow.close();
+                this.infoWindow.set("toggle", false);
+                this.infoWindow.set("studyId", -1n);
+                console.log("Reset infowindow to its initial state");
+                // console.log(this.infoWindow);
+              }
+              map.fitBounds(cluster.bounds as google.maps.LatLngBounds);
+            }
+
           });
+
         },
         error: err => console.error(err)
       });
@@ -189,7 +190,52 @@ export class MapComponent implements OnInit, OnChanges {
       console.error(e);
       return false;
     })
+  }
 
+  buildInfoWindowContent(studyDTO: StudyDTO): HTMLElement {
+    // const html = new HTMLElement();
+    const html = document.createElement('div');
+    html.id = `info-window-content`;
+    html.innerHTML += `<h5>${studyDTO.name}</h5>`
+    html.innerHTML += `<p>latitude: ${studyDTO.mainLocationLat}<br>`
+    html.innerHTML += `<p>longitude: ${studyDTO.mainLocationLon}<br>`
+
+    const buttonElem = document.createElement('button');
+    buttonElem.id = `event-button`;
+    buttonElem.innerText = "Get Event";
+    // buttonElem.click = () => this.emitJsonData("study", studyDTO.id);
+    buttonElem.addEventListener("click", () => {
+      this.emitJsonData("study", studyDTO.id);
+    });
+    // html.innerHTML += `<button (onclick)="emitJsonData('study', '${studyDTO.id}')">Get Events</button>`
+    // TODO: Emit a json observable event from here to the tacker parent component
+    html.appendChild(buttonElem);
+    return html;
+  }
+
+  getJsonData(entityType: "study" | "individual" | "tag", studyId: bigint): Observable<JsonResponseData[]> {
+    console.log("emitting json data");
+    return this.studyService.jsonRequest(entityType, studyId);
+  }
+
+  panToMarker(studyId: bigint): void {
+    console.log("calling panToMarker");
+    const curMarker = this.markers?.get(studyId);
+    if (curMarker === undefined) {
+      return;
+    }
+    const markerPos = curMarker.position;
+    if (!markerPos) {
+      return;
+    }
+    console.log(`Panning to marker ${studyId}`);
+    this.map?.panTo(markerPos);
+    this.map?.setZoom(10);
+    google.maps.event.trigger(curMarker, "click");
+  }
+
+  emitJsonData(entityType: "study" | "individual" | "tag", studyId: bigint): void {
+    this.JsonDataEmitter.emit(this.studyService.jsonRequest(entityType, studyId));
   }
 
   emitStudies(studies: Map<bigint, StudyDTO>): void {

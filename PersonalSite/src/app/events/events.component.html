@@ -1,1 +1,5 @@
-<p>events works!</p>
+<div class="events-container">
+  @if(jsonPayload | async; as payload){
+  {{payload[0].type}}
+  }
+</div>

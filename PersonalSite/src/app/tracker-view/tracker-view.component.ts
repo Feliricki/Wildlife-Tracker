@@ -6,6 +6,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { EventsComponent } from '../events/events.component';
 import { StudyDTO } from '../studies/study';
 import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
+import { Observable } from 'rxjs';
+import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
 
 @Component({
   selector: 'app-tracker-view',
@@ -29,6 +31,7 @@ export class TrackerViewComponent implements OnInit {
   // toggledStudies: Map<bigint, StudyDTO> | undefined;
   toggledStudy: StudyDTO | undefined;
   displayedEvents: EventJsonDTO[] | undefined;
+  jsonPayload: Observable<JsonResponseData[]> | undefined;
 
   constructor() {
     return;
@@ -36,6 +39,10 @@ export class TrackerViewComponent implements OnInit {
 
   ngOnInit(): void {
     return;
+  }
+
+  sendJsonSubscription(jsonData: Observable<JsonResponseData[]>): void {
+    this.jsonPayload = jsonData;
   }
 
   toggleEventForStudy(studyDTO: StudyDTO): void {

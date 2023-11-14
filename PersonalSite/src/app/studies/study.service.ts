@@ -1,15 +1,16 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse, HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { EMPTY, Observable, of, catchError } from 'rxjs';
+import { EMPTY, Observable, of, catchError, tap, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { StudyDTO } from './study';
 import { ApiResult } from '../ApiResult';
 import { EventJsonDTO } from './JsonResults/EventJsonDTO';
-import { TagJsonDTO } from './JsonResults/TagJsonDTO';
+// import { TagJsonDTO } from './JsonResults/TagJsonDTO';
 import { EventOptions } from './EventOptions';
 import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
-import { IndividualJsonDTO } from './JsonResults/IndividualJsonDTO';
-import { StudyJsonDTO } from './JsonResults/StudyJsonDTO';
+// import { IndividualJsonDTO } from './JsonResults/IndividualJsonDTO';
+// import { StudyJsonDTO } from './JsonResults/StudyJsonDTO';
+import { JsonResponseData } from './JsonResults/JsonDataResponse';
 
 @Injectable({
   providedIn: 'root'
@@ -60,36 +61,35 @@ export class StudyService {
 
   // TODO: Test this function
   jsonRequest(entityType: "study" | "tag" | "individual", studyId: bigint):
-    Observable<(IndividualJsonDTO | StudyJsonDTO | TagJsonDTO)[]> {
+    Observable<JsonResponseData[]> {
     const url = environment.baseUrl + "api/MoveBank/GetJsonData";
     const parameters = new HttpParams()
       .set("entityType", entityType)
       .set("studyId", studyId.toString());
 
 
-    let response: Observable<(IndividualJsonDTO | StudyJsonDTO | TagJsonDTO)[]> = EMPTY;
-    response = this.httpClient.get<(Extract<IndividualJsonDTO | StudyJsonDTO | TagJsonDTO, { type: typeof entityType }>)[]>(url, { params: parameters });
-    // switch (entityType) {
-    //   case "study": {
-    //     response = this.httpClient.get<StudyDTO[]>(url, { params: parameters });
-    //     break;
-    //   }
-    //   case "tag": {
-    //     response = this.httpClient.get<TagDTO[]>(url, { params: parameters });
-    //     break;
-    //   }
-    //   case "individual": {
-    //     response = this.httpClient.get<IndividualDTO[]>(url, { params: parameters });
-    //     break;
-    //   }
-    //   default: {
-    //     return EMPTY;
-    //   }
-    // }
+    // type ResponseType = HttpResponse<JsonResponseData[]>;
+    let response: Observable<HttpResponse<JsonResponseData[]>> = EMPTY;
+    response = this.httpClient.get<(Extract<JsonResponseData, { type: typeof entityType }>)[]>(url, { params: parameters, observe: 'response' as const, responseType: 'json' as const });
+    console.log(response);
     return response.pipe(
+      tap(response => console.log(response)),
+      map(response => {
+        // Status Code 204
+        if (response.status == HttpStatusCode.NoContent) {
+          return [];
+        }
+        else if (response.status == 200){
+          return response.body as JsonResponseData[];
+        }
+        else {
+          console.log("unknown response from jsonRequest");
+          return [];
+        }
+      }),
 
       catchError(() => {
-        console.error("Error retrieving jsonData");
+
         return of([]);
       })
     )
