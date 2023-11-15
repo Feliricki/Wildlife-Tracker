@@ -38,11 +38,13 @@ export class EventsComponent implements OnChanges {
         case "toggledStudy":
           this.toggleEventsForStudy(currentValue);
           break;
+
         case "jsonPayload":
           // TODO: Implement a similar event to recieve actual event data
-          console.log("recieved json payload in events component");
-          this.jsonPayload = currentValue;
+          console.log("received json payload in events component");
+          this.jsonPayload = currentValue as Observable<JsonResponseData[]>;
           break;
+
         default:
           break;
       }
@@ -66,8 +68,7 @@ export class EventsComponent implements OnChanges {
   // TODO: This method still needs local identifiers to work
   getEvents(studyDTO: StudyDTO): Observable<EventJsonDTO> {
     // this.studyService.getEventData();
-    console.log(`Sending request for study ${studyDTO.id}`)
-    // return this.studyService.getEventData(studyDTO.id, studyDTO.);
+    console.log(`Sending request for study ${studyDTO.id}`);
     return EMPTY;
   }
 }

@@ -294,7 +294,7 @@ namespace PersonalSiteAPI.Controllers
                 Console.WriteLine("Calling GetJsonData");
                 Dictionary<string, string?> parameters = new()
                 {
-                    { "study_id", studyId.ToString() }
+                    //{ "study_id", studyId.ToString() }
                 };
 
                 var cacheKey = $"GetJsonData:{entityType}-{studyId}";
@@ -305,14 +305,17 @@ namespace PersonalSiteAPI.Controllers
                 }
 
                 var response = await _moveBankService.JsonRequest(
+                    studyId: studyId,
                     entityType: entityType,
                     parameters: parameters,
                     headers: null,
                     authorizedUser: User.IsInRole(RoleNames.Administrator));
 
+                //var strResponse = response.Content.ReadAsStringAsync();
                 if (response is not null && response.Content.Headers.ContentLength == 0)
                 {
-                    return StatusCode(StatusCodes.Status204NoContent);                    
+                    //bool gotPermissions = await _moveBankService
+                    //return StatusCode(StatusCodes.Status204NoContent);                    
                 }
 
                 object? data;              

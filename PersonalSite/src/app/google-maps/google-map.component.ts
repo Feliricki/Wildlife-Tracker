@@ -76,7 +76,7 @@ export class MapComponent implements OnInit, OnChanges {
     this.apiLoaded = from(this.initMap());
   }
 
-  // NOTE: This method listens to values received from the parent component.
+  // NOTE: This method listens to values received from tracker view component
   //  Only new values (actual changes) make it to this method.
   ngOnChanges(changes: SimpleChanges): void {
     for (const propertyName in changes) {
@@ -207,7 +207,6 @@ export class MapComponent implements OnInit, OnChanges {
     buttonElem.addEventListener("click", () => {
       this.emitJsonData("study", studyDTO.id);
     });
-    // html.innerHTML += `<button (onclick)="emitJsonData('study', '${studyDTO.id}')">Get Events</button>`
     // TODO: Emit a json observable event from here to the tacker parent component
     html.appendChild(buttonElem);
     return html;
@@ -239,7 +238,7 @@ export class MapComponent implements OnInit, OnChanges {
   }
 
   emitStudies(studies: Map<bigint, StudyDTO>): void {
-    console.log("emitting studies.")
+    console.log("emitting studies.");
     this.studiesEmitter.emit(studies);
   }
 

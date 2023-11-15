@@ -5,7 +5,7 @@ using System.Globalization;
 namespace PersonalSiteAPI.DTO.MoveBankAttributes
 {
     [Delimiter(",")]
-    public class TagTypeRecord
+    public class SensorTypeRecord
     {
         [Name("description")]
         [Optional]

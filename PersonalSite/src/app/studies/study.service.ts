@@ -67,10 +67,8 @@ export class StudyService {
       .set("entityType", entityType)
       .set("studyId", studyId.toString());
 
-
-    // type ResponseType = HttpResponse<JsonResponseData[]>;
-    let response: Observable<HttpResponse<JsonResponseData[]>> = EMPTY;
-    response = this.httpClient.get<(Extract<JsonResponseData, { type: typeof entityType }>)[]>(url, { params: parameters, observe: 'response' as const, responseType: 'json' as const });
+    // NOTE: The Extract type will pick one type from a union type by matching the type attribute to one of "study", "individual", and "tag"
+    let response = this.httpClient.get<(Extract<JsonResponseData, { type: typeof entityType }>)[]>(url, { params: parameters, observe: 'response' as const, responseType: 'json' as const });
     console.log(response);
     return response.pipe(
       tap(response => console.log(response)),

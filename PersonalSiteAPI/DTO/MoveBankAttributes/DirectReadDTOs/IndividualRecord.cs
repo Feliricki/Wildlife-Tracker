@@ -1,14 +1,14 @@
 ﻿using CsvHelper.Configuration.Attributes;
 using System.ComponentModel.DataAnnotations;
 
-namespace PersonalSiteAPI.DTO.MoveBankAttributes
+namespace PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadDTOs
 {
     [Delimiter(",")]
     public class IndividualRecord
     {
         [Optional]
         [Name("birth_hatch_latitude")]
-        public double?  BirthHatchLat { get; set; }
+        public double? BirthHatchLat { get; set; }
         [Optional]
         [Name("birth_hatch_longitude")]
         public double? BirthHatchLon { get; set; }
@@ -26,7 +26,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes
         public string? ExactDateOfBirth { get; set; }
         [Optional]
         [Name("group_id")]
-        public string? GroupId { get ; set; }
+        public string? GroupId { get; set; }
         [Required]
         [Name("id")]
         public long? Id { get; set; }
@@ -47,7 +47,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes
         public string? MortalityDate { get; set; }
         [Optional]
         [Name("mortality_latitude")]
-        public double? MortalityLat {  get; set; }
+        public double? MortalityLat { get; set; }
         [Optional]
         [Name("mortality_longitude")]
         public double? MortalityLon { get; set; }
@@ -76,10 +76,10 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes
         [Name("taxon_canonical_name")]
         public string? TaxonCanonicalName { get; set; }
         [Optional]
-        [Name("timestamp start")]
+        [Name("timestamp_start")]
         public string? TimeStampStart { get; set; }
         [Optional]
-        [Name("timestamp end")]
+        [Name("timestamp_end")]
         public string? TimeStampEnd { get; set; }
         [Optional]
         [Name("number_of_events")]

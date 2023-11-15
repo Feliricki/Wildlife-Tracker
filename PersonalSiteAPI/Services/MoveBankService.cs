@@ -12,6 +12,11 @@ using System.Security.Cryptography;
 using System.Collections.Immutable;
 using Microsoft.AspNetCore.Http.Extensions;
 using System;
+using CsvHelper;
+using PersonalSiteAPI.DTO.MoveBankAttributes;
+using System.Text;
+using PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadDTOs;
+using Microsoft.IdentityModel.Tokens;
 
 namespace PersonalSiteAPI.Services
 {
@@ -29,6 +34,7 @@ namespace PersonalSiteAPI.Services
             bool authorizedUser = false
             );
         Task<HttpResponseMessage> JsonRequest(
+            long studyId,
             string entityType,
             Dictionary<string, string?>? parameters = null,
             (string, string)[]? headers = null,
@@ -43,9 +49,11 @@ namespace PersonalSiteAPI.Services
             (string, string)[]? headers = null,
             bool authorizedUser = false);
 
+        //Task<bool> GetPermission(long studyId, string entityType = "individual");
 
-
-
+        //Task<HttpResponseMessage> GetPermissionForDirectRead(
+        //    HttpRequestMessage oldRequest,
+        //    HttpResponseMessage oldResponse);
     }
     public class MoveBankService : IMoveBankService
     {
@@ -172,12 +180,13 @@ namespace PersonalSiteAPI.Services
 
             if (response.Headers.TryGetValues("accept-license", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
             {
-                response = await GetPermission(request, response);
+                response = await GetPermissionForDirectRead(request, response);
             }
             return response;
         }
 
         public async Task<HttpResponseMessage> JsonRequest(
+            long studyId,
             string entityType,
             Dictionary<string, string?>? parameters = null,
              (string, string)[]? headers = null,
@@ -196,7 +205,7 @@ namespace PersonalSiteAPI.Services
             }
 
             uri = QueryHelpers.AddQueryString(uri, "entity_type", entityType);
-
+            uri = QueryHelpers.AddQueryString(uri, "study_id", studyId.ToString());
             if (parameters != null)
             {
                 uri = QueryHelpers.AddQueryString(uri, parameters);
@@ -223,9 +232,16 @@ namespace PersonalSiteAPI.Services
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
-            if (response.Headers.TryGetValues("accept-license", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
+            var content = await response.Content.ReadAsStringAsync();
+            bool gotPermission = false;
+            if (content.Length == 0)
             {
-                response = await GetPermission(request, response);
+                gotPermission = await GetPermission(studyId, entityType);
+            }
+
+            if (response.Headers.TryGetValues("Accept-License", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
+            {
+                response = await GetPermissionForDirectRead(request, response);
             }
             return response;
 
@@ -302,18 +318,91 @@ namespace PersonalSiteAPI.Services
                 }
             }
             var response = await _httpClient.SendAsync(request);
-            if (response.Headers.TryGetValues("accept-license", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
+
+            //var responseContent = await response.Content.ReadAsStringAsync();
+            //// We potentially need to 
+            //if (responseContent.Length == 0)
+            //{
+            //    var gotPermission = GetPermisssion(studyId, entityType=)
+            //}
+
+            if (response.Headers.TryGetValues("Accept-License", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
             {
                 Console.WriteLine("Response is awaiting license approval.");
-                response = await GetPermission(request, response);
+                response = await GetPermissionForDirectRead(request, response);
             }
             response.EnsureSuccessStatusCode();
             return response;
         }
+        // TODO: Add a new table to the database of all studies whom I've accepted license terms from
+        // Add parameter validation?
+        // Entity type is one of the following: "study", "individual" or "tag".
+        // The return type is the new response message and wether the license terms were accepted
+        private async Task<Tuple<HttpResponseMessage, bool>> GetPermission(
+            long studyId, 
+            string entityType,
+            HttpResponseMessage oldResponse,
+            HttpRequestMessage oldRequest)
+        {
+            var uri = _httpClient.BaseAddress!.AbsoluteUri;
+            uri += "direct-read";
+            uri = QueryHelpers.AddQueryString(uri, "entity_type", entityType);
+            uri = QueryHelpers.AddQueryString(uri, "study_id", studyId.ToString());
 
+            var request = new HttpRequestMessage()
+            {
+                RequestUri = new Uri(uri),
+                Method = HttpMethod.Get
+            };
 
+            var response = await _httpClient.SendAsync(request);
+            var hasLicenseTerms = HasLicenseTerms(response);
+            //if (hasLicenseTerms)
+            //{
+            //    Console.WriteLine($"Study {studyId} contained license terms");
+
+            //}
+
+            if (!hasLicenseTerms || (!response.Headers.TryGetValues("Accept-License", out var acceptedLicense))
+                || acceptedLicense.IsNullOrEmpty() || acceptedLicense.FirstOrDefault() == "false")
+            {
+                Console.WriteLine($"Response did not ask for license terms. hasLicenseTerms={hasLicenseTerms}");
+                return Tuple.Create(oldResponse, false);
+            }
+
+            var md5String = StringToMD5(await response.Content.ReadAsByteArrayAsync());
+
+            uri = QueryHelpers.AddQueryString(uri, "license-md5", md5String);
+            var newRequest = new HttpRequestMessage()
+            {
+                RequestUri = new Uri(uri),
+                Method = HttpMethod.Get
+            };
+            // TODO - Save all accepted license terms to the database
+            var newResponse = await _httpClient.SendAsync(newRequest);
+
+            return Tuple.Create(newResponse, true);
+        }
+
+        private static bool HasLicenseTerms(HttpResponseMessage response)
+        {
+            var responseAsStream = response.Content.ReadAsStream();
+            using var reader = new StreamReader(responseAsStream);
+            var responseStr = reader.ReadToEnd();
+
+            return responseStr.Contains("License Terms:");
+        }
+
+        private static string StringToMD5(byte[] byteArray)
+        {
+            var checkSum = MD5.HashData(byteArray);
+            return BitConverter.ToString(checkSum).Replace("-", string.Empty);
+        }
         // NOTE: This method is untested
-        private async Task<HttpResponseMessage> GetPermission(HttpRequestMessage oldRequest, HttpResponseMessage oldResponse)
+        // This method assumes that the old response contains some license terms
+        private async Task<HttpResponseMessage> GetPermissionForDirectRead(
+            HttpRequestMessage oldRequest, 
+            HttpResponseMessage oldResponse)
         {
             var uri = oldRequest.RequestUri!.AbsoluteUri;
             var checkSum = MD5.HashData(await oldResponse.Content!.ReadAsByteArrayAsync());
