@@ -10,12 +10,6 @@ using System.Text.Json;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Collections.Immutable;
-using Microsoft.AspNetCore.Http.Extensions;
-using System;
-using CsvHelper;
-using PersonalSiteAPI.DTO.MoveBankAttributes;
-using System.Text;
-using PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadDTOs;
 using Microsoft.IdentityModel.Tokens;
 
 namespace PersonalSiteAPI.Services
@@ -236,17 +230,17 @@ namespace PersonalSiteAPI.Services
             bool gotPermission = false;
             if (content.Length == 0)
             {
-                gotPermission = await GetPermission(studyId, entityType);
+                // TODO:Build a new table to store studies from whom I've received license terms to accept.
+                Console.WriteLine("Json Request response had a content length of zero.");
+                var responseTuple = await GetPermission(studyId, entityType, response, request);
+                response = responseTuple.Item1;
+                gotPermission = true;
             }
 
-            if (response.Headers.TryGetValues("Accept-License", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
-            {
-                response = await GetPermissionForDirectRead(request, response);
-            }
             return response;
 
         }
-
+        // TODO: This method does not handle the case when user permissions are needed 
         // Several inputs are required for events data to be returned
         // If a license agreement has not accepted then the license agreements must be returned in a MD5 hash string
         // The following parameters must be passed:
@@ -254,10 +248,7 @@ namespace PersonalSiteAPI.Services
         // 2) At least one 'individual_local_identifiers'
         // 3) A sensor type (usually 'gps')
         // times are provided in milliseconds since 1970-01-01 UTC 
-        // Coordinates are in WGS84 format
-
-
-        // NOTE: For now we ditch the parameters goes unsused
+        // Coordinates are in WGS84 format.
         public async Task<HttpResponseMessage> JsonEventData(
             long studyId,
             string sensorType,
@@ -318,14 +309,6 @@ namespace PersonalSiteAPI.Services
                 }
             }
             var response = await _httpClient.SendAsync(request);
-
-            //var responseContent = await response.Content.ReadAsStringAsync();
-            //// We potentially need to 
-            //if (responseContent.Length == 0)
-            //{
-            //    var gotPermission = GetPermisssion(studyId, entityType=)
-            //}
-
             if (response.Headers.TryGetValues("Accept-License", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
             {
                 Console.WriteLine("Response is awaiting license approval.");
@@ -334,12 +317,11 @@ namespace PersonalSiteAPI.Services
             response.EnsureSuccessStatusCode();
             return response;
         }
-        // TODO: Add a new table to the database of all studies whom I've accepted license terms from
-        // Add parameter validation?
+
         // Entity type is one of the following: "study", "individual" or "tag".
         // The return type is the new response message and wether the license terms were accepted
         private async Task<Tuple<HttpResponseMessage, bool>> GetPermission(
-            long studyId, 
+            long studyId,
             string entityType,
             HttpResponseMessage oldResponse,
             HttpRequestMessage oldRequest)
@@ -357,11 +339,6 @@ namespace PersonalSiteAPI.Services
 
             var response = await _httpClient.SendAsync(request);
             var hasLicenseTerms = HasLicenseTerms(response);
-            //if (hasLicenseTerms)
-            //{
-            //    Console.WriteLine($"Study {studyId} contained license terms");
-
-            //}
 
             if (!hasLicenseTerms || (!response.Headers.TryGetValues("Accept-License", out var acceptedLicense))
                 || acceptedLicense.IsNullOrEmpty() || acceptedLicense.FirstOrDefault() == "false")
@@ -371,8 +348,8 @@ namespace PersonalSiteAPI.Services
             }
 
             var md5String = StringToMD5(await response.Content.ReadAsByteArrayAsync());
-
             uri = QueryHelpers.AddQueryString(uri, "license-md5", md5String);
+
             var newRequest = new HttpRequestMessage()
             {
                 RequestUri = new Uri(uri),
@@ -401,7 +378,7 @@ namespace PersonalSiteAPI.Services
         // NOTE: This method is untested
         // This method assumes that the old response contains some license terms
         private async Task<HttpResponseMessage> GetPermissionForDirectRead(
-            HttpRequestMessage oldRequest, 
+            HttpRequestMessage oldRequest,
             HttpResponseMessage oldResponse)
         {
             var uri = oldRequest.RequestUri!.AbsoluteUri;

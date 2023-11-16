@@ -311,14 +311,12 @@ namespace PersonalSiteAPI.Controllers
                     headers: null,
                     authorizedUser: User.IsInRole(RoleNames.Administrator));
 
-                //var strResponse = response.Content.ReadAsStringAsync();
-                if (response is not null && response.Content.Headers.ContentLength == 0)
+                object? data;
+                if (response is null)
                 {
-                    //bool gotPermissions = await _moveBankService
-                    //return StatusCode(StatusCodes.Status204NoContent);                    
+                    return BadRequest("Passed invalid parameters to move bank service.");
                 }
 
-                object? data;              
                 switch (entityType)
                 {
                     case "study":

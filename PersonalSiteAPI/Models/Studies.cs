@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace PersonalSiteAPI.Models
 {
+    // Creates a new index by name sorted in ascending order.
     //[Index(nameof(Name))]
     //[Index(nameof(LicenseType), nameof(IHaveDownloadAccess))]
     public class Studies
@@ -43,6 +44,7 @@ namespace PersonalSiteAPI.Models
         public string MainLocationLon { get; set; } = "";
         [Required]
         [JsonPropertyName("name")]
+        [MaxLength(200)]
         public string Name { get; set; } = "";
 
         [JsonPropertyName("number_of_deployments")]

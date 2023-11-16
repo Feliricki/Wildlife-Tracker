@@ -11,6 +11,9 @@ using System.Globalization;
 using PersonalSiteAPI.DTO.MoveBankAttributes;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
+using System.Linq.Expressions;
+using System.Linq.Dynamic.Core;
+using System.Linq;
 
 namespace PersonalSiteAPI.Controllers
 {
@@ -42,7 +45,7 @@ namespace PersonalSiteAPI.Controllers
         }
 
         [HttpPost(Name = "CreateDefaultUser")]
-        [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
+        //[Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
         public async Task<IActionResult> CreateDefaultUsers()
         {
             int usersCreated = 0;
@@ -87,7 +90,79 @@ namespace PersonalSiteAPI.Controllers
                 Users = addedUserList
             });
         }
+        [HttpGet(Name="LongestName")]
+        public async Task<IActionResult> LongestName()
+        {
+            try
+            {
+                //var longestName = _context.Studies
+                //    .Where(study => study.IHaveDownloadAccess)
+                //    .Where(ValidLicenseExp)
+                //    .AsEnumerable<Studies>()
+                //    .Aggregate(Tuple.Create(0, ""), (acc, study) => {
+                //        if (study.Name.Length > acc.Item1)
+                //        {
+                //            return Tuple.Create(study.Name.Length, study.Name);
+                //        }
+                //        else
+                //        {
+                //            return acc;
+                //        }
+                //    });
+                //return new JsonResult(new
+                //{
+                //    LongestNameCount = longestName.Item1,
+                //    LongestName = longestName.Item2
+                //});
 
+                using var response = await _moveBankService.DirectRequest(entityType: "study", parameters: null, headers: null, authorizedUser: true);
+                if (response == null)
+                {
+                    throw new Exception("Response error");
+                }
+                using var stream = new StreamReader(await response.Content.ReadAsStreamAsync(), Encoding.UTF8);
+                using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
+                // TODO: Change this method to save the CSV locally in Models/Data
+                // Then begin seeding the database
+                var records = csvReader.GetRecords<StudiesRecord>();
+                if (records is null)
+                {
+                    throw new Exception("error on parse");
+                }
+
+                var longestName = records
+                    .Aggregate(Tuple.Create(0, ""), (acc, study) =>
+                    {
+                        if (study.Name?.Length > acc.Item1)
+                        {
+                            return Tuple.Create(study.Name.Length, study.Name);
+                        }
+                        else
+                        {
+                            return acc;
+                        }
+                    });
+
+                return new JsonResult(new
+                {
+                    LongestNameCount = longestName.Item1,
+                    LongestName = longestName.Item2
+                });
+            }
+            catch (Exception err)
+            {
+                var exceptionDetails = new ProblemDetails
+                {
+                    Detail = err.Message,
+                    Status = StatusCodes.Status500InternalServerError,
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"
+                };
+                return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
+            }
+        }
+
+        private readonly Expression<Func<Studies, bool>> ValidLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
+        // Make sure this method requires proper authorization.
         [HttpPost(Name = "UpdateStudies")]
         public async Task<IActionResult> UpdateStudies()
         {
@@ -100,10 +175,11 @@ namespace PersonalSiteAPI.Controllers
                 }
                 using var stream = new StreamReader(await response.Content.ReadAsStreamAsync(), Encoding.UTF8);
                 using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
-
+                // TODO: Change this method to save the CSV locally in Models/Data
+                // Then begin seeding the database
                 var records = csvReader.GetRecordsAsync<StudiesRecord>();
                 var existingStudies = _context.Studies.ToDictionary(o => o.Id);
-
+                Console.WriteLine($"There are {await _context.Studies.CountAsync()} studies in the database");
                 int rowsAdded = 0;
                 int rowsSkipped = 0;
                 int rowsFiltered = 0;
@@ -168,9 +244,11 @@ namespace PersonalSiteAPI.Controllers
                     _context.Studies.Add(study);
                     rowsAdded++;
                 }
+                //_context.Database.SetCommandTimeout(60);
                 using var transaction = _context.Database.BeginTransaction();
                 _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies ON");
-                await _context.SaveChangesAsync();
+                var dbChanges = await _context.SaveChangesAsync();
+                Console.WriteLine($"{dbChanges} total database changes");
                 _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies OFF");
                 transaction.Commit();
 
@@ -179,7 +257,7 @@ namespace PersonalSiteAPI.Controllers
                     RowsAdded = rowsAdded,
                     RowsSkipped = rowsSkipped,
                     RowsFiltered = rowsFiltered,
-                    StudiesAdded = _context.Studies.Count()
+                    CurrentStudiesCount = _context.Studies.Count()
                 });
             }
             catch (Exception err)

@@ -53,8 +53,13 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration["TestConnectionStrings:DefaultConnection"]);
-    //options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")); 
+    // NOTE: Switch this to the other connection string to make changes to production database
+    //options.UseSqlServer(builder.Configuration["TestConnectionStrings:DefaultConnection"]);
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), options =>
+    {
+        options.CommandTimeout(60);
+        //options.
+    }); 
 });
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>

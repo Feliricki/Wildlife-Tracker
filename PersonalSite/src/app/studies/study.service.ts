@@ -1,6 +1,6 @@
-import { HttpClient, HttpParams, HttpResponse, HttpStatusCode } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { EMPTY, Observable, of, catchError, tap, map } from 'rxjs';
+import { Observable, of, catchError, tap, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { StudyDTO } from './study';
 import { ApiResult } from '../ApiResult';
@@ -68,7 +68,7 @@ export class StudyService {
       .set("studyId", studyId.toString());
 
     // NOTE: The Extract type will pick one type from a union type by matching the type attribute to one of "study", "individual", and "tag"
-    let response = this.httpClient.get<(Extract<JsonResponseData, { type: typeof entityType }>)[]>(url, { params: parameters, observe: 'response' as const, responseType: 'json' as const });
+    const response = this.httpClient.get<(Extract<JsonResponseData, { type: typeof entityType }>)[]>(url, { params: parameters, observe: 'response' as const, responseType: 'json' as const });
     console.log(response);
     return response.pipe(
       tap(response => console.log(response)),
@@ -77,7 +77,7 @@ export class StudyService {
         if (response.status == HttpStatusCode.NoContent) {
           return [];
         }
-        else if (response.status == 200){
+        else if (response.status == 200) {
           return response.body as JsonResponseData[];
         }
         else {
@@ -110,34 +110,7 @@ export class StudyService {
     for (const localIdentifier of localIdentifiers) {
       parameters = parameters.append("individualLocalIdentifiers", localIdentifier);
     }
-    // if (options.attributes !== undefined) {
-    //   parameters = parameters.set("attributes", options.attributes);
-    // }
-    // if (options.timestampStart !== undefined && options.timestampEnd) {
-    //   parameters = parameters.set("timestampStart", options.timestampStart.toString());
-    //   parameters = parameters.set("timestampEnd", options.timestampEnd.toString());
-    // }
-    // if (options.eventProfiles !== undefined && options.eventProfiles.length >= 1) {
-    //   // parameters = parameters.set("eventProfiles", options.eventProfiles[0]);
-    //   for (const profile of options.eventProfiles) {
-    //     parameters = parameters.append("eventProfiles", profile);
-    //   }
-    // }
-    // if (options.coordinateTrailingDigits !== undefined) {
-    //   parameters = parameters.set("coordinateTrailingDigits", options.coordinateTrailingDigits);
-    // }
-    // if (options.maxDurationDays !== undefined) {
-    //   parameters = parameters.set("maxDurationDays", options.maxDurationDays);
-    // }
-    // if (options.maxKmBetweenEvents !== undefined) {
-    //   parameters = parameters.set("maxKmBetweenEvents", options.maxKmBetweenEvents);
-    // }
-    // if (options.milliBetweenEvents !== undefined) {
-    //   parameters = parameters.set("milliBetweenEvents", options.milliBetweenEvents);
-    // }
-    // if (options.maxEventsPerIndividual !== undefined) {
-    //   parameters = parameters.set("maxEventsPerIndividual", options.maxEventsPerIndividual);
-    // }
+
     const keys = Object.keys(options);
     for (const key of keys) {
       const value = options[key as keyof EventOptions];
