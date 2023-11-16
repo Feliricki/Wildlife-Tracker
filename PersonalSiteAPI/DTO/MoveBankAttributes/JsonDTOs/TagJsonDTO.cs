@@ -9,7 +9,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
         public readonly string type = "tag";
         [Required]
         [JsonPropertyName("id")]
-        public long TagId { get; set; }
+        public long Id { get; set; }
         [JsonPropertyName("local_identifier")]
         public string? LocalIdentifier { get; set; } = null;
     }

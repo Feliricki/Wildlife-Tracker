@@ -9,7 +9,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
         public readonly string type = "individual";
         [Required]
         [JsonPropertyName("id")]
-        public long IndividualId { get; set; }
+        public long Id { get; set; }
         [Required]
         [JsonPropertyName("local_identifier")]
         public string LocalIdentifier { get; set; } = string.Empty;

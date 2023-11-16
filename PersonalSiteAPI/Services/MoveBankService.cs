@@ -11,6 +11,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Collections.Immutable;
 using Microsoft.IdentityModel.Tokens;
+using PersonalSiteAPI.Models;
 
 namespace PersonalSiteAPI.Services
 {
@@ -27,7 +28,7 @@ namespace PersonalSiteAPI.Services
             (string, string)[]? headers = null,
             bool authorizedUser = false
             );
-        Task<HttpResponseMessage> JsonRequest(
+        Task<Tuple<HttpResponseMessage, bool>> JsonRequest(
             long studyId,
             string entityType,
             Dictionary<string, string?>? parameters = null,
@@ -58,19 +59,23 @@ namespace PersonalSiteAPI.Services
         private readonly IDataProtectionProvider _provider;
         private readonly ITimeLimitedDataProtector _protector;
         private readonly SecretsManagerCache _secretsCache;
+        // This context will be used to post information on studies to contact 
+        private readonly ApplicationDbContext _context;
 
         public MoveBankService(
             HttpClient httpClient,
             IConfiguration configuration,
             ILogger<MoveBankService> logger,
             IAmazonSecretsManager amazonSecretsManager,
-            IDataProtectionProvider provider)
+            IDataProtectionProvider provider,
+            ApplicationDbContext context)
         {
             _httpClient = httpClient;
             _configuration = configuration;
             _logger = logger;
             _amazonSecretsManager = amazonSecretsManager;
             _provider = provider;
+            _context = context;
 
             _protector = _provider.CreateProtector("API Token").ToTimeLimitedDataProtector();
             uint durationMinutes = 1;
@@ -83,9 +88,8 @@ namespace PersonalSiteAPI.Services
                     VersionStage = "AWSCURRENT",
                     Client = _amazonSecretsManager,
                     CacheHook = new MySecretCacheHook(_protector, durationMinutes)
-                });
-
-            _httpClient.BaseAddress = new Uri("https://www.movebank.org/movebank/service/");
+                });            
+            //_httpClient.BaseAddress = new Uri("https://www.movebank.org/movebank/service/");
 
         }
         // Restrict this function
@@ -179,12 +183,12 @@ namespace PersonalSiteAPI.Services
             return response;
         }
 
-        public async Task<HttpResponseMessage> JsonRequest(
+        public async Task<Tuple<HttpResponseMessage, bool>> JsonRequest(
             long studyId,
             string entityType,
             Dictionary<string, string?>? parameters = null,
-             (string, string)[]? headers = null,
-             bool authorizedUser = false)
+            (string, string)[]? headers = null,
+            bool authorizedUser = false)
         {
             var secretObj = await GetApiToken();
             var uri = _httpClient.BaseAddress!.OriginalString;
@@ -232,12 +236,11 @@ namespace PersonalSiteAPI.Services
             {
                 // TODO:Build a new table to store studies from whom I've received license terms to accept.
                 Console.WriteLine("Json Request response had a content length of zero.");
-                var responseTuple = await GetPermission(studyId, entityType, response, request);
+                var responseTuple = await GetPermission(response, request);
                 response = responseTuple.Item1;
-                gotPermission = true;
+                gotPermission = responseTuple.Item2;
             }
-
-            return response;
+            return Tuple.Create(response, gotPermission);
 
         }
         // TODO: This method does not handle the case when user permissions are needed 
@@ -321,20 +324,23 @@ namespace PersonalSiteAPI.Services
         // Entity type is one of the following: "study", "individual" or "tag".
         // The return type is the new response message and wether the license terms were accepted
         private async Task<Tuple<HttpResponseMessage, bool>> GetPermission(
-            long studyId,
-            string entityType,
+            //long studyId,
+            //string entityType,
             HttpResponseMessage oldResponse,
             HttpRequestMessage oldRequest)
         {
             var uri = _httpClient.BaseAddress!.AbsoluteUri;
             uri += "direct-read";
-            uri = QueryHelpers.AddQueryString(uri, "entity_type", entityType);
-            uri = QueryHelpers.AddQueryString(uri, "study_id", studyId.ToString());
+            //uri = QueryHelpers.AddQuery
+            // TODO: Refactor to be more explicit about which parameters are to remain
+            // If json data is not available then use the record data from the direct request response casted to a dto class
+            var requestParameters = QueryHelpers.ParseQuery(oldRequest.RequestUri!.Query);
+            uri = QueryHelpers.AddQueryString(uri, requestParameters);
 
             var request = new HttpRequestMessage()
             {
                 RequestUri = new Uri(uri),
-                Method = HttpMethod.Get
+                Method = HttpMethod.Get,                
             };
 
             var response = await _httpClient.SendAsync(request);
@@ -356,9 +362,14 @@ namespace PersonalSiteAPI.Services
                 Method = HttpMethod.Get
             };
             // TODO - Save all accepted license terms to the database
-            var newResponse = await _httpClient.SendAsync(newRequest);
+            var newResponse = await _httpClient.SendAsync(newRequest);            
 
             return Tuple.Create(newResponse, true);
+        }
+
+        private Task<bool> SendToDB(Studies study)
+        {
+            return Task.FromResult(true);
         }
 
         private static bool HasLicenseTerms(HttpResponseMessage response)

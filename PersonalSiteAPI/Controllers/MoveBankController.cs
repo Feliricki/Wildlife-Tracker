@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using CsvHelper;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -13,12 +14,15 @@ using PersonalSiteAPI.Attributes.MoveBankAttributes;
 using PersonalSiteAPI.Constants;
 using PersonalSiteAPI.DTO;
 using PersonalSiteAPI.DTO.MoveBankAttributes;
+using PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadDTOs;
 using PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs;
 using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Linq.Expressions;
+using System.Text;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -300,24 +304,69 @@ namespace PersonalSiteAPI.Controllers
                 var cacheKey = $"GetJsonData:{entityType}-{studyId}";
                 if (_memoryCache.TryGetValue<string>(cacheKey, out var result) && result is not null)
                 {
-                    Console.WriteLine("Returning cached result");
+                    Console.WriteLine("GetJsonData: Returning cached result");
                     return Ok(result);
                 }
 
-                var response = await _moveBankService.JsonRequest(
+
+                var responseTuple = await _moveBankService.JsonRequest(
                     studyId: studyId,
                     entityType: entityType,
                     parameters: parameters,
                     headers: null,
                     authorizedUser: User.IsInRole(RoleNames.Administrator));
 
+                (var response, bool gotPermission) = responseTuple;
+                var responseStream = await response.Content.ReadAsStreamAsync();
+                // 
+
                 object? data;
-                if (response is null)
+                if (response is null || responseStream.Length == 0)
                 {
-                    return BadRequest("Passed invalid parameters to move bank service.");
+                    return BadRequest($"Passed invalid parameters to move bank service. Response has size {responseStream.Length}");
                 }
 
-                switch (entityType)
+                var jsonOptions = new Newtonsoft.Json.JsonSerializerSettings();
+
+                if (gotPermission)
+                {
+                    Console.WriteLine("Returning CSV file.");
+                    using var stream = new StreamReader(await response.Content.ReadAsStreamAsync(), Encoding.UTF8);
+                    using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
+
+                    switch (entityType.ToLower())
+                    {
+                        case "study":
+                            var studyRecords = csvReader.GetRecords<StudiesRecord>().Select(studyRecord => new StudyJsonDTO()
+                            {
+                                Id = studyRecord.Id,
+                                Name = studyRecord.Name ?? "",
+                                SensorTypeIds = studyRecord.SensorTypeIds
+                            });
+                            return new JsonResult(studyRecords.ToList(), jsonOptions);
+
+                        case "individual":
+                            var individualRecords = csvReader.GetRecords<IndividualRecord>().Select(individualRecord => new IndividualJsonDTO()
+                            {
+                                Id = individualRecord.Id,
+                                LocalIdentifier = individualRecord.LocalIdentifier ?? string.Empty
+                            });
+                            return new JsonResult(individualRecords.ToList(), jsonOptions);
+
+                        case "tag":
+                            // TODO - Look into the actual type returned movebank's api
+                            var tagRecords = csvReader.GetRecords<TagRecord>().Select(tagRecord => new TagJsonDTO()
+                            {
+                                Id = tagRecord.Id,
+                                LocalIdentifier = tagRecord.LocalIdentifier
+                            });
+                            return new JsonResult(tagRecords.ToList(), jsonOptions);
+
+                        default:
+                            throw new InvalidOperationException("Invalid parameter for entity type");
+                    }
+                }
+                switch (entityType.ToLower())
                 {
                     case "study":
                         data = await response.Content.ReadFromJsonAsync<List<StudyJsonDTO>>();
@@ -338,6 +387,8 @@ namespace PersonalSiteAPI.Controllers
                 if (data is not null)
                 {
                     var jsonString = JsonConvert.SerializeObject(data);
+                    Console.WriteLine("Final json string is " + jsonString);
+
                     var cacheOptions = new MemoryCacheEntryOptions()
                     {
                         Size = 1,

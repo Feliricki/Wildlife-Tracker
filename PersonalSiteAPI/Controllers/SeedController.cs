@@ -188,8 +188,7 @@ namespace PersonalSiteAPI.Controllers
                 {
                     // Filter invalid rows
                     if (record == null ||
-                        !record.Id.HasValue ||
-                        existingStudies.ContainsKey(record.Id.Value) ||
+                        existingStudies.ContainsKey(record.Id) ||
                         string.IsNullOrEmpty(record.Name))
                     {
                         rowsSkipped++;
@@ -213,7 +212,7 @@ namespace PersonalSiteAPI.Controllers
                         GoPublicDate = record.GoPublicDate ?? null,
                         GrantsUsed = record.GrantsUsed ?? "",
                         IAmOwner = record.IAmOwner,
-                        Id = record.Id.Value,
+                        Id = record.Id,
                         IsTest = record.IsTest,
                         LicenseTerms = record.LicenseTerms ?? "",
                         LicenseType = record.LicenseType ?? "",
@@ -272,7 +271,7 @@ namespace PersonalSiteAPI.Controllers
             }
         }
         // Not necessary
-        [HttpPost("GetPermissions")]
+        [HttpPost(Name="GetPermissions")]
         [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
         public async Task<IActionResult> GetPermissions()
         {

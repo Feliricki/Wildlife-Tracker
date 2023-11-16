@@ -10,12 +10,12 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
         public readonly string type = "study";
         [Required]
         [JsonPropertyName("id")]    
-        public long StudyId { get; set; }
+        public long Id { get; set; }
 
         [Required]
         [JsonPropertyName("name")]
         public string Name { get; set; } = null!;
         [JsonPropertyName("sensor_type_ids")]
-        public string SensorTypeIds { get; set; } = string.Empty;
+        public string? SensorTypeIds { get; set; } = string.Empty;
     }
 }

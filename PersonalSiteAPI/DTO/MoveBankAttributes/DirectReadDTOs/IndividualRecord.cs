@@ -29,7 +29,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadDTOs
         public string? GroupId { get; set; }
         [Required]
         [Name("id")]
-        public long? Id { get; set; }
+        public long Id { get; set; }
         [Optional]
         [Name("latest_date_born")]
         public string? LatestDateBorn { get; set; }

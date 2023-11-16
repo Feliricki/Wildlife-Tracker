@@ -15,7 +15,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes
         public string? ExternalId { get; set; }
         [Required]
         [Name("id")]
-        public long? Id { get; set; }
+        public long Id { get; set; }
         [Required]
         [Name("is_location_sensor")]
         [BooleanTrueValues("true")]

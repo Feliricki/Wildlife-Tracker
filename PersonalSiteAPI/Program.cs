@@ -30,7 +30,6 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers(options =>
 {
-
     options.CacheProfiles.Add("NoCache",
         new CacheProfile() { NoStore = true });
     options.CacheProfiles.Add("Any-60",
@@ -46,9 +45,11 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
 // Custom Services 
 builder.Services.AddTransient<IMoveBankService, MoveBankService>();
-builder.Services.AddHttpClient<IMoveBankService, MoveBankService>();
+builder.Services.AddHttpClient<IMoveBankService, MoveBankService>(client =>
+{
+    client.BaseAddress = new Uri("https://www.movebank.org/movebank/service/");    
+});
 
-//builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -73,7 +74,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 
-// AUTHENTICAION
+// AUTHENTICATION
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme =
@@ -100,6 +101,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+//builder.Services.
+
 builder.Services.AddDataProtection();
 builder.Services.AddScoped<JwtHandler>();
 
@@ -108,7 +111,6 @@ var options = builder.Configuration.GetAWSOptions();
 builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
 
 builder.Services.AddAWSService<IAmazonSecretsManager>();
-//builder.Services.AddAWSService<IAmazonSecurityTokenService>();
 
 builder.Services.AddResponseCaching(options =>
 {

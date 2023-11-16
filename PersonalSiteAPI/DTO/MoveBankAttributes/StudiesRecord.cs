@@ -26,7 +26,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes
         public bool IAmOwner { get; set; } 
         [Required]
         [Name("id")]
-        public long? Id { get; set; }
+        public long Id { get; set; }
         [Required]
         [Name("is_test")]
         [BooleanTrueValues("true")]

@@ -71,7 +71,7 @@ export class StudyService {
     const response = this.httpClient.get<(Extract<JsonResponseData, { type: typeof entityType }>)[]>(url, { params: parameters, observe: 'response' as const, responseType: 'json' as const });
     console.log(response);
     return response.pipe(
-      tap(response => console.log(response)),
+      tap(response => console.log(response)), // this function is optional
       map(response => {
         // Status Code 204
         if (response.status == HttpStatusCode.NoContent) {

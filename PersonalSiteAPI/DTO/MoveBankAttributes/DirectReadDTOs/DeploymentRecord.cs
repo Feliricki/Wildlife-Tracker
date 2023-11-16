@@ -97,7 +97,7 @@ namespace PersonalSiteAPI.DTO
 
         [Required]
         [Name("number_of_events")]
-        public int? NumberOfEvents { get; set; } = 0;
+        public int NumberOfEvents { get; set; } = 0;
 
         [Required]
         [Name("sensor_type_ids")]

@@ -7,6 +7,7 @@ namespace PersonalSiteAPI.Models
     // Creates a new index by name sorted in ascending order.
     //[Index(nameof(Name))]
     //[Index(nameof(LicenseType), nameof(IHaveDownloadAccess))]
+
     public class Studies
     {
 

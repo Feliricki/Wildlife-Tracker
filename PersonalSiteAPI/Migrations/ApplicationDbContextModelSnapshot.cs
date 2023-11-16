@@ -374,7 +374,7 @@ namespace PersonalSiteAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Studies");
+                    b.ToTable("Studies", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
