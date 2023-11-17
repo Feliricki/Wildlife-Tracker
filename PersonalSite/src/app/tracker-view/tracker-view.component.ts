@@ -31,6 +31,8 @@ export class TrackerViewComponent implements OnInit {
   // toggledStudies: Map<bigint, StudyDTO> | undefined;
   toggledStudy: StudyDTO | undefined;
   displayedEvents: EventJsonDTO[] | undefined;
+
+  currentStudy: StudyDTO | undefined;
   jsonPayload: Observable<JsonResponseData[]> | undefined;
 
   constructor() {
@@ -56,6 +58,11 @@ export class TrackerViewComponent implements OnInit {
   }
   switchSearchMode(): void {
     return;
+  }
+
+  // NOTE: Used in event component
+  studyMessage(study: StudyDTO): void {
+    this.currentStudy = study;
   }
 
   panToMarker(studyId: bigint): void {

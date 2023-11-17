@@ -272,6 +272,7 @@ namespace PersonalSiteAPI.Controllers
                 byte[] responseContentArray = await response.Content.ReadAsByteArrayAsync();
                 if (responseContentArray.Length == 0)
                 {
+                    _logger.Log(LogLevel.Information, "Sent a direct request in GetJsonData.");
                     parameters.Add("study_id", studyId.ToString());
                     response = await _moveBankService.DirectRequest(
                         studyId: studyId,
@@ -431,21 +432,21 @@ namespace PersonalSiteAPI.Controllers
             }
         }
 
-        protected static float? FloatParser(string? num)
-        {
-            if (num == null)
-            {
-                return null;
-            }
-            if (float.TryParse(num, out var floatNum))
-            {
-                return floatNum;
-            }
-            else
-            {
-                return null;
-            }
-        }
+        //protected static float? FloatParser(string? num)
+        //{
+        //    if (num == null)
+        //    {
+        //        return null;
+        //    }
+        //    if (float.TryParse(num, out var floatNum))
+        //    {
+        //        return floatNum;
+        //    }
+        //    else
+        //    {
+        //        return null;
+        //    }
+        //}
         private readonly Expression<Func<Studies, bool>> ValidLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
         protected bool ValidLicense(Studies study)
         {

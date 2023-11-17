@@ -1,5 +1,9 @@
 <div class="events-container">
-  @if(jsonPayload | async; as payload){
-  {{payload[0].type}}
+
+  @if (currentStudy){
+  <span>{{currentStudy.name}}</span>
+  } @else {
+  <span>No Information Available</span>
   }
+
 </div>

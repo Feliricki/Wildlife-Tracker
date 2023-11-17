@@ -1,10 +1,12 @@
 import { Component, Input, Output, OnChanges, EventEmitter, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StudyDTO } from '../studies/study';
-import { StudyService } from '../studies/study.service';
 import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
-import { EMPTY, Observable } from 'rxjs';
+import { EMPTY, Observable, filter, map } from 'rxjs';
 import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
+import { StudyService } from '../studies/study.service';
+import { IndividualJsonDTO } from '../studies/JsonResults/IndividualJsonDTO';
+import { TagJsonDTO } from '../studies/JsonResults/TagJsonDTO';
 
 @Component({
   selector: 'app-events',
@@ -14,10 +16,18 @@ import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
   styleUrl: './events.component.css'
 })
 export class EventsComponent implements OnChanges {
-  // NOTE: This collection is the studies that are currently toggled to display event data
+  // NOTE: These studies are toggled to have their events appear on the map if
+  // at all possible
   toggledStudies: Map<bigint, StudyDTO> | undefined;
   @Input() toggledStudy: StudyDTO | undefined;
   @Input() jsonPayload: Observable<JsonResponseData[]> | undefined;
+
+  // NOTE: Only this input is being used
+  @Input() currentStudy: StudyDTO | undefined;
+  // These observable will hold the local identifiers which are assumed to be unique
+  currentIndividuals$: Observable<Set<string>> | undefined;
+  currentTags$: Observable<Set<string>> | undefined;
+
 
   currentEvents: EventJsonDTO[] = [];
   @Output() studyEventEmitter = new EventEmitter<Observable<EventJsonDTO>>();
@@ -31,8 +41,10 @@ export class EventsComponent implements OnChanges {
 
       const currentValue = changes[propertyName].currentValue;
       if (currentValue === undefined) {
+        console.log(`Skipping undefined value for property value ${propertyName}`)
         continue;
       }
+
       switch (propertyName) {
         // This message will toggle the given event's for a particular study.
         case "toggledStudy":
@@ -45,11 +57,38 @@ export class EventsComponent implements OnChanges {
           this.jsonPayload = currentValue as Observable<JsonResponseData[]>;
           break;
 
+        case "currentStudy":
+          console.log("Recieved study in events component");
+          this.currentStudy = currentValue as StudyDTO;
+          break
+
         default:
           break;
       }
     }
     return;
+  }
+
+  // Refactor the use the entire DTO proproty
+  getIndividuals(studyDTO: StudyDTO): void {
+    this.currentIndividuals$ = this.studyService.jsonRequest("individual", studyDTO.id).pipe(
+      // filter(data => data.length > 0),
+      map(data => data as unknown as IndividualJsonDTO[]),
+      map(individuals => {
+        const set = new Set(individuals.map(val => val.localIdentifier));
+        return set;
+      })
+    );
+  }
+
+  getTags(studyDTO: StudyDTO): void {
+    this.currentTags$ = this.studyService.jsonRequest("tag", studyDTO.id).pipe(
+      // filter(data => data.length > 0),
+      map(data => data[0] as unknown as TagJsonDTO[]),
+      map(tags => {
+        return new Set(tags.map(val => val.localIdentifier));
+      })
+    );
   }
 
   toggleEventsForStudy(studyDTO: StudyDTO): void {
@@ -58,7 +97,6 @@ export class EventsComponent implements OnChanges {
     }
     if (!this.toggledStudies.has(studyDTO.id)) {
       this.toggledStudies.set(studyDTO.id, studyDTO);
-      // Send api request here
     }
     else {
       this.toggledStudies.delete(studyDTO.id);
@@ -67,7 +105,6 @@ export class EventsComponent implements OnChanges {
 
   // TODO: This method still needs local identifiers to work
   getEvents(studyDTO: StudyDTO): Observable<EventJsonDTO> {
-    // this.studyService.getEventData();
     console.log(`Sending request for study ${studyDTO.id}`);
     return EMPTY;
   }

@@ -147,6 +147,7 @@ export class SimpleSearchComponent implements OnInit {
       );
 
     }));
+
     return combined$.pipe(
       reduce((acc, value) => {
         if (value[1] !== null) {
@@ -199,9 +200,11 @@ export class SimpleSearchComponent implements OnInit {
   }
 
   isExpanded(index: number): boolean {
+
     if (!this.panelExpanded) {
       return false;
     }
+
     return 0 <= index && index < this.panelExpanded.length
       && this.panelExpanded[index];
   }
@@ -241,30 +244,35 @@ export class SimpleSearchComponent implements OnInit {
       sortColumn,
       sortOrder,
       filterColumn,
-      filterQuery
-    ).subscribe({
-      next: apiResult => {
-        this.paginator.length = apiResult.totalCount;
-        this.paginator.pageIndex = apiResult.pageIndex;
-        this.paginator.pageSize = apiResult.pageSize;
-        console.log(apiResult.data);
-        this.studies = new MatTableDataSource(apiResult.data);
-        this.commonNames$ = [];
-        this.wikipediaLinks$ = [];
-        for (let i = 0; i < Math.min(this.paginator.pageSize, apiResult.data.length); i++) {
-          if (this.studies.data[i].taxonIds) {
-            this.commonNames$.push(this.getTaxa(this.studies.data[i].taxonIds ?? ""));
-            this.wikipediaLinks$.push(this.searchWikipedia(this.studies.data[i].taxonIds ?? ""));
-          } else {
-            this.commonNames$.push(undefined);
-            this.wikipediaLinks$.push(undefined);
+      filterQuery).
+      subscribe({
+        next: apiResult => {
+
+          this.paginator.length = apiResult.totalCount;
+          this.paginator.pageIndex = apiResult.pageIndex;
+          this.paginator.pageSize = apiResult.pageSize;
+
+          console.log(apiResult);
+
+          this.studies = new MatTableDataSource(apiResult.data);
+          this.commonNames$ = [];
+          this.wikipediaLinks$ = [];
+
+          for (let i = 0; i < Math.min(this.paginator.pageSize, apiResult.data.length); i++) {
+
+            if (this.studies.data[i].taxonIds) {
+              this.commonNames$.push(this.getTaxa(this.studies.data[i].taxonIds ?? ""));
+              this.wikipediaLinks$.push(this.searchWikipedia(this.studies.data[i].taxonIds ?? ""));
+            } else {
+              this.commonNames$.push(undefined);
+              this.wikipediaLinks$.push(undefined);
+            }
           }
+        },
+        error: error => {
+          console.log(error);
         }
-      },
-      error: error => {
-        console.log(error);
       }
-    }
-    )
+      )
   }
 }

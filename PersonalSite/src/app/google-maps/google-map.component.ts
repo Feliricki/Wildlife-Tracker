@@ -61,7 +61,11 @@ export class MapComponent implements OnInit, OnChanges {
 
   map: google.maps.Map | undefined;
   studies: Map<bigint, StudyDTO> | undefined;
-  studiesEmitter = new EventEmitter<Map<bigint, StudyDTO>>();
+
+  // TODO: Make sure this message recieved in the trigger view component
+  @Output() studiesEmitter = new EventEmitter<Map<bigint, StudyDTO>>();
+  @Output() studyEmitter = new EventEmitter<StudyDTO>();
+
   markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> | undefined;
   mapCluster: MarkerClusterer | undefined;
 
@@ -72,7 +76,6 @@ export class MapComponent implements OnInit, OnChanges {
   }
 
   ngOnInit(): void {
-    console.log("ngOnInit");
     this.apiLoaded = from(this.initMap());
   }
 
@@ -138,6 +141,7 @@ export class MapComponent implements OnInit, OnChanges {
               },
               title: studyDTO.name,
             });
+
             // NOTE: This is where the listener functions is defined.
             marker.addListener("click", () => {
 
@@ -157,6 +161,8 @@ export class MapComponent implements OnInit, OnChanges {
               this.infoWindow.set("toggle", !this.infoWindow.get("toggle"));
               this.infoWindow.set("studyId", studyDTO.id);
               this.infoWindow.open(this.map, marker);
+
+              this.emitStudy(studyDTO);
             });
             markers.set(studyDTO.id, marker);
           }
@@ -174,7 +180,6 @@ export class MapComponent implements OnInit, OnChanges {
                 this.infoWindow.set("toggle", false);
                 this.infoWindow.set("studyId", -1n);
                 console.log("Reset infowindow to its initial state");
-                // console.log(this.infoWindow);
               }
               map.fitBounds(cluster.bounds as google.maps.LatLngBounds);
             }
@@ -192,6 +197,8 @@ export class MapComponent implements OnInit, OnChanges {
     })
   }
 
+  // NOTE: This function serves to create a dynamic button element every time the info window is opened
+  // On button click an event is emitted that makes send jsonData to the event component
   buildInfoWindowContent(studyDTO: StudyDTO): HTMLElement {
     // const html = new HTMLElement();
     const html = document.createElement('div');
@@ -235,6 +242,12 @@ export class MapComponent implements OnInit, OnChanges {
 
   emitJsonData(entityType: "study" | "individual" | "tag", studyId: bigint): void {
     this.JsonDataEmitter.emit(this.studyService.jsonRequest(entityType, studyId));
+  }
+
+  // Use this to emit specific to the parent component
+  //  Tentatively, this will only be recieved in the event and tracker view component
+  emitStudy(study: StudyDTO): void {
+    this.studyEmitter.emit(study);
   }
 
   emitStudies(studies: Map<bigint, StudyDTO>): void {

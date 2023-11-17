@@ -67,9 +67,11 @@ export class StudyService {
     // NOTE: The Extract type will pick one type from a union type by matching the type attribute to one of "study", "individual", and "tag"
     const response = this.httpClient.get<(Extract<JsonResponseData, { type: typeof entityType }>)[]>(url, { params: parameters, observe: 'response' as const, responseType: 'json' as const });
 
+
     return response.pipe(
       tap(response => console.log(response)), // this function is optional
       map(response => {
+        console.log(response);
         // Status Code 204
         if (response.status == HttpStatusCode.NoContent) {
           return [];
