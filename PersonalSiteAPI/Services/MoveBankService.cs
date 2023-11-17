@@ -1,5 +1,4 @@
-﻿using Amazon.Runtime;
-using Amazon.SecretsManager;
+﻿using Amazon.SecretsManager;
 using Amazon.SecretsManager.Extensions.Caching;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
@@ -12,10 +11,12 @@ using System.Security.Cryptography;
 using System.Collections.Immutable;
 using Microsoft.IdentityModel.Tokens;
 using PersonalSiteAPI.Models;
+using Microsoft.EntityFrameworkCore;
+using Mapster;
+using MapsterMapper;
 
 namespace PersonalSiteAPI.Services
 {
-    //public class Response : AmazonWebServiceResponses;
     public interface IMoveBankService
     {
         Task<ApiTokenResultDTO?> GetApiToken();
@@ -28,7 +29,7 @@ namespace PersonalSiteAPI.Services
             (string, string)[]? headers = null,
             bool authorizedUser = false
             );
-        Task<Tuple<HttpResponseMessage, bool>> JsonRequest(
+        Task<HttpResponseMessage> JsonRequest(
             long studyId,
             string entityType,
             Dictionary<string, string?>? parameters = null,
@@ -61,6 +62,7 @@ namespace PersonalSiteAPI.Services
         private readonly SecretsManagerCache _secretsCache;
         // This context will be used to post information on studies to contact 
         private readonly ApplicationDbContext _context;
+        private readonly IMapper _mapper;
 
         public MoveBankService(
             HttpClient httpClient,
@@ -68,7 +70,8 @@ namespace PersonalSiteAPI.Services
             ILogger<MoveBankService> logger,
             IAmazonSecretsManager amazonSecretsManager,
             IDataProtectionProvider provider,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IMapper mapper)
         {
             _httpClient = httpClient;
             _configuration = configuration;
@@ -76,6 +79,7 @@ namespace PersonalSiteAPI.Services
             _amazonSecretsManager = amazonSecretsManager;
             _provider = provider;
             _context = context;
+            _mapper = mapper;
 
             _protector = _provider.CreateProtector("API Token").ToTimeLimitedDataProtector();
             uint durationMinutes = 1;
@@ -141,8 +145,13 @@ namespace PersonalSiteAPI.Services
                 return null;
             }
         }
-
-        public async Task<HttpResponseMessage?> DirectRequest(string entityType, Dictionary<string, string?>? parameters = null, (string, string)[]? headers = null, bool authorizedUser = false)
+        // NOTE: This method is also used as a fallthrough for json request are empty
+       
+        public async Task<HttpResponseMessage?> DirectRequest(
+            string entityType, 
+            Dictionary<string, string?>? parameters = null, 
+            (string, string)[]? headers = null, 
+            bool authorizedUser = false)
         {
             // Catch potential exceptions
             var secretObj = await GetApiToken();
@@ -175,7 +184,9 @@ namespace PersonalSiteAPI.Services
             }
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
-
+            // TODO: Make sure the response is not being read more than once
+            var needsPermission = HasLicenseTerms(response);
+            // NOTE: This portion of the method is yet untested 
             if (response.Headers.TryGetValues("accept-license", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
             {
                 response = await GetPermissionForDirectRead(request, response);
@@ -183,7 +194,7 @@ namespace PersonalSiteAPI.Services
             return response;
         }
 
-        public async Task<Tuple<HttpResponseMessage, bool>> JsonRequest(
+        public async Task<HttpResponseMessage> JsonRequest(
             long studyId,
             string entityType,
             Dictionary<string, string?>? parameters = null,
@@ -220,27 +231,38 @@ namespace PersonalSiteAPI.Services
                 Method = HttpMethod.Get,
             };
             // Headers get set here
-            if (headers != null)
+            if (headers is not null)
             {
                 foreach (var header in headers)
                 {
                     request.Headers.Add(header.Item1, header.Item2);
                 }
             }
+            // If permission is not granted then the content length is empty
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
+            return response;
 
-            var content = await response.Content.ReadAsStringAsync();
-            bool gotPermission = false;
-            if (content.Length == 0)
-            {
-                // TODO:Build a new table to store studies from whom I've received license terms to accept.
-                Console.WriteLine("Json Request response had a content length of zero.");
-                var responseTuple = await GetPermission(response, request);
-                response = responseTuple.Item1;
-                gotPermission = responseTuple.Item2;
-            }
-            return Tuple.Create(response, gotPermission);
+            //var content = await response.Content.ReadAsStringAsync();
+            //string? responseType = null;
+
+            //bool gotPermission = false;
+            //if (content.Length == 0)
+            //{
+            //    // TODO:Build a new table to store studies from whom I've received license terms to accept.
+            //    Console.WriteLine("Json Request response had a content length of zero.");
+            //    (response, gotPermission) = await GetPermission(response, request);
+            //    responseType = gotPermission ? "csv" : "json";
+            //}
+            //if (gotPermission)
+            //{
+            //    bool savedRequest = await SaveStudy(await _context.Studies.Where(study => study.Id == studyId).FirstAsync());
+            //    if (savedRequest)
+            //    {
+            //        _logger.Log(LogLevel.Information, "Succesfully saved request to RequestPermission Table.");
+            //    }
+            //}
+            //return Tuple.Create(response, gotPermission, responseType);
 
         }
         // TODO: This method does not handle the case when user permissions are needed 
@@ -252,6 +274,8 @@ namespace PersonalSiteAPI.Services
         // 3) A sensor type (usually 'gps')
         // times are provided in milliseconds since 1970-01-01 UTC 
         // Coordinates are in WGS84 format.
+        // NOTE: This method may need a direct request analogue as a failsafe
+        // Remember to check proper permissions
         public async Task<HttpResponseMessage> JsonEventData(
             long studyId,
             string sensorType,
@@ -283,15 +307,9 @@ namespace PersonalSiteAPI.Services
                 uri = QueryHelpers.AddQueryString(uri, "individual_local_identifiers", localIdentifier);
             }
 
-            if (parameters is not null)
-            {
-                uri = QueryHelpers.AddQueryString(uri, parameters);
-            }
+            if (parameters is not null) uri = QueryHelpers.AddQueryString(uri, parameters);
 
-            if (eventProfile is not null)
-            {
-                uri = QueryHelpers.AddQueryString(uri, "event_reduction_profile", eventProfile);
-            }
+            if (eventProfile is not null) uri = QueryHelpers.AddQueryString(uri, "event_reduction_profile", eventProfile);
 
             if (secretObj is not null && !string.IsNullOrEmpty(secretObj.ApiToken))
             {
@@ -350,7 +368,7 @@ namespace PersonalSiteAPI.Services
                 || acceptedLicense.IsNullOrEmpty() || acceptedLicense.FirstOrDefault() == "false")
             {
                 Console.WriteLine($"Response did not ask for license terms. hasLicenseTerms={hasLicenseTerms}");
-                return Tuple.Create(oldResponse, false);
+                return Tuple.Create(response, false);
             }
 
             var md5String = StringToMD5(await response.Content.ReadAsByteArrayAsync());
@@ -360,16 +378,31 @@ namespace PersonalSiteAPI.Services
             {
                 RequestUri = new Uri(uri),
                 Method = HttpMethod.Get
-            };
-            // TODO - Save all accepted license terms to the database
+            };            
             var newResponse = await _httpClient.SendAsync(newRequest);            
-
             return Tuple.Create(newResponse, true);
         }
 
-        private Task<bool> SendToDB(Studies study)
+        private async Task<bool> SaveStudy(Studies study)
         {
-            return Task.FromResult(true);
+
+            Dictionary<long,RequestPermission> recordedStudies = _context.RequestPermission.ToDictionary(s => s.Id);
+            if (_context.RequestPermission.IsNullOrEmpty() || recordedStudies.ContainsKey(study.Id))
+            {
+                RequestPermission request = study.Adapt<RequestPermission>();
+                _context.RequestPermission.Add(request);
+                // Identity insert is set to on so we can manually set the primary key
+                using var transaction = _context.Database.BeginTransaction();
+                _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT RequestPermission ON");
+                var dbChanges = await _context.SaveChangesAsync();
+                _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT RequestPermission OFF");
+                Console.WriteLine("Success added entry to Request Permission table.");
+                return true;
+            }
+            else
+            {
+                return await Task.FromResult(false);
+            }
         }
 
         private static bool HasLicenseTerms(HttpResponseMessage response)

@@ -1,4 +1,6 @@
 ﻿using CsvHelper;
+using Mapster;
+using MapsterMapper;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -7,8 +9,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using MyBGList.Attributes;
 using Newtonsoft.Json;
-//using Newtonsoft.Json;
-//using ThirdParty.Json.LitJson/
 using PersonalSiteAPI.Attributes;
 using PersonalSiteAPI.Attributes.MoveBankAttributes;
 using PersonalSiteAPI.Constants;
@@ -23,7 +23,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Text;
-
+//using Mapster.Models.
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace PersonalSiteAPI.Controllers
@@ -37,19 +37,22 @@ namespace PersonalSiteAPI.Controllers
         private readonly IMoveBankService _moveBankService;
         private readonly IMemoryCache _memoryCache;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IMapper _mapper;
 
         public MoveBankController(
             ApplicationDbContext context,
             ILogger<AccountController> logger,
             IMoveBankService moveBankService,
             IMemoryCache memoryCache,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            IMapper mapper)
         {
             _context = context;
             _logger = logger;
             _moveBankService = moveBankService;
             _memoryCache = memoryCache;
             _userManager = userManager;
+            _mapper = mapper;
         }
 
         // GET: api/<MoveBankController>
@@ -308,101 +311,163 @@ namespace PersonalSiteAPI.Controllers
                     return Ok(result);
                 }
 
-
-                var responseTuple = await _moveBankService.JsonRequest(
+                // TODO: This service method might be in need of a refactor.
+                // The method should convey what type is being returned in the response
+                // Possible options: "csv file", "json text" or null
+                var response = await _moveBankService.JsonRequest(
                     studyId: studyId,
                     entityType: entityType,
                     parameters: parameters,
                     headers: null,
                     authorizedUser: User.IsInRole(RoleNames.Administrator));
-
-                (var response, bool gotPermission) = responseTuple;
-                var responseStream = await response.Content.ReadAsStreamAsync();
-                // 
-
-                object? data;
-                if (response is null || responseStream.Length == 0)
+                
+                if (response is null)
                 {
-                    return BadRequest($"Passed invalid parameters to move bank service. Response has size {responseStream.Length}");
+                    Console.WriteLine("null response in jsonRequest");
+                    throw new Exception("Json request yielded a null response");
+                }
+                string? returnType = "json";
+                byte[] responseContentArray = await response.Content.ReadAsByteArrayAsync();                
+                // This is the fallthrough if movebank's json endpoint is available
+                if (responseContentArray.Length == 0)
+                {
+                    response = await _moveBankService.DirectRequest(
+                        entityType: entityType,
+                        parameters: parameters,
+                        headers: null,
+                        authorizedUser: User.IsInRole(RoleNames.Administrator));
+
+                    if (response is null) throw new Exception("Null return value on DirectRequest.");
+                    responseContentArray = await response.Content.ReadAsByteArrayAsync();
+                    returnType = responseContentArray.Length > 0 ? "csv" : null;
+                }
+                if (returnType is null)
+                {
+                    throw new UnauthorizedAccessException("GetJsonData: Did not receive a valid response from external api.");
                 }
 
-                var jsonOptions = new Newtonsoft.Json.JsonSerializerSettings();
-
-                if (gotPermission)
+                object? data = null;
+                if (returnType == "csv")
                 {
-                    Console.WriteLine("Returning CSV file.");
-                    using var stream = new StreamReader(await response.Content.ReadAsStreamAsync(), Encoding.UTF8);
+                    var memStream = new MemoryStream(responseContentArray);
+                    using var stream = new StreamReader(memStream, Encoding.UTF8);
                     using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
 
-                    switch (entityType.ToLower())
+                    data = entityType.ToLower() switch
                     {
-                        case "study":
-                            var studyRecords = csvReader.GetRecords<StudiesRecord>().Select(studyRecord => new StudyJsonDTO()
-                            {
-                                Id = studyRecord.Id,
-                                Name = studyRecord.Name ?? "",
-                                SensorTypeIds = studyRecord.SensorTypeIds
-                            });
-                            return new JsonResult(studyRecords.ToList(), jsonOptions);
-
-                        case "individual":
-                            var individualRecords = csvReader.GetRecords<IndividualRecord>().Select(individualRecord => new IndividualJsonDTO()
-                            {
-                                Id = individualRecord.Id,
-                                LocalIdentifier = individualRecord.LocalIdentifier ?? string.Empty
-                            });
-                            return new JsonResult(individualRecords.ToList(), jsonOptions);
-
-                        case "tag":
-                            // TODO - Look into the actual type returned movebank's api
-                            var tagRecords = csvReader.GetRecords<TagRecord>().Select(tagRecord => new TagJsonDTO()
-                            {
-                                Id = tagRecord.Id,
-                                LocalIdentifier = tagRecord.LocalIdentifier
-                            });
-                            return new JsonResult(tagRecords.ToList(), jsonOptions);
-
-                        default:
-                            throw new InvalidOperationException("Invalid parameter for entity type");
-                    }
+                        "study" => csvReader.GetRecords<StudiesRecord>().AsQueryable().ProjectToType<StudyJsonDTO>().ToList(),
+                        "individual" => csvReader.GetRecords<IndividualRecord>().AsQueryable().ProjectToType<IndividualJsonDTO>().ToList(),
+                        "tag" => csvReader.GetRecords<TagRecord>().AsQueryable().ProjectToType<TagJsonDTO>().ToList(),
+                        _ => null
+                    };
+                    Console.WriteLine("csv: " + JsonConvert.SerializeObject(data));
                 }
-                switch (entityType.ToLower())
+                else
                 {
-                    case "study":
-                        data = await response.Content.ReadFromJsonAsync<List<StudyJsonDTO>>();
-                        break;
-
-                    case "individual":
-                        data = await response.Content.ReadFromJsonAsync<List<IndividualJsonDTO>>();
-                        break;
-
-                    case "tag":
-                        data = await response.Content.ReadFromJsonAsync<List<TagJsonDTO>>();
-                        break;
-
-                    default:
-                        return BadRequest("Invalid entity type.");
+                    var responseString = Encoding.UTF8.GetString(responseContentArray);                    
+                    data = entityType.ToLower() switch
+                    {
+                        "study" => JsonConvert.DeserializeObject<List<StudyJsonDTO>>(responseString),
+                        "individual" => JsonConvert.DeserializeObject<List<IndividualJsonDTO>>(responseString),
+                        "tag" => JsonConvert.DeserializeObject<List<TagJsonDTO>>(responseString), 
+                        _ => null
+                    };
+                    Console.WriteLine("json: " + JsonConvert.SerializeObject(data));
                 }
 
                 if (data is not null)
                 {
                     var jsonString = JsonConvert.SerializeObject(data);
-                    Console.WriteLine("Final json string is " + jsonString);
-
-                    var cacheOptions = new MemoryCacheEntryOptions()
-                    {
-                        Size = 1,
-                        SlidingExpiration = TimeSpan.FromMinutes(2),
-                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-                    };
-
-                    _memoryCache.Set(cacheKey, jsonString, cacheOptions);
                     return Ok(jsonString);
                 }
                 else
                 {
-                    throw new InvalidOperationException();
+                    return BadRequest("Invalid return type");
                 }
+                //if (gotPermission)
+                //{
+                //    Console.WriteLine("Returning CSV file.");
+                //    var memStream = new MemoryStream(responseContentArray);
+                //    using var stream = new StreamReader(memStream, Encoding.UTF8);
+                //    using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
+
+                //    switch (entityType.ToLower())
+                //    {
+                //        case "study":
+                //            var studyRecords = csvReader.GetRecords<StudiesRecord>().Select(studyRecord => new StudyJsonDTO()
+                //            {
+                //                Id = studyRecord.Id,
+                //                Name = studyRecord.Name ?? "",
+                //                SensorTypeIds = studyRecord.SensorTypeIds
+                //            });
+                //            data = studyRecords.ToList();
+                //            break;
+
+                //        case "individual":
+                //            var individualRecords = csvReader.GetRecords<IndividualRecord>().Select(individualRecord => new IndividualJsonDTO()
+                //            {
+                //                Id = individualRecord.Id,
+                //                LocalIdentifier = individualRecord.LocalIdentifier ?? string.Empty
+                //            });
+                //            data = individualRecords.ToList();
+                //            break;
+
+                //        case "tag":
+                //            // TODO - Look into the actual type returned movebank's api
+                //            var tagRecords = csvReader.GetRecords<TagRecord>().Select(tagRecord => new TagJsonDTO()
+                //            {
+                //                Id = tagRecord.Id,
+                //                LocalIdentifier = tagRecord.LocalIdentifier
+                //            });
+                //            data = tagRecords.ToList();
+                //            break;
+
+                //        default:
+                //            return BadRequest("Invalid entity type.");
+                //    }
+                //}
+                //else
+                //{
+                //    var responseString = Encoding.UTF8.GetString(responseContentArray);
+                //    switch (entityType.ToLower())
+                //    {
+                //        case "study":
+                //            data = JsonConvert.DeserializeObject<List<StudyJsonDTO>>(responseString);
+                //            break;
+
+                //        case "individual":
+                //            data = JsonConvert.DeserializeObject<List<IndividualJsonDTO>>(responseString);
+                //            break;
+
+                //        case "tag":
+                //            //data = await response.Content.ReadFromJsonAsync<List<TagJsonDTO>>();
+                //            data = JsonConvert.DeserializeObject<List<TagJsonDTO>>(responseString);
+                //            break;
+
+                //        default:
+                //            return BadRequest("Invalid entity type.");
+                //    }
+                //}
+
+                //if (data is not null)
+                //{
+                //    var jsonString = JsonConvert.SerializeObject(data);
+                //    Console.WriteLine("Final json string is " + jsonString);
+
+                //    var cacheOptions = new MemoryCacheEntryOptions()
+                //    {
+                //        Size = 1,
+                //        SlidingExpiration = TimeSpan.FromMinutes(2),
+                //        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                //    };
+
+                //    _memoryCache.Set(cacheKey, jsonString, cacheOptions);
+                //    return Ok(jsonString);
+                //}
+                //else
+                //{
+                //    throw new InvalidOperationException();
+                //}
 
             }
             catch (Exception error)

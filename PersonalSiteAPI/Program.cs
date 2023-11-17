@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
+using Mapster;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -59,7 +60,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), options =>
     {
         options.CommandTimeout(60);
-        //options.
     }); 
 });
 
@@ -101,7 +101,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-//builder.Services.
+builder.Services.AddMapster();
 
 builder.Services.AddDataProtection();
 builder.Services.AddScoped<JwtHandler>();

@@ -11,15 +11,11 @@ namespace PersonalSiteAPI.Models
         [Required]
         [Key]
         public long Id { get; set; }
-
         public string Acknowledgements { get; set; } = string.Empty;
-
         public string Citation { get; set; } = string.Empty;
-
         public string LicenseTerms { get; set; } = string.Empty;
         [MaxLength(10)]
         public string LicenseType { get; set; } = string.Empty;
-
         public string MainLocationLat { get; set; } = string.Empty;
         public string MainLocationLon { get; set; } = string.Empty;
         public string PrincipalInvestigatorAddress { get; set; } = string.Empty;
@@ -31,7 +27,7 @@ namespace PersonalSiteAPI.Models
         [Required]
         public bool IAmCollaborator { get; set; }
         public string StudyPermission { get; set; } = string.Empty;
+        [Required]
         public string ContactPersonName { get; set; } = string.Empty;
-
     }
 }

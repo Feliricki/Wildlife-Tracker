@@ -19,5 +19,6 @@ namespace PersonalSiteAPI.Models
             //modelBuilder.Entity<RequestPermission>().HasKey(o => o.Id);
         }
         public DbSet<Studies> Studies => Set<Studies>();
+        public DbSet<RequestPermission> RequestPermission => Set<RequestPermission>();
     }
 }

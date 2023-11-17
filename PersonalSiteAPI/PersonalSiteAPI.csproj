@@ -27,6 +27,8 @@
     <PackageReference Include="AWSSDK.SecretsManager.Caching" Version="1.0.6" />
     <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.202.5" />
     <PackageReference Include="CsvHelper" Version="30.0.1" />
+    <PackageReference Include="Mapster" Version="7.4.0" />
+    <PackageReference Include="Mapster.DependencyInjection" Version="1.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.12" /> <!-- prev version = 7.0.0 -->
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="7.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.12">

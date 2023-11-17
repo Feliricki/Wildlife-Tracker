@@ -95,26 +95,6 @@ namespace PersonalSiteAPI.Controllers
         {
             try
             {
-                //var longestName = _context.Studies
-                //    .Where(study => study.IHaveDownloadAccess)
-                //    .Where(ValidLicenseExp)
-                //    .AsEnumerable<Studies>()
-                //    .Aggregate(Tuple.Create(0, ""), (acc, study) => {
-                //        if (study.Name.Length > acc.Item1)
-                //        {
-                //            return Tuple.Create(study.Name.Length, study.Name);
-                //        }
-                //        else
-                //        {
-                //            return acc;
-                //        }
-                //    });
-                //return new JsonResult(new
-                //{
-                //    LongestNameCount = longestName.Item1,
-                //    LongestName = longestName.Item2
-                //});
-
                 using var response = await _moveBankService.DirectRequest(entityType: "study", parameters: null, headers: null, authorizedUser: true);
                 if (response == null)
                 {
