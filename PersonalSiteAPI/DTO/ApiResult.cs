@@ -53,8 +53,7 @@ namespace PersonalSiteAPI.DTO
             )
         {
 
-            // Prefix search
-            // Filter for columns that start with the 'filterQuery'
+            // Studies are indexed by name in the database
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery)
                 && IsValidProperty(filterColumn))
             {
@@ -83,15 +82,11 @@ namespace PersonalSiteAPI.DTO
                     );
             }
 
-            //public static async Task<ApiResult<TDTO>> CreateAndCastAsync<TEntity, TDTO>()
-
             source = source
                 .Skip(pageIndex * pageSize)
                 .Take(pageSize);
             Console.WriteLine("Creating the final list");
             List<T> data = await source.ToListAsync();
-            //Console.WriteLine($"pageIndex={pageIndex}, pageSize={pageSize} sortColumn={sortColumn} sortOrder={sortOrder} filterColumn={filterColumn} filterQuery={filterQuery}");
-            Console.WriteLine("Returning result.");
             return new ApiResult<T>(
                 data,
                 count,

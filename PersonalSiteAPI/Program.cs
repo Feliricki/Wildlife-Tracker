@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
 using Mapster;
+using PersonalSiteAPI.Mappings;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -102,6 +103,7 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddMapster();
+builder.Services.RegisterMapsterConfiguration();
 
 builder.Services.AddDataProtection();
 builder.Services.AddScoped<JwtHandler>();
@@ -119,7 +121,7 @@ builder.Services.AddResponseCaching(options =>
 });
 builder.Services.AddMemoryCache(options =>
 {
-    options.SizeLimit = 1024 * 1024 * 1024; // 1 GB    
+    options.SizeLimit = 1024 * 1024 * 1024; // 1 GB
 });
 
 var app = builder.Build();

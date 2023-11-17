@@ -1,16 +1,19 @@
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 
-namespace PersonalSiteAPI.Attributes {
-    public class UnixEpochValidatorAttribute : ValidationAttribute 
+namespace PersonalSiteAPI.Attributes
+{
+    public class UnixEpochValidatorAttribute : ValidationAttribute
     {
-        public UnixEpochValidatorAttribute() : base("Value is invalid.") {}
+        public UnixEpochValidatorAttribute() : base("Value is invalid.") { }
 
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
-            if (value is long longValue){
+            if (value is long longValue)
+            {
                 return ValidationResult.Success;
-            } else {                
+            }
+            else
+            {
                 return new ValidationResult(ErrorMessage);
             }
         }

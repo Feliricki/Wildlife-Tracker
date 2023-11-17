@@ -96,7 +96,7 @@ export class MapComponent implements OnInit, OnChanges {
   async initMap(): Promise<boolean> {
 
     console.log("Initializing map.");
-    return this.loader.load().then(async () => {
+    return this.loader.load().then(() => {
 
       this.map = new google.maps.Map(document.getElementById("map") as HTMLElement, this.defaultMapOptions);
       this.infoWindow = new google.maps.InfoWindow();

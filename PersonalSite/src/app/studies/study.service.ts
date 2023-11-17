@@ -5,11 +5,8 @@ import { environment } from '../../environments/environment';
 import { StudyDTO } from './study';
 import { ApiResult } from '../ApiResult';
 import { EventJsonDTO } from './JsonResults/EventJsonDTO';
-// import { TagJsonDTO } from './JsonResults/TagJsonDTO';
 import { EventOptions } from './EventOptions';
 import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
-// import { IndividualJsonDTO } from './JsonResults/IndividualJsonDTO';
-// import { StudyJsonDTO } from './JsonResults/StudyJsonDTO';
 import { JsonResponseData } from './JsonResults/JsonDataResponse';
 
 @Injectable({
@@ -69,7 +66,7 @@ export class StudyService {
 
     // NOTE: The Extract type will pick one type from a union type by matching the type attribute to one of "study", "individual", and "tag"
     const response = this.httpClient.get<(Extract<JsonResponseData, { type: typeof entityType }>)[]>(url, { params: parameters, observe: 'response' as const, responseType: 'json' as const });
-    console.log(response);
+
     return response.pipe(
       tap(response => console.log(response)), // this function is optional
       map(response => {

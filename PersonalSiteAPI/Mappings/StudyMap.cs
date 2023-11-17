@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PersonalSiteAPI.DTO.MoveBankAttributes;
 using PersonalSiteAPI.Models;
-using System.Xml.Linq;
 
 namespace PersonalSiteAPI.Mappings
 {

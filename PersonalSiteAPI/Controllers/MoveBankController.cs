@@ -1,7 +1,6 @@
 ﻿using CsvHelper;
 using Mapster;
 using MapsterMapper;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +22,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Text;
-//using Mapster.Models.
+using PersonalSiteAPI.Mappings;
+
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace PersonalSiteAPI.Controllers
@@ -82,7 +82,6 @@ namespace PersonalSiteAPI.Controllers
         {
             try
             {
-                // TODO: implement caching
                 Console.WriteLine("Calling GetStudy");
                 var cacheKey = $"GetStudy: {studyId}";
                 Studies? study = null;
@@ -94,44 +93,30 @@ namespace PersonalSiteAPI.Controllers
                 {
                     study = storedResult;
                 }
-                if (study == null)
+                if (study is null)
                 {
                     return Unauthorized();
                 }
-                bool authorized = User.IsInRole(RoleNames.Administrator);
-                var result = new StudyDTO()
+                
+                var studyDto = study.Adapt<StudyDTO>();
+                if (User.IsInRole(RoleNames.Administrator))
                 {
-                    Acknowledgements = study.Acknowledgements,
-                    Citation = study.Citation,
-                    GrantsUsed = study.GrantsUsed,
-                    Id = study.Id,
-                    LicenseType = study.LicenseType,
-                    MainLocationLat = FloatParser(study.MainLocationLat),
-                    MainLocationLon = FloatParser(study.MainLocationLon),
-                    Name = study.Name,
-                    NumberOfDeployments = study.NumberOfDeployments,
-                    NumberOfIndividuals = study.NumberOfIndividuals,
-                    NumberOfTags = study.NumberOfTags,
-                    StudyObjective = study.StudyObjective,
-                    TimestampFirstDeployedLocation = study.TimeStampFirstDeployedLocation,
-                    TimestampLastDeployedLocation = study.TimeStampLastDeployedLocation,
-                    NumberOfDeployedLocations = study.NumberOfDeployedLocations,
-                    TaxonIds = study.TaxonIds,
-                    SensorTypeIds = study.SensorTypeIds,
-                    ContactPersonName = study.ContactPersonName
-                };
-                if (authorized)
-                {
-                    return result;
+                    return studyDto;
                 }
                 if (!ValidLicense(study))
                 {
                     return Unauthorized("User is not authorized.");
                 }
-                _memoryCache.Set(cacheKey, study, new TimeSpan(0, 1, 0));
-                return result;
+                var cacheOptions = new MemoryCacheEntryOptions()
+                {
+                    Size = 1,
+                    SlidingExpiration = TimeSpan.FromMinutes(2),
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                };
+                _memoryCache.Set(cacheKey, study, cacheOptions);
+                return studyDto;
             }
-            catch (Exception)
+            catch (Exception error)
             {
                 return Unauthorized();
             }
@@ -176,30 +161,9 @@ namespace PersonalSiteAPI.Controllers
                 {
                     return storedResult ?? throw new NullReferenceException();
                 }
-                //StudyMapper mapper = new StudyMapper();
-                //IEnumerable<StudyDTO> dataSource = mapper.EntityToDTO(await source.ToListAsync());
-                IQueryable<StudyDTO> dataSource = source.Select(study => new StudyDTO()
-                {
-                    Acknowledgements = study.Acknowledgements,
-                    Citation = study.Citation,
-                    GrantsUsed = study.GrantsUsed,
-                    Id = study.Id,
-                    LicenseType = study.LicenseType,
-                    MainLocationLat = FloatParser(study.MainLocationLat),
-                    MainLocationLon = FloatParser(study.MainLocationLon),
-                    Name = study.Name,
-                    NumberOfDeployments = study.NumberOfDeployments,
-                    NumberOfIndividuals = study.NumberOfIndividuals,
-                    NumberOfTags = study.NumberOfTags,
-                    StudyObjective = study.StudyObjective,
-                    TimestampFirstDeployedLocation = study.TimeStampFirstDeployedLocation,
-                    TimestampLastDeployedLocation = study.TimeStampLastDeployedLocation,
-                    NumberOfDeployedLocations = study.NumberOfDeployedLocations,
-                    TaxonIds = study.TaxonIds,
-                    SensorTypeIds = study.SensorTypeIds,
-                    ContactPersonName = study.ContactPersonName
-                });
 
+                var dataSource  = source.ProjectToType<StudyDTO>();
+                
                 ApiResult<StudyDTO> apiResult = await ApiResult<StudyDTO>.CreateAsync(
                     dataSource,
                     pageIndex,
@@ -249,27 +213,7 @@ namespace PersonalSiteAPI.Controllers
                     return result!;
                 }
 
-                IQueryable<StudyDTO> dataSource = source.Select(study => new StudyDTO()
-                {
-                    Acknowledgements = study.Acknowledgements,
-                    Citation = study.Citation,
-                    GrantsUsed = study.GrantsUsed,
-                    Id = study.Id,
-                    LicenseType = study.LicenseType,
-                    MainLocationLat = FloatParser(study.MainLocationLat),
-                    MainLocationLon = FloatParser(study.MainLocationLon),
-                    Name = study.Name,
-                    NumberOfDeployments = study.NumberOfDeployments,
-                    NumberOfIndividuals = study.NumberOfIndividuals,
-                    NumberOfTags = study.NumberOfTags,
-                    StudyObjective = study.StudyObjective,
-                    TimestampFirstDeployedLocation = study.TimeStampFirstDeployedLocation,
-                    TimestampLastDeployedLocation = study.TimeStampLastDeployedLocation,
-                    NumberOfDeployedLocations = study.NumberOfDeployedLocations,
-                    TaxonIds = study.TaxonIds,
-                    SensorTypeIds = study.SensorTypeIds,
-                    ContactPersonName = study.ContactPersonName
-                });
+                IQueryable<StudyDTO> dataSource = source.ProjectToType<StudyDTO>();
 
                 // TODO: refactor to use default cache options? 
                 var cacheOptions = new MemoryCacheEntryOptions()
@@ -299,10 +243,7 @@ namespace PersonalSiteAPI.Controllers
             try
             {
                 Console.WriteLine("Calling GetJsonData");
-                Dictionary<string, string?> parameters = new()
-                {
-                    //{ "study_id", studyId.ToString() }
-                };
+                Dictionary<string, string?> parameters = new() { };
 
                 var cacheKey = $"GetJsonData:{entityType}-{studyId}";
                 if (_memoryCache.TryGetValue<string>(cacheKey, out var result) && result is not null)
@@ -320,18 +261,20 @@ namespace PersonalSiteAPI.Controllers
                     parameters: parameters,
                     headers: null,
                     authorizedUser: User.IsInRole(RoleNames.Administrator));
-                
+
                 if (response is null)
                 {
                     Console.WriteLine("null response in jsonRequest");
                     throw new Exception("Json request yielded a null response");
                 }
+                
                 string? returnType = "json";
-                byte[] responseContentArray = await response.Content.ReadAsByteArrayAsync();                
-                // This is the fallthrough if movebank's json endpoint is available
+                byte[] responseContentArray = await response.Content.ReadAsByteArrayAsync();
                 if (responseContentArray.Length == 0)
                 {
+                    parameters.Add("study_id", studyId.ToString());
                     response = await _moveBankService.DirectRequest(
+                        studyId: studyId,
                         entityType: entityType,
                         parameters: parameters,
                         headers: null,
@@ -347,6 +290,7 @@ namespace PersonalSiteAPI.Controllers
                 }
 
                 object? data = null;
+                // NOTE: The CSV file will return the sensor types all capitalized.
                 if (returnType == "csv")
                 {
                     var memStream = new MemoryStream(responseContentArray);
@@ -360,115 +304,34 @@ namespace PersonalSiteAPI.Controllers
                         "tag" => csvReader.GetRecords<TagRecord>().AsQueryable().ProjectToType<TagJsonDTO>().ToList(),
                         _ => null
                     };
-                    Console.WriteLine("csv: " + JsonConvert.SerializeObject(data));
                 }
                 else
                 {
-                    var responseString = Encoding.UTF8.GetString(responseContentArray);                    
                     data = entityType.ToLower() switch
                     {
-                        "study" => JsonConvert.DeserializeObject<List<StudyJsonDTO>>(responseString),
-                        "individual" => JsonConvert.DeserializeObject<List<IndividualJsonDTO>>(responseString),
-                        "tag" => JsonConvert.DeserializeObject<List<TagJsonDTO>>(responseString), 
+                        "study" => System.Text.Json.JsonSerializer.Deserialize<List<StudyJsonDTO>>(responseContentArray),
+                        "individual" => System.Text.Json.JsonSerializer.Deserialize<List<IndividualJsonDTO>>(responseContentArray),
+                        "tag" => System.Text.Json.JsonSerializer.Deserialize<List<TagJsonDTO>>(responseContentArray),
                         _ => null
                     };
-                    Console.WriteLine("json: " + JsonConvert.SerializeObject(data));
                 }
 
                 if (data is not null)
                 {
                     var jsonString = JsonConvert.SerializeObject(data);
+                    var cacheOptions = new MemoryCacheEntryOptions()
+                    {
+                        Size = 1,
+                        SlidingExpiration = TimeSpan.FromMinutes(2),
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                    };
+                    _memoryCache.Set(cacheKey, jsonString, cacheOptions);
                     return Ok(jsonString);
                 }
                 else
                 {
                     return BadRequest("Invalid return type");
                 }
-                //if (gotPermission)
-                //{
-                //    Console.WriteLine("Returning CSV file.");
-                //    var memStream = new MemoryStream(responseContentArray);
-                //    using var stream = new StreamReader(memStream, Encoding.UTF8);
-                //    using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
-
-                //    switch (entityType.ToLower())
-                //    {
-                //        case "study":
-                //            var studyRecords = csvReader.GetRecords<StudiesRecord>().Select(studyRecord => new StudyJsonDTO()
-                //            {
-                //                Id = studyRecord.Id,
-                //                Name = studyRecord.Name ?? "",
-                //                SensorTypeIds = studyRecord.SensorTypeIds
-                //            });
-                //            data = studyRecords.ToList();
-                //            break;
-
-                //        case "individual":
-                //            var individualRecords = csvReader.GetRecords<IndividualRecord>().Select(individualRecord => new IndividualJsonDTO()
-                //            {
-                //                Id = individualRecord.Id,
-                //                LocalIdentifier = individualRecord.LocalIdentifier ?? string.Empty
-                //            });
-                //            data = individualRecords.ToList();
-                //            break;
-
-                //        case "tag":
-                //            // TODO - Look into the actual type returned movebank's api
-                //            var tagRecords = csvReader.GetRecords<TagRecord>().Select(tagRecord => new TagJsonDTO()
-                //            {
-                //                Id = tagRecord.Id,
-                //                LocalIdentifier = tagRecord.LocalIdentifier
-                //            });
-                //            data = tagRecords.ToList();
-                //            break;
-
-                //        default:
-                //            return BadRequest("Invalid entity type.");
-                //    }
-                //}
-                //else
-                //{
-                //    var responseString = Encoding.UTF8.GetString(responseContentArray);
-                //    switch (entityType.ToLower())
-                //    {
-                //        case "study":
-                //            data = JsonConvert.DeserializeObject<List<StudyJsonDTO>>(responseString);
-                //            break;
-
-                //        case "individual":
-                //            data = JsonConvert.DeserializeObject<List<IndividualJsonDTO>>(responseString);
-                //            break;
-
-                //        case "tag":
-                //            //data = await response.Content.ReadFromJsonAsync<List<TagJsonDTO>>();
-                //            data = JsonConvert.DeserializeObject<List<TagJsonDTO>>(responseString);
-                //            break;
-
-                //        default:
-                //            return BadRequest("Invalid entity type.");
-                //    }
-                //}
-
-                //if (data is not null)
-                //{
-                //    var jsonString = JsonConvert.SerializeObject(data);
-                //    Console.WriteLine("Final json string is " + jsonString);
-
-                //    var cacheOptions = new MemoryCacheEntryOptions()
-                //    {
-                //        Size = 1,
-                //        SlidingExpiration = TimeSpan.FromMinutes(2),
-                //        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-                //    };
-
-                //    _memoryCache.Set(cacheKey, jsonString, cacheOptions);
-                //    return Ok(jsonString);
-                //}
-                //else
-                //{
-                //    throw new InvalidOperationException();
-                //}
-
             }
             catch (Exception error)
             {
@@ -523,7 +386,33 @@ namespace PersonalSiteAPI.Controllers
                     headers: null,
                     authorizedUser: User.IsInRole(RoleNames.Administrator));
 
-                var data = await response.Content.ReadFromJsonAsync<EventJsonDTO>();
+                var responseContentArray = await response.Content.ReadAsByteArrayAsync();
+                var responseType = "json";
+                if (responseContentArray.Length == 0)
+                {
+                    response = await _moveBankService.DirectRequest(
+                        entityType: "event",
+                        studyId: studyId,
+                        parameters: parameters,
+                        headers: null,
+                        authorizedUser: User.IsInRole(RoleNames.Administrator)
+                        );
+                    responseType = "csv";
+                }
+                if (response is null)
+                {
+                    throw new InvalidOperationException("Null response from movebank service");
+                }
+                var responseString = Encoding.UTF8.GetString(responseContentArray);
+                // TODO: This pattern is incomplete for the "csv" case
+                // // There is appropriate dto class to cast this object to
+                var data = responseType switch
+                {
+                    "json" => System.Text.Json.JsonSerializer.Deserialize<EventJsonDTO>(responseString),
+                    "csv" => System.Text.Json.JsonSerializer.Deserialize<EventJsonDTO>(responseString),
+                    _ => null
+                };
+
 
                 if (data is not null)
                 {
@@ -541,7 +430,6 @@ namespace PersonalSiteAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
-        // private static EventJsonDTO CombineResults()
 
         protected static float? FloatParser(string? num)
         {

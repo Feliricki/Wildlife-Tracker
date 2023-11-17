@@ -14,6 +14,7 @@ using PersonalSiteAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using Mapster;
 using MapsterMapper;
+using System.Text;
 
 namespace PersonalSiteAPI.Services
 {
@@ -25,6 +26,7 @@ namespace PersonalSiteAPI.Services
         // Some entities are "individual, tag_type ,study"
         Task<HttpResponseMessage?> DirectRequest(
             string entityType,
+            long? studyId = null,
             Dictionary<string, string?>? parameters = null,
             (string, string)[]? headers = null,
             bool authorizedUser = false
@@ -35,7 +37,7 @@ namespace PersonalSiteAPI.Services
             Dictionary<string, string?>? parameters = null,
             (string, string)[]? headers = null,
             bool authorizedUser = false);
-        // Paremeters are required for json requests
+        // Parameters are required for json requests
         Task<HttpResponseMessage> JsonEventData(
             long studyId,
             string sensorType,
@@ -44,12 +46,7 @@ namespace PersonalSiteAPI.Services
             string? eventProfile = null,
             (string, string)[]? headers = null,
             bool authorizedUser = false);
-
-        //Task<bool> GetPermission(long studyId, string entityType = "individual");
-
-        //Task<HttpResponseMessage> GetPermissionForDirectRead(
-        //    HttpRequestMessage oldRequest,
-        //    HttpResponseMessage oldResponse);
+        
     }
     public class MoveBankService : IMoveBankService
     {
@@ -92,7 +89,7 @@ namespace PersonalSiteAPI.Services
                     VersionStage = "AWSCURRENT",
                     Client = _amazonSecretsManager,
                     CacheHook = new MySecretCacheHook(_protector, durationMinutes)
-                });            
+                });
             //_httpClient.BaseAddress = new Uri("https://www.movebank.org/movebank/service/");
 
         }
@@ -146,21 +143,24 @@ namespace PersonalSiteAPI.Services
             }
         }
         // NOTE: This method is also used as a fallthrough for json request are empty
-       
         public async Task<HttpResponseMessage?> DirectRequest(
-            string entityType, 
-            Dictionary<string, string?>? parameters = null, 
-            (string, string)[]? headers = null, 
+            string entityType,
+            long? studyId = null,
+            Dictionary<string, string?>? parameters = null,
+            (string, string)[]? headers = null,
             bool authorizedUser = false)
         {
-            // Catch potential exceptions
             var secretObj = await GetApiToken();
             var uri = _httpClient.BaseAddress!.OriginalString + "direct-read";
 
             // Adding Parameters
             uri = QueryHelpers.AddQueryString(uri, "entity_type", entityType);
+            if (studyId is long studyIdLong)
+            {
+                uri = QueryHelpers.AddQueryString(uri, "study_id", studyIdLong.ToString());
+            }
 
-            if (parameters != null)
+            if (parameters is not null)
             {
                 uri = QueryHelpers.AddQueryString(uri, parameters);
             }
@@ -175,7 +175,7 @@ namespace PersonalSiteAPI.Services
                 Method = HttpMethod.Get,
             };
             // Headers get set here
-            if (headers != null)
+            if (headers is not null)
             {
                 foreach (var header in headers)
                 {
@@ -184,13 +184,23 @@ namespace PersonalSiteAPI.Services
             }
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
+
+            var responseContentBytes = await response.Content.ReadAsByteArrayAsync();
             // TODO: Make sure the response is not being read more than once
-            var needsPermission = HasLicenseTerms(response);
-            // NOTE: This portion of the method is yet untested 
-            if (response.Headers.TryGetValues("accept-license", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
+            var hasLicenseTerms = HasLicenseTerms(responseContentBytes);
+            if (!hasLicenseTerms || studyId is null)
             {
-                response = await GetPermissionForDirectRead(request, response);
+                return response;
+            } 
+            Console.WriteLine("Requesting permission for direct read response");
+                
+            response = await GetPermissionForDirectRead(request, response);
+            var study = await _context.Studies.AsNoTracking().Where(s => s.Id == studyId).FirstOrDefaultAsync();
+            if (await SaveStudy(study))
+            {
+                Console.WriteLine("Successfully saved study to RequestPermission table");
             }
+                         
             return response;
         }
 
@@ -241,29 +251,8 @@ namespace PersonalSiteAPI.Services
             // If permission is not granted then the content length is empty
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
+
             return response;
-
-            //var content = await response.Content.ReadAsStringAsync();
-            //string? responseType = null;
-
-            //bool gotPermission = false;
-            //if (content.Length == 0)
-            //{
-            //    // TODO:Build a new table to store studies from whom I've received license terms to accept.
-            //    Console.WriteLine("Json Request response had a content length of zero.");
-            //    (response, gotPermission) = await GetPermission(response, request);
-            //    responseType = gotPermission ? "csv" : "json";
-            //}
-            //if (gotPermission)
-            //{
-            //    bool savedRequest = await SaveStudy(await _context.Studies.Where(study => study.Id == studyId).FirstAsync());
-            //    if (savedRequest)
-            //    {
-            //        _logger.Log(LogLevel.Information, "Succesfully saved request to RequestPermission Table.");
-            //    }
-            //}
-            //return Tuple.Create(response, gotPermission, responseType);
-
         }
         // TODO: This method does not handle the case when user permissions are needed 
         // Several inputs are required for events data to be returned
@@ -286,6 +275,7 @@ namespace PersonalSiteAPI.Services
             bool authorizedUser = false)
         {
             var uri = _httpClient.BaseAddress!.OriginalString;
+
             var secretObj = await GetApiToken();
 
             if (!authorizedUser)
@@ -329,12 +319,8 @@ namespace PersonalSiteAPI.Services
                     request.Headers.Add(header.Item1, header.Item2);
                 }
             }
+            // Handle the empty case in the controller endpoint
             var response = await _httpClient.SendAsync(request);
-            if (response.Headers.TryGetValues("Accept-License", out var isLicensed) && isLicensed.FirstOrDefault() == "true")
-            {
-                Console.WriteLine("Response is awaiting license approval.");
-                response = await GetPermissionForDirectRead(request, response);
-            }
             response.EnsureSuccessStatusCode();
             return response;
         }
@@ -349,7 +335,6 @@ namespace PersonalSiteAPI.Services
         {
             var uri = _httpClient.BaseAddress!.AbsoluteUri;
             uri += "direct-read";
-            //uri = QueryHelpers.AddQuery
             // TODO: Refactor to be more explicit about which parameters are to remain
             // If json data is not available then use the record data from the direct request response casted to a dto class
             var requestParameters = QueryHelpers.ParseQuery(oldRequest.RequestUri!.Query);
@@ -358,11 +343,12 @@ namespace PersonalSiteAPI.Services
             var request = new HttpRequestMessage()
             {
                 RequestUri = new Uri(uri),
-                Method = HttpMethod.Get,                
+                Method = HttpMethod.Get,
             };
 
             var response = await _httpClient.SendAsync(request);
-            var hasLicenseTerms = HasLicenseTerms(response);
+            var responseContent = await response.Content.ReadAsByteArrayAsync();
+            var hasLicenseTerms = HasLicenseTerms(responseContent);
 
             if (!hasLicenseTerms || (!response.Headers.TryGetValues("Accept-License", out var acceptedLicense))
                 || acceptedLicense.IsNullOrEmpty() || acceptedLicense.FirstOrDefault() == "false")
@@ -378,15 +364,16 @@ namespace PersonalSiteAPI.Services
             {
                 RequestUri = new Uri(uri),
                 Method = HttpMethod.Get
-            };            
-            var newResponse = await _httpClient.SendAsync(newRequest);            
+            };
+            var newResponse = await _httpClient.SendAsync(newRequest);
             return Tuple.Create(newResponse, true);
         }
 
-        private async Task<bool> SaveStudy(Studies study)
+        private async Task<bool> SaveStudy(Studies? study)
         {
-
-            Dictionary<long,RequestPermission> recordedStudies = _context.RequestPermission.ToDictionary(s => s.Id);
+            if (study is null) return await Task.FromResult(false);
+            
+            Dictionary<long, RequestPermission> recordedStudies = _context.RequestPermission.ToDictionary(s => s.Id);
             if (_context.RequestPermission.IsNullOrEmpty() || recordedStudies.ContainsKey(study.Id))
             {
                 RequestPermission request = study.Adapt<RequestPermission>();
@@ -405,12 +392,9 @@ namespace PersonalSiteAPI.Services
             }
         }
 
-        private static bool HasLicenseTerms(HttpResponseMessage response)
+        private static bool HasLicenseTerms(byte[] content)
         {
-            var responseAsStream = response.Content.ReadAsStream();
-            using var reader = new StreamReader(responseAsStream);
-            var responseStr = reader.ReadToEnd();
-
+            string responseStr = Encoding.UTF8.GetString(content);
             return responseStr.Contains("License Terms:");
         }
 
@@ -421,6 +405,7 @@ namespace PersonalSiteAPI.Services
         }
         // NOTE: This method is untested
         // This method assumes that the old response contains some license terms
+        // Otherwise the same response be received
         private async Task<HttpResponseMessage> GetPermissionForDirectRead(
             HttpRequestMessage oldRequest,
             HttpResponseMessage oldResponse)
@@ -438,16 +423,8 @@ namespace PersonalSiteAPI.Services
             };
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
-
-            Console.WriteLine("Accepted License Terms");
-
             return response;
         }
-
-        //private static string ToCommaSeparatedList(string[] collection)
-        //{
-        //    return string.Join(",", collection.Select(str => str.Trim()));
-        //}
 
     }
 }

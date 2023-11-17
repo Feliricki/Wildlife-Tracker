@@ -90,7 +90,7 @@ namespace PersonalSiteAPI.Controllers
                 Users = addedUserList
             });
         }
-        [HttpGet(Name="LongestName")]
+        [HttpGet(Name = "LongestName")]
         public async Task<IActionResult> LongestName()
         {
             try
@@ -155,6 +155,7 @@ namespace PersonalSiteAPI.Controllers
                 }
                 using var stream = new StreamReader(await response.Content.ReadAsStreamAsync(), Encoding.UTF8);
                 using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
+                // csvReader.GetRecordsAsync(await stream.ReadToEndAsync());
                 // TODO: Change this method to save the CSV locally in Models/Data
                 // Then begin seeding the database
                 var records = csvReader.GetRecordsAsync<StudiesRecord>();
@@ -251,7 +252,7 @@ namespace PersonalSiteAPI.Controllers
             }
         }
         // Not necessary
-        [HttpPost(Name="GetPermissions")]
+        [HttpPost(Name = "GetPermissions")]
         [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
         public async Task<IActionResult> GetPermissions()
         {
