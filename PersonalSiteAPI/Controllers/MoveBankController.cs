@@ -431,22 +431,7 @@ namespace PersonalSiteAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
-
-        //protected static float? FloatParser(string? num)
-        //{
-        //    if (num == null)
-        //    {
-        //        return null;
-        //    }
-        //    if (float.TryParse(num, out var floatNum))
-        //    {
-        //        return floatNum;
-        //    }
-        //    else
-        //    {
-        //        return null;
-        //    }
-        //}
+        
         private readonly Expression<Func<Studies, bool>> ValidLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
         protected bool ValidLicense(Studies study)
         {

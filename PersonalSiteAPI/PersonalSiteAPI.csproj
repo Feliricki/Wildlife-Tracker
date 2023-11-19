@@ -19,6 +19,7 @@
   <ItemGroup>
     <None Remove="Models\Data\Studies.csv" />
   </ItemGroup>
+	
 
   <ItemGroup>
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.7" />

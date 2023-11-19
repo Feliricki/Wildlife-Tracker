@@ -2,7 +2,7 @@ import { Component, Input, Output, OnChanges, EventEmitter, SimpleChanges } from
 import { CommonModule } from '@angular/common';
 import { StudyDTO } from '../studies/study';
 import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
-import { EMPTY, Observable, filter, map } from 'rxjs';
+import { EMPTY, Observable, map } from 'rxjs';
 import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
 import { StudyService } from '../studies/study.service';
 import { IndividualJsonDTO } from '../studies/JsonResults/IndividualJsonDTO';
@@ -25,8 +25,8 @@ export class EventsComponent implements OnChanges {
   // NOTE: Only this input is being used
   @Input() currentStudy: StudyDTO | undefined;
   // These observable will hold the local identifiers which are assumed to be unique
-  currentIndividuals$: Observable<Set<string>> | undefined;
-  currentTags$: Observable<Set<string>> | undefined;
+  currentIndividuals$: Observable<Map<string, IndividualJsonDTO>> | undefined;
+  currentTags$: Observable<Map<string, TagJsonDTO>> | undefined;
 
 
   currentEvents: EventJsonDTO[] = [];
@@ -75,8 +75,9 @@ export class EventsComponent implements OnChanges {
       // filter(data => data.length > 0),
       map(data => data as unknown as IndividualJsonDTO[]),
       map(individuals => {
-        const set = new Set(individuals.map(val => val.localIdentifier));
-        return set;
+        const map = new Map<string, IndividualJsonDTO>();
+        individuals.forEach(value => map.set(value.localIdentifier, value));
+        return map;
       })
     );
   }
@@ -86,9 +87,31 @@ export class EventsComponent implements OnChanges {
       // filter(data => data.length > 0),
       map(data => data[0] as unknown as TagJsonDTO[]),
       map(tags => {
-        return new Set(tags.map(val => val.localIdentifier));
+        const map = new Map<string, TagJsonDTO>();
+        tags.forEach(value => map.set(value.localIdentifier, value));
+        return map;
       })
     );
+  }
+
+  // Seperate the tagged individuals from the total number of individuals
+  // s.t it is exclusively in the the tagged array
+  // the individual array is made of the remaining
+  combineSubscriptions(
+    individuals: Map<string, IndividualJsonDTO>,
+    tags: Map<string, TagJsonDTO>): [IndividualJsonDTO[], TagJsonDTO[]] {
+
+    const unTagged: IndividualJsonDTO[] = [];
+    const tagged: TagJsonDTO[] = [];
+
+    for (const [name, value] of individuals.entries()){
+      if (tags.has(name)){
+        tagged.push( {type: "tag", id: value.id, localIdentifier: value.localIdentifier })
+      } else {
+        unTagged.push({type: "individual", id: value.id, localIdentifier: value.localIdentifier});
+      }
+    }
+    return [unTagged, tagged];
   }
 
   toggleEventsForStudy(studyDTO: StudyDTO): void {
