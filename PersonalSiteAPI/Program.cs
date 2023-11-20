@@ -105,6 +105,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddMapster();
 builder.Services.RegisterMapsterConfiguration();
 
+builder.Services.AddSingleton<IAutoCompleteService, AutoCompleteService>();
+
 builder.Services.AddDataProtection();
 builder.Services.AddScoped<JwtHandler>();
 
