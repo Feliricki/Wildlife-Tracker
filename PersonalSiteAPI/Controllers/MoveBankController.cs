@@ -55,6 +55,26 @@ namespace PersonalSiteAPI.Controllers
             _mapper = mapper;
         }
 
+        [HttpGet(Name = "AutoComplete")]
+        public async Task<IActionResult> AutoComplete(string prefix, long? maxCount = null)
+        {
+            try
+            {
+                var jsonString =
+                    JsonConvert.SerializeObject(await _moveBankService.GetWordsWithPrefix(prefix, maxCount));
+                return Ok(jsonString);
+            }
+            catch (Exception e)
+            {
+                var exceptionDetails = new ProblemDetails
+                {
+                    Detail = e.Message,
+                    Status = StatusCodes.Status500InternalServerError,
+                };
+                return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
+            }
+        }
+
         // GET: api/<MoveBankController>
         [HttpGet(Name = "GetToken")]
         [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]

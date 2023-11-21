@@ -1,6 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Concurrent;
+using System.Linq.Expressions;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
+using PersonalSiteAPI.Models;
 
 namespace PersonalSiteAPI.Services;
 
@@ -152,21 +155,21 @@ public class Trie<T> where T : IEquatable<T>
      * TODO: Make test suite for this method and dependant methods
     *  Traverse and StartWithGetNode
     */ 
-    public List<IEnumerable<T>> GetWordsWithPrefix(
+    public List<T[]> GetWordsWithPrefix(
     IEnumerable<T> prefix,
-    int maxCount=int.MaxValue)
+    long? maxCount = null)
     {
+        maxCount ??= TotalCount;
         if (maxCount <= 0)
         {
-            return new List<IEnumerable<T>>();
+            return new List<T[]>();
         }
 
         var startTuple = StartsWithGetNode(prefix);
         if (startTuple is null)
         {
-            return new List<IEnumerable<T>>();
+            return new List<T[]>();
         }
-        maxCount = Math.Min((int)TotalCount, maxCount);
         (var currentWord, var startNode) = startTuple;
         return Traverse(startNode, currentWord);
     }
@@ -190,7 +193,7 @@ public class Trie<T> where T : IEquatable<T>
         return true;
     }
 
-    public List<IEnumerable<T>> Traverse(
+    public List<T[]> Traverse(
         Node<T>? start=null,
         LinkedList<T>? curWord=null,
         int? wordsToReturn=null)
@@ -200,25 +203,31 @@ public class Trie<T> where T : IEquatable<T>
             throw new ArgumentException("Expected positive number.");
         }
 
-        List<IEnumerable<T>> allWords = new();
+        List<T[]> allWords = new();
         HashSet<Node<T>> explored = new();
         // This should be a parameter
         start ??= _root;
         curWord ??= new LinkedList<T>();
+        // if (curWord.Count == 0)
+        // {
+        //     curWord.AddLast(_root.Value);
+        // }
 
         void Dfs(Node<T> root)
         {
             // The root is always excluded from the final result.
-            if (!root.Value.Equals(_root.Value))
-            {
-                curWord.AddLast(root.Value);
-                explored.Add(root);   
-            }
+            // if (!root.Value.Equals(_root.Value))
+            // {
+            //     curWord.AddLast(root.Value);
+            //     explored.Add(root);   
+            // }
 
             foreach (var child in root.Children.Values)
             {
                 if (!explored.Contains(child) && (wordsToReturn == null || allWords.Count < wordsToReturn))
                 {
+                    curWord.AddLast(root.Value);
+                    explored.Add(root);  
                     Dfs(child);
                 }
             }
@@ -286,19 +295,42 @@ public interface IAutoCompleteService
     void InsertWord(string word);
     bool SearchWord(string word);
     bool StartsWith(string prefix);
-    List<IEnumerable<char>> GetAllWords();
+    List<char[]> GetAllWordsWithPrefix(string prefix, long? maxCount=null);
 }
 
 // To be used as a singleton or scoped service.
+// Add a special filter for unauthorized users
 public class AutoCompleteService : IAutoCompleteService
 {
     private readonly Trie<char> _trie;
+    
+    private readonly Expression<Func<Studies, bool>> _validLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
 
-    public AutoCompleteService()
+    private IServiceScopeFactory _serviceScopeFactory;
+    // Singleton services need a manually create scope.
+    public AutoCompleteService(
+        IServiceScopeFactory serviceScopeFactory)
     { 
         // type parameter denotes the key type 
         var comparer = new CaseInsensitiveCharComparer();
         _trie = new Trie<char>(comparer);
+        
+        _serviceScopeFactory = serviceScopeFactory;
+        var scope = _serviceScopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetService<ApplicationDbContext>();
+        
+        var source = dbContext.Studies
+            .AsNoTracking()
+            .Where(study => study.IHaveDownloadAccess);
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        foreach (var study in source)
+        {
+            _trie.Insert(study.Name);
+        }
+        watch.Stop();
+        var elapsed = watch.ElapsedMilliseconds;
+        Console.WriteLine($"Initialization of trie took {elapsed} milliseconds");
     }
 
     public long Count()
@@ -321,9 +353,9 @@ public class AutoCompleteService : IAutoCompleteService
         return _trie.StartWith(prefix);
     }
 
-    public List<IEnumerable<char>> GetAllWords()
+    public List<char[]> GetAllWordsWithPrefix(string prefix, long? maxCount = null)
     {
-        return _trie.Traverse();
+        return _trie.GetWordsWithPrefix(prefix, maxCount);
     }
 
     public int RemoveWord(string word)

@@ -21,6 +21,7 @@ namespace PersonalSiteAPI.Services
     public interface IMoveBankService
     {
         Task<ApiTokenResultDTO?> GetApiToken();
+        Task<List<string>> GetWordsWithPrefix(string prefix, long? maxCount = null);
         DateTime? GetDateTime(string dateString, string timeZone = "CET");
         // Direct and Json request must specify an entity_type
         // Some entities are "individual, tag_type ,study"
@@ -59,7 +60,7 @@ namespace PersonalSiteAPI.Services
         private readonly SecretsManagerCache _secretsCache;
         // This context will be used to post information on studies to contact 
         private readonly ApplicationDbContext _context;
-        private readonly IMapper _mapper;
+        private readonly IAutoCompleteService _autoCompleteService;
 
         public MoveBankService(
             HttpClient httpClient,
@@ -68,7 +69,7 @@ namespace PersonalSiteAPI.Services
             IAmazonSecretsManager amazonSecretsManager,
             IDataProtectionProvider provider,
             ApplicationDbContext context,
-            IMapper mapper)
+            IAutoCompleteService autoCompleteService)
         {
             _httpClient = httpClient;
             _configuration = configuration;
@@ -76,7 +77,10 @@ namespace PersonalSiteAPI.Services
             _amazonSecretsManager = amazonSecretsManager;
             _provider = provider;
             _context = context;
-            _mapper = mapper;
+            
+            _autoCompleteService = autoCompleteService;
+            
+            // TODO: Autocomplete should return different results depending on authorization 
 
             _protector = _provider.CreateProtector("API Token").ToTimeLimitedDataProtector();
             uint durationMinutes = 1;
@@ -92,6 +96,13 @@ namespace PersonalSiteAPI.Services
                 });
             //_httpClient.BaseAddress = new Uri("https://www.movebank.org/movebank/service/");
 
+        }
+
+        public async Task<List<string>> GetWordsWithPrefix(string prefix, long? maxCount = null)
+        {
+            return await Task.FromResult(
+                _autoCompleteService.GetAllWordsWithPrefix(prefix, maxCount).Select(charArray => string.Join("", charArray)).ToList()
+                );
         }
         // Restrict this function
         public async Task<ApiTokenResultDTO?> GetApiToken()

@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using PersonalSiteAPI.Services;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace PersonalSiteAPI.Tests;
 

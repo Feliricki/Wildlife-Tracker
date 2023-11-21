@@ -121,6 +121,7 @@ builder.Services.AddResponseCaching(options =>
     options.MaximumBodySize = 64 * 1024 * 1024; // 64 MB
     options.SizeLimit = 100 * 1024 * 1024; // 100 MB
 });
+
 builder.Services.AddMemoryCache(options =>
 {
     options.SizeLimit = 1024 * 1024 * 1024; // 1 GB

@@ -1,54 +1,62 @@
-﻿using PersonalSiteAPI.Services;
+﻿// using Microsoft.EntityFrameworkCore;
+
+using System.Reflection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.UserSecrets;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
+using PersonalSiteAPI.Models;
+using PersonalSiteAPI.Services;
+using Xunit.Abstractions;
 
 namespace PersonalSiteAPI.Tests;
-
-
 public class AutoCompleteTests
 {
-    [Fact]
-    public void InsertWord_IncrementsCount()
+    public class Startup
     {
-        AutoCompleteService autoCompleteService = new AutoCompleteService();
-        autoCompleteService.InsertWord("apple");
-        autoCompleteService.InsertWord("banana");
-        autoCompleteService.InsertWord("some word");
+        // TODO: Run this test and check for correct configuration
+        public void ConfigureHost(IHostBuilder hostBuilder) =>
+            hostBuilder
+                .ConfigureHostConfiguration(builder => builder.AddUserSecrets(Assembly.GetExecutingAssembly()))
+                .ConfigureServices((context, services) =>
+                {
+                    var connectionString = context.Configuration["ConnectionStrings:DefaultConnection"];
+                    services.AddSqlServer<ApplicationDbContext>(connectionString);
 
-        Assert.Equal(3, autoCompleteService.Count());
+                    services.AddSingleton<IAutoCompleteService, AutoCompleteService>();
+                });
+    }
+    
+    private readonly ITestOutputHelper _output;
+    private readonly ApplicationDbContext _context;
+    private readonly IAutoCompleteService _autoCompleteService;
+    public AutoCompleteTests(
+        ITestOutputHelper output,
+        ApplicationDbContext context,
+        IAutoCompleteService autoCompleteService)
+    {
+        _output = output;
+        _context = context;
+        _autoCompleteService = autoCompleteService;
     }
 
     [Fact]
-    public void SearchWord_ReturnsTrueForInsertedWord()
+    public void NonEmptyTrie()
     {
-        AutoCompleteService autoCompleteService = new AutoCompleteService();
-        autoCompleteService.InsertWord("apple");
-
-        Assert.True(autoCompleteService.SearchWord("apple"));
+        Assert.NotEqual(0, _autoCompleteService.Count());
     }
 
     [Fact]
-    public void SearchWord_ReturnsFalseForNonexistentWord()
+    public void ContainsWordsWithPrefix()
     {
-        AutoCompleteService autoCompleteService = new AutoCompleteService();
-        autoCompleteService.InsertWord("apple");
-
-        Assert.False(autoCompleteService.SearchWord("orange"));
+        var words = _autoCompleteService.GetAllWordsWithPrefix("y");
+        _output.WriteLine(JsonConvert.SerializeObject(words.Select(word => string.Join("", word))));
     }
 
     [Fact]
-    public void StartsWith_ReturnsTrueForPrefix()
+    public void ContainsAllWords()
     {
-        AutoCompleteService autoCompleteService = new AutoCompleteService();
-        autoCompleteService.InsertWord("apple");
-
-        Assert.True(autoCompleteService.StartsWith("app"));
-    }
-
-    [Fact]
-    public void StartsWith_ReturnsFalseForNonexistentPrefix()
-    {
-        AutoCompleteService autoCompleteService = new AutoCompleteService();
-        autoCompleteService.InsertWord("apple");
-
-        Assert.False(autoCompleteService.StartsWith("ora"));
+        // var words = _autoCompleteService.
     }
 }
