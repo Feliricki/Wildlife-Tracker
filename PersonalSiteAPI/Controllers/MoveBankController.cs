@@ -56,7 +56,7 @@ namespace PersonalSiteAPI.Controllers
         }
 
         [HttpGet(Name = "AutoComplete")]
-        public async Task<IActionResult> AutoComplete(string prefix="", long? maxCount = null)
+        public async Task<IActionResult> AutoComplete(string prefix = "", long? maxCount = null)
         {
             try
             {
@@ -123,7 +123,7 @@ namespace PersonalSiteAPI.Controllers
                 {
                     return Unauthorized();
                 }
-                
+
                 var studyDto = study.Adapt<StudyDTO>();
                 if (User.IsInRole(RoleNames.Administrator))
                 {
@@ -188,8 +188,8 @@ namespace PersonalSiteAPI.Controllers
                     return storedResult ?? throw new NullReferenceException();
                 }
 
-                var dataSource  = source.ProjectToType<StudyDTO>();
-                
+                var dataSource = source.ProjectToType<StudyDTO>();
+
                 ApiResult<StudyDTO> apiResult = await ApiResult<StudyDTO>.CreateAsync(
                     dataSource,
                     pageIndex,
@@ -293,7 +293,7 @@ namespace PersonalSiteAPI.Controllers
                     Console.WriteLine("null response in jsonRequest");
                     throw new Exception("Json request yielded a null response");
                 }
-                
+
                 string? returnType = "json";
                 byte[] responseContentArray = await response.Content.ReadAsByteArrayAsync();
                 if (responseContentArray.Length == 0)
@@ -457,7 +457,7 @@ namespace PersonalSiteAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
-        
+
         private readonly Expression<Func<Studies, bool>> ValidLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
         protected bool ValidLicense(Studies study)
         {

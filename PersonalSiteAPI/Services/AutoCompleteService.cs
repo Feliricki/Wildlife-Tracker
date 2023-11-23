@@ -12,7 +12,7 @@ public class Node<T> where T : IEquatable<T>
     public T Value { get; set; }
     public int Count;
     public readonly ConcurrentDictionary<T, Node<T>> Children;
-    public Node(T value=default!, IEqualityComparer<T>? equalityComparer=null)
+    public Node(T value = default!, IEqualityComparer<T>? equalityComparer = null)
     {
         Value = value;
         Children = new ConcurrentDictionary<T, Node<T>>(equalityComparer);
@@ -32,27 +32,27 @@ public class Node<T> where T : IEquatable<T>
 
         return Count;
     }
-    
+
 }
 // Invariants to maintain
 // 1) There is always at least one root node.
 // 2) T type parameters is non-nullable
 // 3) T type is an enumerable type
-public class Trie<T> 
+public class Trie<T>
     where T : IEquatable<T>
 {
     private readonly Node<T> _root;
     private readonly IEqualityComparer<T>? _equalityComparer;
-    private readonly ConcurrentDictionary<T, Node<T>>  _firstLayer;
+    private readonly ConcurrentDictionary<T, Node<T>> _firstLayer;
 
     // These are node with an 'count' s.t they signify the end of a word.
     private ConcurrentBag<Node<T>> _Collection;
     private ConcurrentBag<Node<T>> _RestrictedCollection;
     // private List<Expression<Func<T, bool>>> _Filters;
-    
+
     // TODO: Store the equality comparer here and reuse it every time a new node is created 
     public long TotalCount;
-    public Trie(IEqualityComparer<T>? equalityComparer=null)
+    public Trie(IEqualityComparer<T>? equalityComparer = null)
     {
         _equalityComparer = equalityComparer ?? EqualityComparer<T>.Default;
         _root = new Node<T>(default(T)!, _equalityComparer);
@@ -77,7 +77,7 @@ public class Trie<T>
         return Interlocked.Read(ref TotalCount) - 1;
     }
 
-    public void Insert(IEnumerable<T> word, bool restrictedWord=true)
+    public void Insert(IEnumerable<T> word, bool restrictedWord = true)
     {
         var searchSpace = _root.Children;
         using var enumerator = word.GetEnumerator();
@@ -103,7 +103,7 @@ public class Trie<T>
             latest = result;
             searchSpace = result.Children;
         }
-        
+
         if (latest is null)
         {
             throw new ArgumentException("Passed empty enumerable to trie.");
@@ -118,7 +118,7 @@ public class Trie<T>
         var searchSpace = _root.Children;
         using var enumerator = word.GetEnumerator();
         Node<T>? latest = null;
-        
+
         while (enumerator.MoveNext())
         {
             var current = enumerator.Current;
@@ -135,7 +135,7 @@ public class Trie<T>
         {
             return false;
         }
-        
+
         return latest is not null && latest.Count > 0;
     }
     // This method will return the node and string* that matches a certain prefix  
@@ -158,7 +158,7 @@ public class Trie<T>
             {
                 return null;
             }
-            
+
             retList.AddLast(result.Value);
             retVal = result;
             searchSpace = result.Children;
@@ -173,11 +173,11 @@ public class Trie<T>
 
         return retVal is null ? null : Tuple.Create(retList, retVal);
     }
-    
+
     /*
      * TODO: Make test suite for this method and dependant methods
     *  Traverse and StartWithGetNode
-    */ 
+    */
     public List<T[]> GetWordsWithPrefix(
     IEnumerable<T> prefix,
     long? maxCount = null,
@@ -198,7 +198,7 @@ public class Trie<T>
         (var currentWord, var startNode) = startTuple;
         return Traverse(startNode, currentWord, maxCount, allowRestricted);
     }
-    
+
     // If there's a word with the following prefix
     public bool StartWith(IEnumerable<T> prefix)
     {
@@ -219,16 +219,16 @@ public class Trie<T>
     }
 
     public List<T[]> Traverse(
-        Node<T>? start=null,
-        LinkedList<T>? curWord=null,
-        long? wordsToReturn=null,
+        Node<T>? start = null,
+        LinkedList<T>? curWord = null,
+        long? wordsToReturn = null,
         bool allowRestricted = false)
     {
         if (wordsToReturn < 0)
         {
             throw new ArgumentException("Expected positive number.");
         }
-    
+
         List<T[]> allWords = new();
         HashSet<Node<T>> explored = new();
         // This should be a parameter
@@ -246,8 +246,8 @@ public class Trie<T>
             foreach (var child in root.Children.Values)
             {
                 // TODO; This logic is untested.
-                if (!explored.Contains(child) 
-                    && allWords.Count < wordsToReturn 
+                if (!explored.Contains(child)
+                    && allWords.Count < wordsToReturn
                     && (allowRestricted || (!allowRestricted && !_RestrictedCollection.Contains(child))
                     ))
                 {
@@ -291,37 +291,37 @@ public interface IAutoCompleteService
     // void InsertWord(string word);
     bool SearchWord(string word, bool allowRestricted = false);
     bool StartsWith(string prefix, bool allowRestricted = false);
-    List<char[]> GetAllWordsWithPrefix(string prefix="", long? maxCount=null, bool allowRestricted = false);
+    List<char[]> GetAllWordsWithPrefix(string prefix = "", long? maxCount = null, bool allowRestricted = false);
 }
 
 // TODO: Keep track of metadata to keep track of what restriction are placed.
 public class AutoCompleteService : IAutoCompleteService
 {
     private readonly Trie<char> _trie;
-    
-    private readonly Expression<Func<Studies, bool>> _validLicenseExp = study => 
+
+    private readonly Expression<Func<Studies, bool>> _validLicenseExp = study =>
         study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
-    
+
     private readonly Expression<Func<Studies, bool>> _hasDownloadAccess = study => study.IHaveDownloadAccess;
-    
+
     private IServiceScopeFactory _serviceScopeFactory;
     // Singleton services need a manually create scope.
     public AutoCompleteService(
         IServiceScopeFactory serviceScopeFactory)
-    { 
+    {
         // type parameter denotes the key type 
         // Func<string, bool> validLicense = word => word 
         var comparer = new CaseInsensitiveCharComparer();
         _trie = new Trie<char>(comparer);
-        
+
         _serviceScopeFactory = serviceScopeFactory;
         var scope = _serviceScopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetService<ApplicationDbContext>();
-        
+
         var source = dbContext?.Studies
             .AsNoTracking()
             .Where(study => study.IHaveDownloadAccess);
-        
+
         if (source is null)
         {
             Console.WriteLine("Database context is unavailable in AutoCompleteService initialization.");
@@ -364,7 +364,7 @@ public class AutoCompleteService : IAutoCompleteService
         return _trie.StartWith(prefix);
     }
 
-    public List<char[]> GetAllWordsWithPrefix(string prefix="", long? maxCount = null, bool allowRestricted = false)
+    public List<char[]> GetAllWordsWithPrefix(string prefix = "", long? maxCount = null, bool allowRestricted = false)
     {
         return _trie.GetWordsWithPrefix(prefix, maxCount, allowRestricted);
     }
