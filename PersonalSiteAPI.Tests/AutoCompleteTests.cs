@@ -2,10 +2,8 @@
 
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Newtonsoft.Json;
 using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
 using Xunit.Abstractions;
@@ -50,13 +48,31 @@ public class AutoCompleteTests
     [Fact]
     public void ContainsWordsWithPrefix()
     {
-        var words = _autoCompleteService.GetAllWordsWithPrefix("y");
-        _output.WriteLine(JsonConvert.SerializeObject(words.Select(word => string.Join("", word))));
+        var words = _autoCompleteService.GetAllWordsWithPrefix("ya");
+        foreach (var word in words)
+        {
+            _output.WriteLine(string.Join("", word));
+        }
+    }
+
+    [Fact]
+    public void GetsWordsWithLimit()
+    {
+        var words = _autoCompleteService.GetAllWordsWithPrefix("", 2);
+        foreach (var word in words)
+        {
+            _output.WriteLine(string.Join("", word));
+        }
     }
 
     [Fact]
     public void ContainsAllWords()
     {
-        // var words = _autoCompleteService.
+        var words = _autoCompleteService.GetAllWordsWithPrefix("");
+        _output.WriteLine($"Total Count: {words.Count}");
+        foreach (var word in words.Take(50))
+        {
+            _output.WriteLine(string.Join("", word));
+        }
     }
 }

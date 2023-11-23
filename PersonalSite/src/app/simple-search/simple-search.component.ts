@@ -17,6 +17,7 @@ import { NgIf, NgFor, AsyncPipe, DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatAutocompleteModule } from '@angular/material/autocomplete'
 
 interface WikiLinks {
   title: string;
@@ -36,7 +37,7 @@ interface WikiLinks {
     MatExpansionModule, MatIconModule,
     NgFor, MatPaginatorModule,
     AsyncPipe, DatePipe, MatProgressSpinnerModule,
-    MatRadioModule, MatButtonModule]
+    MatRadioModule, MatButtonModule, MatAutocompleteModule]
 })
 export class SimpleSearchComponent implements OnInit {
 
@@ -46,6 +47,8 @@ export class SimpleSearchComponent implements OnInit {
   panelExpanded: boolean[] | undefined;
   commonNames$: (Observable<string> | undefined)[] = [];
   wikipediaLinks$: (Observable<WikiLinks[]> | undefined)[] = [];
+  autoCompleteEvent$: Observable<string[]> | undefined;
+  // autoCompleteEvent$: Subject<string[]> = new Subject<string[]>();
 
   defaultPageIndex = 0;
   defaultPageSize = 10;
@@ -75,9 +78,15 @@ export class SimpleSearchComponent implements OnInit {
     for (let i = 0; i < this.defaultPageSize; i += 1) {
       this.commonNames$.push(undefined);
       this.wikipediaLinks$.push(undefined);
+
     }
     this.loadData();
   }
+
+  trackStudy(index: number, item: StudyDTO): string {
+    return `${item.id}`;
+  }
+
 
   hasLocation(study: StudyDTO): boolean {
     if (!this.studies) {
@@ -86,9 +95,16 @@ export class SimpleSearchComponent implements OnInit {
     return study.mainLocationLat !== undefined && study.mainLocationLon !== undefined;
   }
 
+  getAutoCompleteOptions(prefix: string, maxCount: number = 5): void {
+    console.log(`${prefix} ${maxCount}`);
+    if (!prefix){
+      return;
+    }
+    this.autoCompleteEvent$ = this.studyService.autoComplete(prefix, maxCount);
+ }
 
   filterEvent(text?: string): void {
-    if (!text) {
+    if (text === undefined) {
       return;
     }
     if (!this.filterTextChanged.observed) {
@@ -99,7 +115,11 @@ export class SimpleSearchComponent implements OnInit {
         ).subscribe({
 
           next: (query) => {
-            this.loadData(query);
+            // this.loadData(query);
+            if (query === ""){
+              this.autoCompleteEvent$ = of([]);
+            }
+            this.getAutoCompleteOptions(query);
           },
 
           error: err => console.log(err)

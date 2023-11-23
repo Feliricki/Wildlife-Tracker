@@ -3,7 +3,7 @@
 </div>
 
 
-<table mat-table [dataSource]="studies" class="study-table" *ngIf="studies">
+<table mat-table [dataSource]="studies" [trackBy]="trackStudy" class="study-table" *ngIf="studies">
 
   <!-- Name -->
   <ng-container matColumnDef="name" class="cell-container">
@@ -13,12 +13,28 @@
           <!-- <mat-label>Search: </mat-label> -->
           <mat-form-field class="search-form" appearance="outline">
             <mat-label>Search</mat-label>
-            <input matInput type="text" #filter (keyup)="filterEvent(filter.value)" class="search-input"
-              formControlName="filterQuery" />
+            <!-- <input matInput type="text" #filter (keyup)="filterEvent(filter.value)" class="search-input" -->
+            <!--   formControlName="filterQuery" /> -->
 
+            <!-- TODO: Have this form use a submit button instead of a keyup event -->
+            <input matInput type="text" #filter (keyup)="filterEvent(filter.value)" [matAutocomplete]="auto"
+              class="search-input" formControlName="filterQuery" />
+
+            <mat-autocomplete #auto="matAutocomplete">
+              @for (option of autoCompleteEvent$ | async; track option){
+              <mat-option [value]="option">{{option}}</mat-option>
+              }
+              <!-- <mat-option>option 1</mat-option> -->
+              <!-- <mat-option [value]="option">option 1</mat-option> -->
+            </mat-autocomplete>
+
+            <button matSuffix mat-icon-button aria-label="Search" (click)="loadData(filter.value)">
+              <mat-icon>search</mat-icon>
+            </button>
             <!-- <button matSuffix mat-icon-button aria-label="Search"> -->
             <!-- <mat-icon>search</mat-icon> -->
             <!-- </button> -->
+
           </mat-form-field>
           <span class="spacer"></span>
           <!-- Drop down list input -->
@@ -52,11 +68,11 @@
           <!--  place icon	<mat-icon> place</mat-icon> -->
           <!-- TODO: Create a custom pipe to convert to local date format -->
           @if(hasLocation(study)){
-          <button mat-mini-fab (click)="panToMarker(study.id)">
+          <button class="mini-button" mat-mini-fab (click)="panToMarker(study.id)">
             <mat-icon>location_searching</mat-icon>
           </button>
           } @else {
-          <button mat-mini-fab>
+          <button class="mini-button" mat-mini-fab>
             <mat-icon>location_disabled</mat-icon>
           </button>
           }

@@ -56,13 +56,19 @@ namespace PersonalSiteAPI.Controllers
         }
 
         [HttpGet(Name = "AutoComplete")]
-        public async Task<IActionResult> AutoComplete(string prefix, long? maxCount = null)
+        public async Task<IActionResult> AutoComplete(string prefix="", long? maxCount = null)
         {
             try
             {
-                var jsonString =
-                    JsonConvert.SerializeObject(await _moveBankService.GetWordsWithPrefix(prefix, maxCount));
-                return Ok(jsonString);
+                var words = await _moveBankService.GetWordsWithPrefix(prefix, maxCount,
+                    User.IsInRole(RoleNames.Administrator));
+
+                return Ok(words);
+                // return new JsonResult(new
+                // {
+                //     Data = words,
+                //     Count = words.Count
+                // });
             }
             catch (Exception e)
             {

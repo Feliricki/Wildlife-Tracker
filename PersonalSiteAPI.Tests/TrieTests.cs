@@ -1,4 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿using System.Reflection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
+using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
 using Xunit.Abstractions;
 
@@ -8,6 +13,20 @@ public class TrieTests
 {
     private readonly ITestOutputHelper _output;
 
+    public class Startup
+    {
+        // TODO: Run this test and check for correct configuration
+        public void ConfigureHost(IHostBuilder hostBuilder) =>
+            hostBuilder
+                .ConfigureHostConfiguration(builder => builder.AddUserSecrets(Assembly.GetExecutingAssembly()))
+                .ConfigureServices((context, services) =>
+                {
+                    // var connectionString = context.Configuration["ConnectionStrings:DefaultConnection"];
+                    // services.AddSqlServer<ApplicationDbContext>(connectionString);
+                    //
+                    // services.AddSingleton<IAutoCompleteService, AutoCompleteService>();
+                });
+    }
     public TrieTests(ITestOutputHelper output)
     {
         _output = output;

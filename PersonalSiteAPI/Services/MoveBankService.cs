@@ -21,7 +21,7 @@ namespace PersonalSiteAPI.Services
     public interface IMoveBankService
     {
         Task<ApiTokenResultDTO?> GetApiToken();
-        Task<List<string>> GetWordsWithPrefix(string prefix, long? maxCount = null);
+        Task<List<string>> GetWordsWithPrefix(string prefix, long? maxCount = null, bool allowRestricted= false);
         DateTime? GetDateTime(string dateString, string timeZone = "CET");
         // Direct and Json request must specify an entity_type
         // Some entities are "individual, tag_type ,study"
@@ -94,15 +94,15 @@ namespace PersonalSiteAPI.Services
                     Client = _amazonSecretsManager,
                     CacheHook = new MySecretCacheHook(_protector, durationMinutes)
                 });
-            //_httpClient.BaseAddress = new Uri("https://www.movebank.org/movebank/service/");
-
         }
-
-        public async Task<List<string>> GetWordsWithPrefix(string prefix, long? maxCount = null)
+        
+        
+        // TODO: Change this method to accept 
+        public async Task<List<string>> GetWordsWithPrefix(string prefix="", long? maxCount = 10, bool allowedRestricted = false)
         {
             return await Task.FromResult(
-                _autoCompleteService.GetAllWordsWithPrefix(prefix, maxCount).Select(charArray => string.Join("", charArray)).ToList()
-                );
+                _autoCompleteService.GetAllWordsWithPrefix(prefix, maxCount, allowedRestricted).Select(charArray => string.Join("", charArray)).ToList()
+            );
         }
         // Restrict this function
         public async Task<ApiTokenResultDTO?> GetApiToken()

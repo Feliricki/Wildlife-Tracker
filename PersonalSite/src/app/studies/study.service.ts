@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams, HttpStatusCode } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams, HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, of, catchError, tap, map } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -124,5 +124,19 @@ export class StudyService {
     }
     console.log(parameters);
     return this.httpClient.get<EventJsonDTO>(url, { params: parameters });
+  }
+
+  autoComplete(prefix: string, maxCount: number): Observable<string[]> {
+    const url = environment.baseUrl + "api/MoveBank/AutoComplete";
+    const parameters = new HttpParams()
+      .set("prefix", prefix)
+      .set("maxCount", maxCount.toString());
+
+    return this.httpClient.get<string[]>(url, { params: parameters }).pipe(
+      catchError((err: HttpErrorResponse) => {
+        console.error(err.message);
+        return of([]);
+      })
+    )
   }
 }
