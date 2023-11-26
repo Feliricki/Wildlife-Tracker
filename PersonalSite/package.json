@@ -24,6 +24,7 @@
     "@angular/router": "^17.0.2",
     "@googlemaps/js-api-loader": "^1.16.2",
     "@googlemaps/markerclusterer": "^2.5.1",
+    "directive": "^0.1.0",
     "jest-editor-support": "*",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",

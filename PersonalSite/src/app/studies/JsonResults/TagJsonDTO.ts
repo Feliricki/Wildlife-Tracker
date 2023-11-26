@@ -1,5 +1,5 @@
 export interface TagJsonDTO {
     type: "tag";
-    id: number;
-    localIdentifier: string;
+    Id: number;
+    LocalIdentifier: string;
 }

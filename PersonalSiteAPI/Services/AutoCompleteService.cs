@@ -330,6 +330,7 @@ public class AutoCompleteService : IAutoCompleteService
         // var watch = System.Diagnostics.Stopwatch.StartNew();
         var hasValidLicense = _validLicenseExp.Compile();
         var hasDownloadAccess = _hasDownloadAccess.Compile();
+        int index = 0;
         foreach (var study in source)
         {
             if (hasValidLicense(study) && hasDownloadAccess(study))
@@ -340,7 +341,9 @@ public class AutoCompleteService : IAutoCompleteService
             {
                 _trie.Insert(study.Name, true);
             }
+            index++;
         }
+        Console.WriteLine($"{index} records added to trie");
     }
 
     public long Count()

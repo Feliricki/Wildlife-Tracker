@@ -22,7 +22,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Text;
-using PersonalSiteAPI.Mappings;
+// using PersonalSiteAPI.Mappings;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -56,19 +56,16 @@ namespace PersonalSiteAPI.Controllers
         }
 
         [HttpGet(Name = "AutoComplete")]
-        public async Task<IActionResult> AutoComplete(string prefix = "", long? maxCount = null)
+        public async Task<IActionResult> AutoComplete(
+            [MaxLength(200)] string prefix = "",
+            long maxCount = 10)
         {
             try
-            {
+            {              
                 var words = await _moveBankService.GetWordsWithPrefix(prefix, maxCount,
                     User.IsInRole(RoleNames.Administrator));
 
                 return Ok(words);
-                // return new JsonResult(new
-                // {
-                //     Data = words,
-                //     Count = words.Count
-                // });
             }
             catch (Exception e)
             {
@@ -144,11 +141,10 @@ namespace PersonalSiteAPI.Controllers
             }
             catch (Exception error)
             {
-                return Unauthorized();
+                return Unauthorized(error.Message);
             }
         }
 
-        // TODO: Create custom validators       
         // TODO: Test this method with filterQueries and the sorting of different columns
         [HttpGet(Name = "GetStudies")]
         [ResponseCache(CacheProfileName = "Any-60")]
@@ -156,7 +152,7 @@ namespace PersonalSiteAPI.Controllers
             int pageIndex = 0,
             [Range(1, 50)] int pageSize = 10,
             string? sortColumn = "Name",
-            [SortOrderValidatorAttribute] string? sortOrder = "ASC",
+            string? sortOrder = "ASC",
             string? filterColumn = null,
             string? filterQuery = null)
         {
@@ -298,8 +294,9 @@ namespace PersonalSiteAPI.Controllers
                 byte[] responseContentArray = await response.Content.ReadAsByteArrayAsync();
                 if (responseContentArray.Length == 0)
                 {
-                    _logger.Log(LogLevel.Information, "Sent a direct request in GetJsonData.");
-                    parameters.Add("study_id", studyId.ToString());
+                    Console.WriteLine("Sending a json request in GetJsonData");
+                    //_logger.Log(LogLevel.Information, "Sent a direct request in GetJsonData.");
+                    //parameters.Add("study_id", studyId.ToString());
                     response = await _moveBankService.DirectRequest(
                         studyId: studyId,
                         entityType: entityType,
@@ -378,7 +375,7 @@ namespace PersonalSiteAPI.Controllers
             [Required][FromQuery] List<string> individualLocalIdentifiers,
             [Required] long studyId,
             [Required] string sensorType,
-            [GreaterThanZero] int? maxEventsPerIndividual = null,
+            int? maxEventsPerIndividual = null,
             long? timestampStart = null,
             long? timestampEnd = null,
             string? attributes = null,

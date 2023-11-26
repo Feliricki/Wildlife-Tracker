@@ -20,7 +20,7 @@
             <input matInput type="text" #filter (keyup)="filterEvent(filter.value)" [matAutocomplete]="auto"
               class="search-input" formControlName="filterQuery" />
 
-            <mat-autocomplete #auto="matAutocomplete">
+            <mat-autocomplete (optionSelected)="loadData(filter.value)" #auto="matAutocomplete">
               @for (option of autoCompleteEvent$ | async; track option){
               <mat-option [value]="option">{{option}}</mat-option>
               }

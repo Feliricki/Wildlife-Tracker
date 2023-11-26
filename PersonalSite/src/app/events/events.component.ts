@@ -2,16 +2,17 @@ import { Component, Input, Output, OnChanges, EventEmitter, SimpleChanges } from
 import { CommonModule } from '@angular/common';
 import { StudyDTO } from '../studies/study';
 import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
-import { EMPTY, Observable, map } from 'rxjs';
-import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
+import { EMPTY, Observable, tap, concatMap, map, pipe } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { IndividualJsonDTO } from '../studies/JsonResults/IndividualJsonDTO';
 import { TagJsonDTO } from '../studies/JsonResults/TagJsonDTO';
+import { isLocationSensor } from '../studies/locationSensors';
+import { MatListModule } from '@angular/material/list';
 
 @Component({
   selector: 'app-events',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MatListModule],
   templateUrl: './events.component.html',
   styleUrl: './events.component.css'
 })
@@ -19,14 +20,14 @@ export class EventsComponent implements OnChanges {
   // NOTE: These studies are toggled to have their events appear on the map if
   // at all possible
   toggledStudies: Map<bigint, StudyDTO> | undefined;
-  @Input() toggledStudy: StudyDTO | undefined;
-  @Input() jsonPayload: Observable<JsonResponseData[]> | undefined;
 
   // NOTE: Only this input is being used
   @Input() currentStudy: StudyDTO | undefined;
+  currentLocationSensors: string[] = [];
   // These observable will hold the local identifiers which are assumed to be unique
   currentIndividuals$: Observable<Map<string, IndividualJsonDTO>> | undefined;
   currentTags$: Observable<Map<string, TagJsonDTO>> | undefined;
+  currentSubscriptions$: Observable<[Map<string, IndividualJsonDTO>, Map<string, TagJsonDTO>]> | undefined;
 
 
   currentEvents: EventJsonDTO[] = [];
@@ -44,22 +45,14 @@ export class EventsComponent implements OnChanges {
         console.log(`Skipping undefined value for property value ${propertyName}`)
         continue;
       }
-
+      // NOTE: The inputs currently in use are jsonPayload and currentStudy
       switch (propertyName) {
-        // This message will toggle the given event's for a particular study.
-        case "toggledStudy":
-          this.toggleEventsForStudy(currentValue);
-          break;
-
-        case "jsonPayload":
-          // TODO: Implement a similar event to recieve actual event data
-          console.log("received json payload in events component");
-          this.jsonPayload = currentValue as Observable<JsonResponseData[]>;
-          break;
-
+        // The current study being focused on.
         case "currentStudy":
           console.log("Recieved study in events component");
           this.currentStudy = currentValue as StudyDTO;
+          this.currentLocationSensors = this.getLocationSensor(this.currentStudy);
+          this.currentSubscriptions$ = this.combineSubscriptions(this.currentStudy);
           break
 
         default:
@@ -69,50 +62,80 @@ export class EventsComponent implements OnChanges {
     return;
   }
 
-  // Refactor the use the entire DTO proproty
-  getIndividuals(studyDTO: StudyDTO): void {
-    this.currentIndividuals$ = this.studyService.jsonRequest("individual", studyDTO.id).pipe(
-      // filter(data => data.length > 0),
-      map(data => data as unknown as IndividualJsonDTO[]),
-      map(individuals => {
-        const map = new Map<string, IndividualJsonDTO>();
-        individuals.forEach(value => map.set(value.localIdentifier, value));
-        return map;
-      })
-    );
-  }
+  getLocationSensor(studyDTO: StudyDTO): string[] {
 
-  getTags(studyDTO: StudyDTO): void {
-    this.currentTags$ = this.studyService.jsonRequest("tag", studyDTO.id).pipe(
-      // filter(data => data.length > 0),
-      map(data => data[0] as unknown as TagJsonDTO[]),
-      map(tags => {
-        const map = new Map<string, TagJsonDTO>();
-        tags.forEach(value => map.set(value.localIdentifier, value));
-        return map;
-      })
-    );
-  }
-
-  // Seperate the tagged individuals from the total number of individuals
-  // s.t it is exclusively in the the tagged array
-  // the individual array is made of the remaining
-  combineSubscriptions(
-    individuals: Map<string, IndividualJsonDTO>,
-    tags: Map<string, TagJsonDTO>): [IndividualJsonDTO[], TagJsonDTO[]] {
-
-    const unTagged: IndividualJsonDTO[] = [];
-    const tagged: TagJsonDTO[] = [];
-
-    for (const [name, value] of individuals.entries()){
-      if (tags.has(name)){
-        tagged.push( {type: "tag", id: value.id, localIdentifier: value.localIdentifier })
-      } else {
-        unTagged.push({type: "individual", id: value.id, localIdentifier: value.localIdentifier});
-      }
+    if (studyDTO.sensorTypeIds === undefined || studyDTO.sensorTypeIds.length === 0) {
+      return [];
     }
-    return [unTagged, tagged];
+    const splitList = studyDTO.sensorTypeIds.trim()
+      .split(",")
+      .map(sensor => sensor.trim());
+
+    const locationSensors: string[] = [];
+    splitList.forEach(sensor => {
+      if (isLocationSensor(sensor)) {
+        locationSensors.push(sensor);
+      }
+    });
+
+    return locationSensors;
   }
+
+
+  // Refactor the use the entire DTO proproty
+  getIndividuals(studyDTO: StudyDTO): Observable<Map<string, IndividualJsonDTO>> {
+    const retVal = this.studyService.jsonRequest("individual" as const, studyDTO.id).pipe(
+      map(data => data as IndividualJsonDTO[]),
+      map(individuals => {
+        console.log(individuals);
+        const ret = new Map<string, IndividualJsonDTO>();
+        for (const individual of individuals) {
+          ret.set(individual.LocalIdentifier, individual);
+        }
+        return ret;
+      }),
+      tap(res => console.log(res)),
+    );
+    return retVal;
+  }
+
+
+  getTags(studyDTO: StudyDTO): Observable<Map<string, TagJsonDTO>> {
+    return this.studyService.jsonRequest("tag" as const, studyDTO.id).pipe(
+      map(data => data as TagJsonDTO[]),
+      map(tags => {
+        console.log(tags);
+        const ret = new Map<string, TagJsonDTO>();
+        for (const individual of tags) {
+          ret.set(individual.LocalIdentifier, individual);
+        }
+        return ret;
+      }),
+      tap(res => console.log(res))
+    );
+  }
+
+  // NOTE: This functions combines the result of getIndividuals and getTags
+  // into one observable for ease of use in templating
+  combineSubscriptions(studyDTO: StudyDTO): Observable<[Map<string, IndividualJsonDTO>, Map<string, TagJsonDTO>]> {
+    return this.getIndividuals(studyDTO).pipe(
+      concatMap(individuals => {
+        return this.getTags(studyDTO).pipe(
+          map(tagged => {
+
+            const unTagged = new Map<string, IndividualJsonDTO>();
+            for (const individual in individuals.keys()) {
+              if (!tagged.has(individual)) {
+                unTagged.set(individual, individuals.get(individual)!)
+              }
+            }
+            return [unTagged, tagged] as [Map<string, IndividualJsonDTO>, Map<string, TagJsonDTO>];
+          }),
+        );
+      }),
+    );
+  }
+
 
   toggleEventsForStudy(studyDTO: StudyDTO): void {
     if (this.toggledStudies === undefined) {

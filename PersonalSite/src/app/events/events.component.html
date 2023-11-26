@@ -1,9 +1,23 @@
 <div class="events-container">
+  @if (currentSubscriptions$ | async; as subscriptions){
+  <mat-list class="animal-list">
+    <h3>Individuals</h3>
+    @for (individualMap of subscriptions[0] | keyvalue; track individualMap.value.Id){
+    <mat-list-item>
+      {{individualMap.key}}: {{individualMap.value.LocalIdentifier}}
+    </mat-list-item>
+    }
+    @if(subscriptions[1].size > 0){
+    <h3>Tagged Individuals</h3>
+    @for(taggedMap of subscriptions[1] | keyvalue; track taggedMap.value.Id){
+    <mat-list-item>
+      {{taggedMap.key}}: {{taggedMap.value.LocalIdentifier}}
+    </mat-list-item>
+    }
+    }
 
-  @if (currentStudy){
-  <span>{{currentStudy.name}}</span>
+  </mat-list>
   } @else {
-  <span>No Information Available</span>
+  No Information Available.
   }
-
 </div>

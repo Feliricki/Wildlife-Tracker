@@ -65,7 +65,7 @@ export class SimpleSearchComponent implements OnInit {
   });
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
-  // The variable name is the name of the event in the parent component
+  // NOTE: This message is sent to the tracker component and is then sent to the map component
   @Output() panToMarkerEvent = new EventEmitter<bigint>();
 
   constructor(
@@ -78,7 +78,6 @@ export class SimpleSearchComponent implements OnInit {
     for (let i = 0; i < this.defaultPageSize; i += 1) {
       this.commonNames$.push(undefined);
       this.wikipediaLinks$.push(undefined);
-
     }
     this.loadData();
   }
@@ -96,12 +95,11 @@ export class SimpleSearchComponent implements OnInit {
   }
 
   getAutoCompleteOptions(prefix: string, maxCount: number = 5): void {
-    console.log(`${prefix} ${maxCount}`);
-    if (!prefix){
+    if (!prefix) {
       return;
     }
     this.autoCompleteEvent$ = this.studyService.autoComplete(prefix, maxCount);
- }
+  }
 
   filterEvent(text?: string): void {
     if (text === undefined) {
@@ -116,7 +114,7 @@ export class SimpleSearchComponent implements OnInit {
 
           next: (query) => {
             // this.loadData(query);
-            if (query === ""){
+            if (query === "") {
               this.autoCompleteEvent$ = of([]);
             }
             this.getAutoCompleteOptions(query);

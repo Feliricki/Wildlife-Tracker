@@ -16,6 +16,13 @@ namespace MyBGList.Attributes
             object? value,
             ValidationContext validationContext)
         {
+            // TODO: Test this validation attribute for wanted behavior
+            bool isNullable(Type type) => Nullable.GetUnderlyingType(type) != null;
+            if (isNullable(validationContext.ObjectType))
+            {
+                return ValidationResult.Success;
+            }
+
             if (EntityType != null)
             {
                 var strValue = value as string;

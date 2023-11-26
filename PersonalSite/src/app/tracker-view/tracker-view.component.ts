@@ -6,8 +6,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { EventsComponent } from '../events/events.component';
 import { StudyDTO } from '../studies/study';
 import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
-import { Observable } from 'rxjs';
-import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
 
 @Component({
   selector: 'app-tracker-view',
@@ -28,12 +26,9 @@ export class TrackerViewComponent implements OnInit {
   currentMarker: bigint | undefined;
   currentStudies: Map<bigint, StudyDTO> | undefined;
 
-  // toggledStudies: Map<bigint, StudyDTO> | undefined;
-  toggledStudy: StudyDTO | undefined;
   displayedEvents: EventJsonDTO[] | undefined;
 
   currentStudy: StudyDTO | undefined;
-  jsonPayload: Observable<JsonResponseData[]> | undefined;
 
   constructor() {
     return;
@@ -41,15 +36,6 @@ export class TrackerViewComponent implements OnInit {
 
   ngOnInit(): void {
     return;
-  }
-
-  sendJsonSubscription(jsonData: Observable<JsonResponseData[]>): void {
-    this.jsonPayload = jsonData;
-  }
-
-  toggleEventForStudy(studyDTO: StudyDTO): void {
-    console.log(`Sending request for study ${studyDTO.id}`);
-    this.toggledStudy = studyDTO;
   }
 
   updateMarkers(studies: Map<bigint, StudyDTO>): void {
@@ -60,7 +46,7 @@ export class TrackerViewComponent implements OnInit {
     return;
   }
 
-  // NOTE: Used in event component
+  // This message is received on the event component
   studyMessage(study: StudyDTO): void {
     this.currentStudy = study;
   }

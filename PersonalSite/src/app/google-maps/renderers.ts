@@ -1,7 +1,7 @@
 import { Marker, Renderer, Cluster, ClusterStats, MarkerUtils } from '@googlemaps/markerclusterer';
 // import { interpolateRgb } from "d3-interpolate";
 
-export class Renderer1 implements Renderer {
+export class CustomRenderer1 implements Renderer {
 
   public render(
     { count, position }: Cluster,

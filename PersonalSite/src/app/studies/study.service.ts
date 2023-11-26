@@ -1,6 +1,6 @@
-import { HttpClient, HttpErrorResponse, HttpParams, HttpStatusCode } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams, HttpResponse, HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of, catchError, tap, map } from 'rxjs';
+import { Observable, of, catchError, tap, map, pipe, EMPTY } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { StudyDTO } from './study';
 import { ApiResult } from '../ApiResult';
@@ -8,6 +8,12 @@ import { EventJsonDTO } from './JsonResults/EventJsonDTO';
 import { EventOptions } from './EventOptions';
 import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
 import { JsonResponseData } from './JsonResults/JsonDataResponse';
+import { StudyJsonDTO } from './JsonResults/StudyJsonDTO';
+import { IndividualJsonDTO } from './JsonResults/IndividualJsonDTO';
+import { TagJsonDTO } from './JsonResults/TagJsonDTO';
+// import { IndividualJsonDTO } from './JsonResults/IndividualJsonDTO';
+// import { TagJsonDTO } from './JsonResults/TagJsonDTO';
+// import { StudyJsonDTO } from './JsonResults/StudyJsonDTO';
 
 @Injectable({
   providedIn: 'root'
@@ -56,22 +62,27 @@ export class StudyService {
     return this.httpClient.get<StudyDTO[]>(url);
   }
 
+  // getJsonType(response: JsonResponseData): JsonResponseData {
+  //   type retType = {type: response["type"]}
+  // }
+
   // TODO: Test this function
   jsonRequest(entityType: "study" | "tag" | "individual", studyId: bigint):
     Observable<JsonResponseData[]> {
+
     const url = environment.baseUrl + "api/MoveBank/GetJsonData";
     const parameters = new HttpParams()
       .set("entityType", entityType)
       .set("studyId", studyId.toString());
 
     // NOTE: The Extract type will pick one type from a union type by matching the type attribute to one of "study", "individual", and "tag"
-    const response = this.httpClient.get<(Extract<JsonResponseData, { type: typeof entityType }>)[]>(url, { params: parameters, observe: 'response' as const, responseType: 'json' as const });
-
+    const opts = { params: parameters, observe: 'response' as const, responseType: 'json' as const };
+    const response = this.httpClient.get<(Extract<JsonResponseData, { type: typeof entityType}>)[]>(url, opts);
 
     return response.pipe(
+
       tap(response => console.log(response)), // this function is optional
       map(response => {
-        console.log(response);
         // Status Code 204
         if (response.status == HttpStatusCode.NoContent) {
           return [];
@@ -85,8 +96,8 @@ export class StudyService {
         }
       }),
 
-      catchError(() => {
-
+      catchError((error: HttpErrorResponse) => {
+        console.error(`Status: ${error.type} Message: ${error.message}`);
         return of([]);
       })
     )

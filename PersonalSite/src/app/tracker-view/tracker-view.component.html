@@ -12,15 +12,14 @@
       [fixedInViewport]="true">
 
       <!-- NOTE: Here, a specific study is toggled and has it's events displaye or removed from the map. -->
-      <app-events [toggledStudy]="toggledStudy" [jsonPayload]="jsonPayload" [currentStudy]="currentStudy"></app-events>
+      <app-events [currentStudy]="currentStudy"></app-events>
 
     </mat-sidenav>
 
     <mat-sidenav-content>
 
-      <!-- content -->
-      <app-google-map (studyEmitter)="studyMessage($event)" (JsonDataEmitter)="sendJsonSubscription($event)"
-        [focusedMarker]="currentMarker"></app-google-map>
+      <!-- content:  -->
+      <app-google-map (studyEmitter)="studyMessage($event)" [focusedMarker]="currentMarker"></app-google-map>
 
     </mat-sidenav-content>
 

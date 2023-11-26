@@ -1,14 +1,15 @@
-import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, Renderer2, ElementRef, ViewContainerRef } from '@angular/core';
+// import { NgElement } from '@angular/elements';
 import { map, of, from, Observable } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
 import { Loader } from '@googlemaps/js-api-loader';
 import { NgIf, AsyncPipe } from '@angular/common';
+import { CustomRenderer1 } from './renderers';
 import { MarkerClusterer, Marker, SuperClusterAlgorithm, SuperClusterOptions } from '@googlemaps/markerclusterer';
-import { Renderer1 } from './renderers';
 import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
+import {  MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-google-map',
@@ -72,7 +73,10 @@ export class MapComponent implements OnInit, OnChanges {
   infoWindow: google.maps.InfoWindow | undefined;
 
   constructor(
-    private studyService: StudyService) {
+    private studyService: StudyService,
+    private renderer: Renderer2,
+    private elementRef: ElementRef,
+    private viewContainerRef: ViewContainerRef) {
   }
 
   ngOnInit(): void {
@@ -85,6 +89,7 @@ export class MapComponent implements OnInit, OnChanges {
     for (const propertyName in changes) {
       const currentValue = changes[propertyName].currentValue;
       switch (propertyName) {
+        // This case sends a message that is received in the event component
         case "focusedMarker":
           console.log(`Panning to ${currentValue}`);
           this.panToMarker(currentValue);
@@ -157,7 +162,9 @@ export class MapComponent implements OnInit, OnChanges {
               }
               const content = this.buildInfoWindowContent(studyDTO);
               this.infoWindow.close();
+
               this.infoWindow.setContent(content);
+
               this.infoWindow.set("toggle", !this.infoWindow.get("toggle"));
               this.infoWindow.set("studyId", studyDTO.id);
               this.infoWindow.open(this.map, marker);
@@ -170,7 +177,7 @@ export class MapComponent implements OnInit, OnChanges {
           this.mapCluster = new MarkerClusterer({
             map: this.map,
             markers: Array.from(markers.values()),
-            renderer: new Renderer1(),
+            renderer: new CustomRenderer1(),
             algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
             onClusterClick: (_, cluster, map) => {
               // If any cluster is clicked, then the infowindow is restored to its initial state more or less
@@ -200,22 +207,22 @@ export class MapComponent implements OnInit, OnChanges {
   // NOTE: This function serves to create a dynamic button element every time the info window is opened
   // On button click an event is emitted that makes send jsonData to the event component
   buildInfoWindowContent(studyDTO: StudyDTO): HTMLElement {
-    // const html = new HTMLElement();
     const html = document.createElement('div');
     html.id = `info-window-content`;
+
     html.innerHTML += `<h5>${studyDTO.name}</h5>`
     html.innerHTML += `<p>latitude: ${studyDTO.mainLocationLat}<br>`
     html.innerHTML += `<p>longitude: ${studyDTO.mainLocationLon}<br>`
 
-    const buttonElem = document.createElement('button');
-    buttonElem.id = `event-button`;
-    buttonElem.innerText = "Get Event";
-    // buttonElem.click = () => this.emitJsonData("study", studyDTO.id);
-    buttonElem.addEventListener("click", () => {
-      this.emitJsonData("study", studyDTO.id);
-    });
-    // TODO: Emit a json observable event from here to the tacker parent component
-    html.appendChild(buttonElem);
+    // const buttonElem = document.createElement('button');
+    // buttonElem.id = `event-button`;
+    // buttonElem.innerText = "Get Event";
+    // buttonElem.setAttribute("MatSuffix", "");
+    // buttonElem.setAttribute("mat-icon-button", "")
+    // buttonElem.addEventListener("click", () => {
+    //   this.emitJsonData("study", studyDTO.id);
+    // });
+
     return html;
   }
 

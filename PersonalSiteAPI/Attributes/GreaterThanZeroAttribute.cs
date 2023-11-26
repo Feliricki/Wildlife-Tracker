@@ -7,6 +7,10 @@ namespace MyBGList.Attributes {
 
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
+            bool isNullable (Type type) => Nullable.GetUnderlyingType(type) != null;
+            if (isNullable(validationContext.ObjectType)){
+                return ValidationResult.Success;
+            }
             bool success;
             switch (value){
                 case int intValue:
@@ -14,6 +18,9 @@ namespace MyBGList.Attributes {
                     break;
                 case float floatVal:
                     success = floatVal > 0;
+                    break;
+                case null:
+                    success = true;
                     break;
                 default:
                     return new ValidationResult(ErrorMessage);
