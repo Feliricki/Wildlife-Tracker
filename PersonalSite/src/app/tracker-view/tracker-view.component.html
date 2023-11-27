@@ -19,7 +19,7 @@
     <mat-sidenav-content>
 
       <!-- content:  -->
-      <app-google-map (studyEmitter)="studyMessage($event)" [focusedMarker]="currentMarker"></app-google-map>
+      <app-google-map (eventRequestEmitter)="eventRequest($event)" (studyEmitter)="studyMessage($event)" [focusedMarker]="currentMarker"></app-google-map>
 
     </mat-sidenav-content>
 

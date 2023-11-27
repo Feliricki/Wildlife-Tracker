@@ -2,7 +2,7 @@ import { Component, Input, Output, OnChanges, EventEmitter, SimpleChanges } from
 import { CommonModule } from '@angular/common';
 import { StudyDTO } from '../studies/study';
 import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
-import { EMPTY, Observable, tap, concatMap, map, pipe } from 'rxjs';
+import { EMPTY, Observable, tap, concatMap, map } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { IndividualJsonDTO } from '../studies/JsonResults/IndividualJsonDTO';
 import { TagJsonDTO } from '../studies/JsonResults/TagJsonDTO';
@@ -21,8 +21,10 @@ export class EventsComponent implements OnChanges {
   // at all possible
   toggledStudies: Map<bigint, StudyDTO> | undefined;
 
-  // NOTE: Only this input is being used
   @Input() currentStudy: StudyDTO | undefined;
+  // This input is used to signal an event request orignating from the info window component.
+  @Input() eventRequest: StudyDTO| undefined;
+
   currentLocationSensors: string[] = [];
   // These observable will hold the local identifiers which are assumed to be unique
   currentIndividuals$: Observable<Map<string, IndividualJsonDTO>> | undefined;
@@ -54,6 +56,10 @@ export class EventsComponent implements OnChanges {
           this.currentLocationSensors = this.getLocationSensor(this.currentStudy);
           this.currentSubscriptions$ = this.combineSubscriptions(this.currentStudy);
           break
+        case "eventRequest":
+          console.log("Received event request in events component.");
+          this.eventRequest = currentValue as StudyDTO;
+          break;
 
         default:
           break;
@@ -118,7 +124,9 @@ export class EventsComponent implements OnChanges {
   // NOTE: This functions combines the result of getIndividuals and getTags
   // into one observable for ease of use in templating
   combineSubscriptions(studyDTO: StudyDTO): Observable<[Map<string, IndividualJsonDTO>, Map<string, TagJsonDTO>]> {
+
     return this.getIndividuals(studyDTO).pipe(
+
       concatMap(individuals => {
         return this.getTags(studyDTO).pipe(
           map(tagged => {

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, Renderer2, ElementRef, ViewContainerRef } from '@angular/core';
+import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter } from '@angular/core';
 // import { NgElement } from '@angular/elements';
 import { map, of, from, Observable } from 'rxjs';
 import { StudyService } from '../studies/study.service';
@@ -9,7 +9,9 @@ import { CustomRenderer1 } from './renderers';
 import { MarkerClusterer, Marker, SuperClusterAlgorithm, SuperClusterOptions } from '@googlemaps/markerclusterer';
 import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
 import { MatIconModule } from '@angular/material/icon';
-import {  MatButtonModule } from '@angular/material/button';
+import { MatButtonModule } from '@angular/material/button';
+import { NgElement, WithProperties } from '@angular/elements';
+import { InfoWindowComponent } from './info-window/info-window.component';
 
 @Component({
   selector: 'app-google-map',
@@ -66,6 +68,7 @@ export class MapComponent implements OnInit, OnChanges {
   // TODO: Make sure this message recieved in the trigger view component
   @Output() studiesEmitter = new EventEmitter<Map<bigint, StudyDTO>>();
   @Output() studyEmitter = new EventEmitter<StudyDTO>();
+  @Output() eventRequestEmitter = new EventEmitter<StudyDTO>();
 
   markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> | undefined;
   mapCluster: MarkerClusterer | undefined;
@@ -73,10 +76,7 @@ export class MapComponent implements OnInit, OnChanges {
   infoWindow: google.maps.InfoWindow | undefined;
 
   constructor(
-    private studyService: StudyService,
-    private renderer: Renderer2,
-    private elementRef: ElementRef,
-    private viewContainerRef: ViewContainerRef) {
+    private studyService: StudyService) {
   }
 
   ngOnInit(): void {
@@ -110,6 +110,9 @@ export class MapComponent implements OnInit, OnChanges {
       this.infoWindow = new google.maps.InfoWindow();
       this.infoWindow.set("toggle", false);
       this.infoWindow.set("studyId", -1n);
+      this.infoWindow.addListener('closeclick', () => {
+        console.log('closing info window');
+      })
 
       this.studyService.getAllStudies().pipe(
 
@@ -160,16 +163,14 @@ export class MapComponent implements OnInit, OnChanges {
                 this.infoWindow.set("toggle", false);
                 return;
               }
-              const content = this.buildInfoWindowContent(studyDTO);
               this.infoWindow.close();
-
-              this.infoWindow.setContent(content);
+              this.infoWindow.setContent(this.buildInfoWindowContent(studyDTO));
 
               this.infoWindow.set("toggle", !this.infoWindow.get("toggle"));
               this.infoWindow.set("studyId", studyDTO.id);
               this.infoWindow.open(this.map, marker);
 
-              this.emitStudy(studyDTO);
+              // this.emitStudy(studyDTO);
             });
             markers.set(studyDTO.id, marker);
           }
@@ -207,23 +208,17 @@ export class MapComponent implements OnInit, OnChanges {
   // NOTE: This function serves to create a dynamic button element every time the info window is opened
   // On button click an event is emitted that makes send jsonData to the event component
   buildInfoWindowContent(studyDTO: StudyDTO): HTMLElement {
-    const html = document.createElement('div');
-    html.id = `info-window-content`;
+    console.log("about to create info window");
+    const infoWindowEl = document.createElement('info-window-el') as NgElement & WithProperties<InfoWindowComponent>;
+    infoWindowEl.currentStudy = studyDTO;
+    infoWindowEl.eventRequest = this.studyEmitter;
 
-    html.innerHTML += `<h5>${studyDTO.name}</h5>`
-    html.innerHTML += `<p>latitude: ${studyDTO.mainLocationLat}<br>`
-    html.innerHTML += `<p>longitude: ${studyDTO.mainLocationLon}<br>`
-
-    // const buttonElem = document.createElement('button');
-    // buttonElem.id = `event-button`;
-    // buttonElem.innerText = "Get Event";
-    // buttonElem.setAttribute("MatSuffix", "");
-    // buttonElem.setAttribute("mat-icon-button", "")
-    // buttonElem.addEventListener("click", () => {
-    //   this.emitJsonData("study", studyDTO.id);
-    // });
-
-    return html;
+    infoWindowEl.addEventListener('closed', () => {
+      console.log("Closing info window component");
+      document.body.removeChild(infoWindowEl)
+    });
+    console.log("returning info window content");
+    return infoWindowEl;
   }
 
   getJsonData(entityType: "study" | "individual" | "tag", studyId: bigint): Observable<JsonResponseData[]> {
@@ -231,6 +226,7 @@ export class MapComponent implements OnInit, OnChanges {
     return this.studyService.jsonRequest(entityType, studyId);
   }
 
+  // NOTE: This function only effects the map component
   panToMarker(studyId: bigint): void {
     console.log("calling panToMarker");
     const curMarker = this.markers?.get(studyId);
@@ -258,7 +254,6 @@ export class MapComponent implements OnInit, OnChanges {
   }
 
   emitStudies(studies: Map<bigint, StudyDTO>): void {
-    console.log("emitting studies.");
     this.studiesEmitter.emit(studies);
   }
 

@@ -29,6 +29,7 @@ export class TrackerViewComponent implements OnInit {
   displayedEvents: EventJsonDTO[] | undefined;
 
   currentStudy: StudyDTO | undefined;
+  studyEventMessage: StudyDTO | undefined;
 
   constructor() {
     return;
@@ -44,6 +45,10 @@ export class TrackerViewComponent implements OnInit {
   }
   switchSearchMode(): void {
     return;
+  }
+
+  eventRequest(studyDTO: StudyDTO): void {
+    this.studyEventMessage = studyDTO;
   }
 
   // This message is received on the event component
