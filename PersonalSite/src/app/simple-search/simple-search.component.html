@@ -3,8 +3,9 @@
 </div>
 
 
-<table mat-table [dataSource]="studies" [trackBy]="trackStudy" class="study-table" *ngIf="studies">
+<table mat-table [dataSource]="studies" [trackBy]="trackStudy" class="study-table" *ngIf="studies && allStudies">
 
+  <!-- NOTE: studies and allStudies has been initialized -->
   <!-- Name -->
   <ng-container matColumnDef="name" class="cell-container">
     <th mat-header-cell *matHeaderCellDef class="cell-header">
@@ -20,13 +21,17 @@
             <input matInput type="text" #filter (keyup)="filterEvent(filter.value)" [matAutocomplete]="auto"
               class="search-input" formControlName="filterQuery" />
 
-            <mat-autocomplete (optionSelected)="loadData(filter.value)" #auto="matAutocomplete">
-              @for (option of autoCompleteEvent$ | async; track option){
-              <mat-option [value]="option">{{option}}</mat-option>
+            <!-- </mat-form-field> -->
+            <mat-autocomplete #options formControlName="currentOptions" class="auto-complete"
+              [appAutoComplete]="allStudies" (optionSelected)="loadData(filter.value)" #auto="matAutocomplete">
+              @for (option of currentOptions.value; track option){
+              <span>Test</span>
               }
-              <!-- <mat-option>option 1</mat-option> -->
-              <!-- <mat-option [value]="option">option 1</mat-option> -->
+              <!-- @for (option of autoCompleteEvent$ | async; track option){ -->
+              <!-- <mat-option [value]="option">{{option}}</mat-option> -->
+              <!-- } -->
             </mat-autocomplete>
+
 
             <button matSuffix mat-icon-button aria-label="Search" (click)="loadData(filter.value)">
               <mat-icon>search</mat-icon>

@@ -1,5 +1,4 @@
 import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter } from '@angular/core';
-// import { NgElement } from '@angular/elements';
 import { map, of, from, Observable } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
@@ -68,7 +67,7 @@ export class MapComponent implements OnInit, OnChanges {
   // TODO: Make sure this message recieved in the trigger view component
   @Output() studiesEmitter = new EventEmitter<Map<bigint, StudyDTO>>();
   @Output() studyEmitter = new EventEmitter<StudyDTO>();
-  @Output() eventRequestEmitter = new EventEmitter<StudyDTO>();
+  // @Output() eventRequestEmitter = new EventEmitter<StudyDTO>();
 
   markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> | undefined;
   mapCluster: MarkerClusterer | undefined;
@@ -99,7 +98,7 @@ export class MapComponent implements OnInit, OnChanges {
       }
     }
   }
-
+  // TODO: Design the ui that will become the individual identifier and event viewer viewer
 
   async initMap(): Promise<boolean> {
 
@@ -110,9 +109,6 @@ export class MapComponent implements OnInit, OnChanges {
       this.infoWindow = new google.maps.InfoWindow();
       this.infoWindow.set("toggle", false);
       this.infoWindow.set("studyId", -1n);
-      this.infoWindow.addListener('closeclick', () => {
-        console.log('closing info window');
-      })
 
       this.studyService.getAllStudies().pipe(
 
@@ -128,6 +124,7 @@ export class MapComponent implements OnInit, OnChanges {
       ).subscribe({
         next: mappings => {
           this.studies = mappings;
+          this.emitStudies(this.studies);
           const markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> = new Map<bigint, google.maps.marker.AdvancedMarkerElement>();
 
           for (const studyDTO of this.studies.values()) {
@@ -169,8 +166,6 @@ export class MapComponent implements OnInit, OnChanges {
               this.infoWindow.set("toggle", !this.infoWindow.get("toggle"));
               this.infoWindow.set("studyId", studyDTO.id);
               this.infoWindow.open(this.map, marker);
-
-              // this.emitStudy(studyDTO);
             });
             markers.set(studyDTO.id, marker);
           }
@@ -182,12 +177,10 @@ export class MapComponent implements OnInit, OnChanges {
             algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
             onClusterClick: (_, cluster, map) => {
               // If any cluster is clicked, then the infowindow is restored to its initial state more or less
-              console.log("Recording cluster click event");
               if (this.infoWindow && this.infoWindow.get("toggle") === true) {
                 this.infoWindow.close();
                 this.infoWindow.set("toggle", false);
                 this.infoWindow.set("studyId", -1n);
-                console.log("Reset infowindow to its initial state");
               }
               map.fitBounds(cluster.bounds as google.maps.LatLngBounds);
             }
@@ -214,7 +207,7 @@ export class MapComponent implements OnInit, OnChanges {
     infoWindowEl.eventRequest = this.studyEmitter;
 
     infoWindowEl.addEventListener('closed', () => {
-      console.log("Closing info window component");
+      console.log("closed event: Closing info window component");
       document.body.removeChild(infoWindowEl)
     });
     console.log("returning info window content");
@@ -254,6 +247,7 @@ export class MapComponent implements OnInit, OnChanges {
   }
 
   emitStudies(studies: Map<bigint, StudyDTO>): void {
+    console.log("Emitting studies in google maps component");
     this.studiesEmitter.emit(studies);
   }
 

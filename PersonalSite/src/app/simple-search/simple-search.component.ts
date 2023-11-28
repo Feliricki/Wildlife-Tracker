@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, signal, WritableSignal, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, ViewChild, signal, WritableSignal, Output, EventEmitter, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
 import { Observable, Subject, reduce, distinctUntilChanged, debounceTime, map, catchError, of, concat, EMPTY } from 'rxjs';
@@ -18,6 +18,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatAutocompleteModule } from '@angular/material/autocomplete'
+import { AutoCompleteDirective } from '../auto-complete/auto-complete.directive';
 
 interface WikiLinks {
   title: string;
@@ -30,7 +31,7 @@ interface WikiLinks {
   styleUrls: ['./simple-search.component.scss'],
   standalone: true,
   imports: [
-    NgIf, MatTableModule,
+    NgIf, MatTableModule, AutoCompleteDirective,
     FormsModule, ReactiveFormsModule,
     MatFormFieldModule, MatInputModule,
     MatSelectModule, MatOptionModule,
@@ -39,7 +40,7 @@ interface WikiLinks {
     AsyncPipe, DatePipe, MatProgressSpinnerModule,
     MatRadioModule, MatButtonModule, MatAutocompleteModule]
 })
-export class SimpleSearchComponent implements OnInit {
+export class SimpleSearchComponent implements OnInit, OnChanges {
 
   studies: MatTableDataSource<StudyDTO> | undefined;
   displayedColumns = ["name"];
@@ -61,12 +62,14 @@ export class SimpleSearchComponent implements OnInit {
   // This form group is the source of truth
   searchForm = new FormGroup({
     filterQuery: new FormControl<string>("", { nonNullable: true }),
-    dropDownList: new FormControl<"asc" | "desc">("asc", { nonNullable: true })
+    dropDownList: new FormControl<"asc" | "desc">("asc", { nonNullable: true }),
+    currentOptions: new FormControl<string[]>([], { nonNullable: true })
   });
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   // NOTE: This message is sent to the tracker component and is then sent to the map component
   @Output() panToMarkerEvent = new EventEmitter<bigint>();
+  @Input() allStudies: Map<bigint, StudyDTO> | undefined;
 
   constructor(
     private studyService: StudyService,
@@ -80,6 +83,22 @@ export class SimpleSearchComponent implements OnInit {
       this.wikipediaLinks$.push(undefined);
     }
     this.loadData();
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    console.log(changes);
+    for (const propertyName in changes) {
+      const currentValue = changes[propertyName].currentValue;
+      switch (propertyName) {
+        // This message originates
+        case "allStudies":
+          console.log("Received allStudies message in simple search.");
+          this.allStudies = currentValue as Map<bigint, StudyDTO>;
+          break;
+        default:
+          break;
+      }
+    }
   }
 
   trackStudy(index: number, item: StudyDTO): string {
@@ -138,6 +157,10 @@ export class SimpleSearchComponent implements OnInit {
 
   get dropDownList(): FormControl<"asc" | "desc"> {
     return this.searchForm.controls.dropDownList;
+  }
+
+  get currentOptions(): FormControl<string[]> {
+    return this.searchForm.controls.currentOptions;
   }
 
   getTaxa(taxaStr: string): Observable<string> {

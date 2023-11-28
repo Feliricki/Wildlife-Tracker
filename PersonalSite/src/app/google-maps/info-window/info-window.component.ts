@@ -13,7 +13,7 @@ import { StudyDTO } from 'src/app/studies/study';
       <h5>{{ currentStudy?.name }}</h5>
       <span>latitude: {{ currentStudy?.mainLocationLat }}</span><br>
       <span>longitude: {{ currentStudy?.mainLocationLon }}</span><br>
-      <button mat-button (click)="emitEventRequest(currentStudy!)">Get Event Data</button>
+      <button mat-button (click)="emitEventRequest(currentStudy!)">See Event Data</button>
     `,
   styleUrl: './info-window.component.css'
 })

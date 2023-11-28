@@ -39,21 +39,21 @@ export class TrackerViewComponent implements OnInit {
     return;
   }
 
-  updateMarkers(studies: Map<bigint, StudyDTO>): void {
-    console.log("Updated studies in tracker view");
-    this.currentStudies = studies;
-  }
+  // updateMarkers(studies: Map<bigint, StudyDTO>): void {
+  //   console.log("Updated studies in tracker view");
+  //   this.currentStudies = studies;
+  // }
   switchSearchMode(): void {
     return;
   }
-
-  eventRequest(studyDTO: StudyDTO): void {
-    this.studyEventMessage = studyDTO;
-  }
-
   // This message is received on the event component
   studyMessage(study: StudyDTO): void {
     this.currentStudy = study;
+  }
+
+  studiesMessage(studies: Map<bigint, StudyDTO>): void {
+    console.log(`studiesMessage: size = ${studies.size}`);
+    this.currentStudies = studies;
   }
 
   panToMarker(studyId: bigint): void {

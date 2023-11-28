@@ -2,12 +2,14 @@
 <mat-sidenav-container class="sidenav-container" [hasBackdrop]="false">
 
   <mat-sidenav #sidenav mode="over" [opened]="true" [fixedInViewport]="true" class="sidenav" [disableClose]="true">
-    <app-simple-search (panToMarkerEvent)="panToMarker($event)"></app-simple-search>
+    <!-- allStudies is an input property in simple-search -->
+    <app-simple-search [allStudies]="currentStudies" (panToMarkerEvent)="panToMarker($event)"></app-simple-search>
     <!-- <button mat-button class="toggle-button">Button</button> -->
   </mat-sidenav>
 
   <mat-sidenav-content class="sidenav-content">
 
+    <!-- NOTE: This is another sidenav within the outer sidenav -->
     <mat-sidenav class="right-sidenav" #rightSidenav [opened]="true" position="end" [disableClose]="true" mode="side"
       [fixedInViewport]="true">
 
@@ -19,7 +21,7 @@
     <mat-sidenav-content>
 
       <!-- content:  -->
-      <app-google-map (eventRequestEmitter)="eventRequest($event)" (studyEmitter)="studyMessage($event)" [focusedMarker]="currentMarker"></app-google-map>
+      <app-google-map (studiesEmitter)="studiesMessage($event)" (studyEmitter)="studyMessage($event)" [focusedMarker]="currentMarker"></app-google-map>
 
     </mat-sidenav-content>
 

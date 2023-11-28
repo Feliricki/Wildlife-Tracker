@@ -28,7 +28,8 @@
 }
 
 .right-sidenav {
-  width: 300px;
+  min-width: 100px;
+  width: 400px;
   margin-top:3.5em;
   /* margin-top:6em; */
   /* position:fixed; */

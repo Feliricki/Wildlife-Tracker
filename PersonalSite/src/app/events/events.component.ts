@@ -8,11 +8,12 @@ import { IndividualJsonDTO } from '../studies/JsonResults/IndividualJsonDTO';
 import { TagJsonDTO } from '../studies/JsonResults/TagJsonDTO';
 import { isLocationSensor } from '../studies/locationSensors';
 import { MatListModule } from '@angular/material/list';
+import { MatTabsModule } from '@angular/material/tabs';
 
 @Component({
   selector: 'app-events',
   standalone: true,
-  imports: [CommonModule, MatListModule],
+  imports: [CommonModule, MatListModule, MatTabsModule],
   templateUrl: './events.component.html',
   styleUrl: './events.component.css'
 })
@@ -22,8 +23,6 @@ export class EventsComponent implements OnChanges {
   toggledStudies: Map<bigint, StudyDTO> | undefined;
 
   @Input() currentStudy: StudyDTO | undefined;
-  // This input is used to signal an event request orignating from the info window component.
-  @Input() eventRequest: StudyDTO| undefined;
 
   currentLocationSensors: string[] = [];
   // These observable will hold the local identifiers which are assumed to be unique
@@ -56,11 +55,6 @@ export class EventsComponent implements OnChanges {
           this.currentLocationSensors = this.getLocationSensor(this.currentStudy);
           this.currentSubscriptions$ = this.combineSubscriptions(this.currentStudy);
           break
-        case "eventRequest":
-          console.log("Received event request in events component.");
-          this.eventRequest = currentValue as StudyDTO;
-          break;
-
         default:
           break;
       }
