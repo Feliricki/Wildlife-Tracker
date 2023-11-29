@@ -22,14 +22,12 @@
               class="search-input" formControlName="filterQuery" />
 
             <!-- </mat-form-field> -->
-            <mat-autocomplete #options formControlName="currentOptions" class="auto-complete"
-              [appAutoComplete]="allStudies" (optionSelected)="loadData(filter.value)" #auto="matAutocomplete">
-              @for (option of currentOptions.value; track option){
-              <span>Test</span>
+            <mat-autocomplete class="auto-complete" (optionSelected)=" loadData(filter.value)" #auto="matAutocomplete">
+              <!-- <mat-option>Option 1</mat-option> -->
+              @for (option of currentOptions(); track option){
+              <mat-option>{{option}}</mat-option>
               }
-              <!-- @for (option of autoCompleteEvent$ | async; track option){ -->
-              <!-- <mat-option [value]="option">{{option}}</mat-option> -->
-              <!-- } -->
+
             </mat-autocomplete>
 
 

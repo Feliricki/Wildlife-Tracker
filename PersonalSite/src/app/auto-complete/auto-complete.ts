@@ -1,48 +1,35 @@
-import { Directive, ElementRef, Input } from '@angular/core';
-import { StudyDTO } from '../studies/study';
-// import { StudyDTO } from '../studies/study';
-
-@Directive({
-  selector: '[appAutoComplete]',
-  standalone: true,
-  host: {
-    '[example]': 'testValue',
-  }
-})
-export class AutoCompleteDirective {
-  targetEl?: HTMLElement;
-  autoComplete?: AutoComplete;
-  testValue: string = "test Value";
-
-  constructor(private element: ElementRef) {
-    console.log("constructor in autoCompleteDirective");
-    this.targetEl = this.element.nativeElement as HTMLElement;
-    if (this.targetEl.className === "auto-complete"){
-      console.log("directive test");
-      return;
-    }
-  }
-
-  @Input()
-  set appAutoComplete(words: Map<bigint, StudyDTO> | undefined){
-    console.log(words);
-    if (this.autoComplete !== undefined || words === undefined){
-      return;
-    }
-    const studyNames: string[] = Array.from(words.values()).map(value => value.name);
-    this.autoComplete = new AutoComplete(studyNames);
-  }
-}
-
 // String of length 1
 type char = string;
 
-class Node {
+class CaseInsensitiveMap<T, U> extends Map<T, U> {
+  override set(key: T, value: U): this {
+    if (typeof key === 'string') {
+      key = key.toLowerCase() as T;
+    }
+    return super.set(key, value);
+  }
+
+  override get(key: T): U | undefined {
+    if (typeof key === 'string') {
+      key = key.toLowerCase() as T;
+    }
+    return super.get(key);
+  }
+
+  override has(key: T): boolean {
+    if (typeof key === 'string') {
+      key = key.toLowerCase() as T;
+    }
+    return super.has(key);
+  }
+}
+
+class TreeNode {
   public count: number;
-  public children: Map<char, Node>;
+  public children: CaseInsensitiveMap<char, TreeNode>;
   constructor(private value: char) {
     this.count = 0;
-    this.children = new Map<char, Node>();
+    this.children = new CaseInsensitiveMap<char, TreeNode>();
   }
   get Value(): char {
     return this.value;
@@ -59,10 +46,10 @@ class Node {
 }
 
 class Trie {
-  private readonly _rootNode: Node;
+  private readonly _rootNode: TreeNode;
   public totalCount: number;
   constructor() {
-    this._rootNode = new Node('\0');
+    this._rootNode = new TreeNode('\0');
     this.totalCount = 0;
   }
 
@@ -70,16 +57,18 @@ class Trie {
     return this.totalCount;
   }
 
+  // Searches must be case insensitive
   Insert(word: string): void {
     let searchSpace = this._rootNode.children;
-    let latest: Node | undefined;
+    let latest: TreeNode | undefined;
 
     for (let i = 0; i < word.length; i++) {
 
       const curChar: char = word[i];
       latest = searchSpace.get(curChar);
-      if (latest === undefined){
-        latest = new Node(curChar);
+
+      if (latest === undefined) {
+        latest = new TreeNode(curChar);
         searchSpace.set(curChar, latest);
       }
       searchSpace = latest.children;
@@ -87,20 +76,24 @@ class Trie {
     latest?.incrementCount();
     this.totalCount++;
   }
-  startWithGetNode(prefix: string): [char[], Node] | null {
+
+  startWithGetNode(prefix: string): [char[], TreeNode] | null {
     let searchSpace = this._rootNode.children;
-    if (prefix.length === 0){
+    if (prefix.length === 0) {
       return [[this._rootNode.Value], this._rootNode];
     }
-    let retVal: Node | null = null;
+    let retVal: TreeNode | null = null;
     const retList: char[] = [];
-    for (let i = 0; i < prefix.length; i++){
+    for (let i = 0; i < prefix.length; i++) {
+
       const curChar: char = prefix[i];
       const result = searchSpace.get(curChar);
-      if (result === undefined){
+
+      if (result === undefined) {
         return null;
       }
-      retList.push(curChar);
+
+      retList.push(prefix[i]);
       retVal = result;
       searchSpace = result.children;
     }
@@ -109,66 +102,71 @@ class Trie {
   }
 
   getWordsWithPrefix(prefix: string, maxCount: number = 10): string[] {
-    if (maxCount <= 0){
+    if (maxCount <= 0) {
       return [];
     }
 
     const startTuple = this.startWithGetNode(prefix);
-    if (startTuple == null){
+    if (startTuple == null) {
       return [];
     }
     const [currentWord, startNode] = startTuple;
     return this.traverse(startNode, currentWord, maxCount);
   }
 
-  traverse(start: Node, curWord?: char[], wordsToReturn?: number): string[] {
-    if (wordsToReturn !== undefined && wordsToReturn < 0){
+  traverse(start: TreeNode, curWord?: char[], wordsToReturn?: number): string[] {
+    if (wordsToReturn !== undefined && wordsToReturn < 0) {
       console.error("Invalid input in traverse method in Trie");
       return [];
     }
 
     const allWords: string[] = [];
-    const explored = new Set<Node>();
+    const explored = new Set<TreeNode>();
 
     start = start ?? this._rootNode;
     curWord = curWord ?? [];
     wordsToReturn = wordsToReturn ?? this.totalCount;
+    if (start === this._rootNode) {
+      curWord.pop();
+    }
 
-    const dfs = (root: Node) => {
+    const dfs = (root: TreeNode) => {
 
-      for (const child of root.children.values()){
-        if (!explored.has(child) && allWords.length < wordsToReturn!){
+      for (const child of root.children.values()) {
+        if (!explored.has(child) && allWords.length < wordsToReturn!) {
+          explored.add(child);
           curWord!.push(child.Value);
+          dfs(child);
         }
       }
-      if (root.Count > 0){
+      if (root.Count > 0) {
         allWords.push(curWord!.join(""));
       }
 
-      if (curWord!.length > 0){
+      if (curWord!.length > 0) {
         curWord!.pop();
       }
     }
 
     dfs(start);
+    console.log(allWords);
     return allWords;
   }
 }
 
-class AutoComplete {
+export class AutoComplete {
   private trie: Trie;
   public words: string[];
-  constructor(readonly collection: string[]){
-    console.log("initializing collection in autocomplete class");
+  constructor(readonly collection: string[]) {
     this.trie = new Trie();
     this.words = [];
-    for (const word of collection){
+    for (const word of collection) {
       this.trie.Insert(word);
       this.words.push(word);
     }
   }
 
-  getWordsWithPrefix(prefix: string, maxCount: number){
+  getWordsWithPrefix(prefix: string, maxCount: number): string[] {
     return this.trie.getWordsWithPrefix(prefix, maxCount);
   }
 

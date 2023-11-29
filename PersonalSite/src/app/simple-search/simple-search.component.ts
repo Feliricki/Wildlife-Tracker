@@ -18,7 +18,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatAutocompleteModule } from '@angular/material/autocomplete'
-import { AutoCompleteDirective } from '../auto-complete/auto-complete.directive';
+import { AutoComplete } from '../auto-complete/auto-complete';
 
 interface WikiLinks {
   title: string;
@@ -31,7 +31,7 @@ interface WikiLinks {
   styleUrls: ['./simple-search.component.scss'],
   standalone: true,
   imports: [
-    NgIf, MatTableModule, AutoCompleteDirective,
+    NgIf, MatTableModule,
     FormsModule, ReactiveFormsModule,
     MatFormFieldModule, MatInputModule,
     MatSelectModule, MatOptionModule,
@@ -49,7 +49,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
   commonNames$: (Observable<string> | undefined)[] = [];
   wikipediaLinks$: (Observable<WikiLinks[]> | undefined)[] = [];
   autoCompleteEvent$: Observable<string[]> | undefined;
-  // autoCompleteEvent$: Subject<string[]> = new Subject<string[]>();
+  autoComplete?: AutoComplete;
 
   defaultPageIndex = 0;
   defaultPageSize = 10;
@@ -57,19 +57,22 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
   defaultSortColumn = "name";
   defaultFilterColumn = "name";
   filterTextChanged: Subject<string> = new Subject<string>();
+  filterTextValue: string = "";
+  currentOptions: WritableSignal<string[]> = signal([]);
 
   studiesLoaded: WritableSignal<boolean> = signal(false);
   // This form group is the source of truth
   searchForm = new FormGroup({
     filterQuery: new FormControl<string>("", { nonNullable: true }),
     dropDownList: new FormControl<"asc" | "desc">("asc", { nonNullable: true }),
-    currentOptions: new FormControl<string[]>([], { nonNullable: true })
   });
+
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   // NOTE: This message is sent to the tracker component and is then sent to the map component
   @Output() panToMarkerEvent = new EventEmitter<bigint>();
-  @Input() allStudies: Map<bigint, StudyDTO> | undefined;
+  @Input() allStudies?: Map<bigint, StudyDTO>;
+  studyNames: string[] = [];
 
   constructor(
     private studyService: StudyService,
@@ -78,7 +81,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
   }
 
   ngOnInit(): void {
-    for (let i = 0; i < this.defaultPageSize; i += 1) {
+    for (let i = 0; i < this.defaultPageSize; i++) {
       this.commonNames$.push(undefined);
       this.wikipediaLinks$.push(undefined);
     }
@@ -86,19 +89,34 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    console.log(changes);
     for (const propertyName in changes) {
       const currentValue = changes[propertyName].currentValue;
+      if (currentValue === undefined) {
+        continue;
+      }
       switch (propertyName) {
         // This message originates
         case "allStudies":
           console.log("Received allStudies message in simple search.");
           this.allStudies = currentValue as Map<bigint, StudyDTO>;
+          this.studyNames = Array.from(this.allStudies.values()).map(value => value.name);
+          this.initializeAutoComplete(this.studyNames);
           break;
         default:
           break;
       }
     }
+  }
+  getAutoCompleteOptions(query: string): string[] {
+    return this.autoComplete?.getWordsWithPrefix(query, 5) ?? [];
+  }
+
+  // NOTE: The list of studies are initialized only once.
+  initializeAutoComplete(words: string[]): void {
+    if (this.autoComplete !== undefined) {
+      return;
+    }
+    this.autoComplete = new AutoComplete(words);
   }
 
   trackStudy(index: number, item: StudyDTO): string {
@@ -113,13 +131,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
     return study.mainLocationLat !== undefined && study.mainLocationLon !== undefined;
   }
 
-  getAutoCompleteOptions(prefix: string, maxCount: number = 5): void {
-    if (!prefix) {
-      return;
-    }
-    this.autoCompleteEvent$ = this.studyService.autoComplete(prefix, maxCount);
-  }
-
   filterEvent(text?: string): void {
     if (text === undefined) {
       return;
@@ -127,18 +138,16 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
     if (!this.filterTextChanged.observed) {
       this.filterTextChanged
         .pipe(
-          debounceTime(1000),
+          debounceTime(100),
           distinctUntilChanged(),
         ).subscribe({
 
           next: (query) => {
-            // this.loadData(query);
             if (query === "") {
               this.autoCompleteEvent$ = of([]);
             }
-            this.getAutoCompleteOptions(query);
+            this.currentOptions.set(this.getAutoCompleteOptions(query));
           },
-
           error: err => console.log(err)
         });
     }
@@ -157,10 +166,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
 
   get dropDownList(): FormControl<"asc" | "desc"> {
     return this.searchForm.controls.dropDownList;
-  }
-
-  get currentOptions(): FormControl<string[]> {
-    return this.searchForm.controls.currentOptions;
   }
 
   getTaxa(taxaStr: string): Observable<string> {
@@ -251,7 +256,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
   }
 
   sortData(ordering: "asc" | "desc"): void {
-    console.log(`New ordering: ` + ordering);
     this.searchForm.controls.dropDownList.setValue(ordering);
 
     const pageEvent = new PageEvent();
@@ -311,7 +315,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
           }
         },
         error: error => {
-          console.log(error);
+          console.error(error);
         }
       }
       )
