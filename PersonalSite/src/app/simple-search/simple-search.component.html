@@ -14,18 +14,16 @@
           <!-- <mat-label>Search: </mat-label> -->
           <mat-form-field class="search-form" appearance="outline">
             <mat-label>Search</mat-label>
-            <!-- <input matInput type="text" #filter (keyup)="filterEvent(filter.value)" class="search-input" -->
-            <!--   formControlName="filterQuery" /> -->
 
             <!-- TODO: Have this form use a submit button instead of a keyup event -->
             <input matInput type="text" #filter (keyup)="filterEvent(filter.value)" [matAutocomplete]="auto"
               class="search-input" formControlName="filterQuery" />
 
             <!-- </mat-form-field> -->
-            <mat-autocomplete class="auto-complete" (optionSelected)=" loadData(filter.value)" #auto="matAutocomplete">
-              <!-- <mat-option>Option 1</mat-option> -->
+            <mat-autocomplete class="auto-complete" (optionSelected)="selectOption($event)"  #auto="matAutocomplete">
+              <!-- NOTE: currentOptions is a writable signal that contains the current options. -->
               @for (option of currentOptions(); track option){
-              <mat-option>{{option}}</mat-option>
+              <mat-option [value]="option">{{option}}</mat-option>
               }
 
             </mat-autocomplete>
@@ -34,9 +32,6 @@
             <button matSuffix mat-icon-button aria-label="Search" (click)="loadData(filter.value)">
               <mat-icon>search</mat-icon>
             </button>
-            <!-- <button matSuffix mat-icon-button aria-label="Search"> -->
-            <!-- <mat-icon>search</mat-icon> -->
-            <!-- </button> -->
 
           </mat-form-field>
           <span class="spacer"></span>

@@ -17,7 +17,7 @@ import { NgIf, NgFor, AsyncPipe, DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatAutocompleteModule } from '@angular/material/autocomplete'
+import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete'
 import { AutoComplete } from '../auto-complete/auto-complete';
 
 interface WikiLinks {
@@ -48,7 +48,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
   panelExpanded: boolean[] | undefined;
   commonNames$: (Observable<string> | undefined)[] = [];
   wikipediaLinks$: (Observable<WikiLinks[]> | undefined)[] = [];
-  autoCompleteEvent$: Observable<string[]> | undefined;
   autoComplete?: AutoComplete;
 
   defaultPageIndex = 0;
@@ -57,9 +56,9 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
   defaultSortColumn = "name";
   defaultFilterColumn = "name";
   filterTextChanged: Subject<string> = new Subject<string>();
-  filterTextValue: string = "";
-  currentOptions: WritableSignal<string[]> = signal([]);
+  // filterTextValue: string = "";
 
+  currentOptions: WritableSignal<string[]> = signal([]);
   studiesLoaded: WritableSignal<boolean> = signal(false);
   // This form group is the source of truth
   searchForm = new FormGroup({
@@ -143,9 +142,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
         ).subscribe({
 
           next: (query) => {
-            if (query === "") {
-              this.autoCompleteEvent$ = of([]);
-            }
             this.currentOptions.set(this.getAutoCompleteOptions(query));
           },
           error: err => console.log(err)
@@ -266,10 +262,17 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
 
   loadData(query?: string) {
     console.log("Calling loadData with query: " + query);
+    if (query){
+      this.filterQuery.setValue(query);
+    }
     const pageEvent = new PageEvent();
     pageEvent.pageIndex = this.defaultPageIndex;
     pageEvent.pageSize = this.defaultPageSize
     this.getData(pageEvent);
+  }
+
+  selectOption(event: MatAutocompleteSelectedEvent){
+    this.loadData(event.option.viewValue);
   }
 
   // look up rates of API usage vs bing's api

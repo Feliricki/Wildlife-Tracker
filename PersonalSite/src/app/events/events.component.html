@@ -1,6 +1,40 @@
 <mat-tab-group preserveContent animationDuration="0ms">
   <mat-tab label="Individuals">
-    Individuals tab.
+    @if (currentStudy && this.currentIndividuals$ | async; as currentIndividuals){
+    <span>{{currentStudy?.name}}</span>
+    <table mat-table [dataSource]="mapToArray(currentIndividuals)" class="animal-table">
+      <ng-container matColumnDef="select">
+        <th mat-header-cell *matHeaderCellDef>
+          <mat-checkbox (change)="$event"></mat-checkbox>
+        </th>
+      </ng-container>
+
+      <ng-container matColumnDef="name" class="ng-container">
+        <th mat-header-cell *matHeaderCellDef>
+          <span>Local Identifiers</span>
+          <mat-icon matTooltip="A unique individual identifier provided by the owner of the study." aria-label="false"
+            fontIcon="info"></mat-icon>
+        </th>
+        <td mat-cell *matCellDef="let individual; let j = index;" class="individual-header-cell">
+          <mat-expansion-panel class="mat-elevation-z0">
+            <mat-expansion-panel-header>
+              <span>{{individual.LocalIdentifier}}</span>
+            </mat-expansion-panel-header>
+            <ng-template matExpansionPanelContent>
+              <span>{{individual.Id}}</span>
+            </ng-template>
+          </mat-expansion-panel>
+
+        </td>
+      </ng-container>
+
+      <tr mat-header-row class="header-row" *matHeaderRowDef="displayedColumns; sticky:true"></tr>
+      <tr mat-row class="rows" *matRowDef="let row; let i = index; columns:displayedColumns;"></tr>
+
+    </table>
+    }
+
+
   </mat-tab>
 
   <mat-tab label="Event Information">
