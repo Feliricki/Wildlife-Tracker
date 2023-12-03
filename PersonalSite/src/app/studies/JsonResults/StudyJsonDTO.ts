@@ -1,6 +1,6 @@
 export interface StudyJsonDTO {
     type: "study";
-    Id: number;
+    Id: bigint;
     Name: string;
     SensorTypeIds: string;
 }

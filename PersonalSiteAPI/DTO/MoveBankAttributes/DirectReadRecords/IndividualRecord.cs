@@ -65,7 +65,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadDTOs
         public string? Parents { get; set; }
         [Optional]
         [Name("ring_id")]
-        public long? RingId { get; set; }
+        public string? RingId { get; set; }
         [Optional]
         [Name("sex")]
         public string? Sex { get; set; }

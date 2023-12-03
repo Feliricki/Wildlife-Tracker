@@ -21,7 +21,10 @@ using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
+using Microsoft.Data.SqlClient;
+
 // using PersonalSiteAPI.Mappings;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -56,6 +59,7 @@ namespace PersonalSiteAPI.Controllers
         }
 
         [HttpGet(Name = "AutoComplete")]
+        [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
         public async Task<IActionResult> AutoComplete(
             [MaxLength(200)] string prefix = "",
             long maxCount = 10)
@@ -260,7 +264,8 @@ namespace PersonalSiteAPI.Controllers
         [ResponseCache(CacheProfileName = "Any-60")]
         public async Task<IActionResult> GetJsonData(
             [Required][EntityTypeValidator] string entityType,
-            [Required] long studyId)
+            [Required] long studyId,
+            [SortOrderValidator] string sortOrder = "ASC")
         {
             try
             {
@@ -268,10 +273,10 @@ namespace PersonalSiteAPI.Controllers
                 Dictionary<string, string?> parameters = new() { };
 
                 var cacheKey = $"GetJsonData:{entityType}-{studyId}";
-                if (_memoryCache.TryGetValue<string>(cacheKey, out var result) && result is not null)
+                if (_memoryCache.TryGetValue<object>(cacheKey, out var result) && result is not null)
                 {
-                    Console.WriteLine("GetJsonData: Returning cached result");
-                    return Ok(result);
+                    var sortedResult = SortObjects(sortOrder, result);
+                    return sortedResult is not null ? Ok(sortedResult) : throw new Exception("Invalid Object Found in Cache.");
                 }
 
                 // TODO: This service method might be in need of a refactor.
@@ -294,9 +299,8 @@ namespace PersonalSiteAPI.Controllers
                 byte[] responseContentArray = await response.Content.ReadAsByteArrayAsync();
                 if (responseContentArray.Length == 0)
                 {
-                    Console.WriteLine("Sending a json request in GetJsonData");
+                    Console.WriteLine("Sending a csv request in GetJsonData");
                     //_logger.Log(LogLevel.Information, "Sent a direct request in GetJsonData.");
-                    //parameters.Add("study_id", studyId.ToString());
                     response = await _moveBankService.DirectRequest(
                         studyId: studyId,
                         entityType: entityType,
@@ -339,29 +343,60 @@ namespace PersonalSiteAPI.Controllers
                         _ => null
                     };
                 }
-
-                if (data is not null)
-                {
-                    var jsonString = JsonConvert.SerializeObject(data);
-                    var cacheOptions = new MemoryCacheEntryOptions()
-                    {
-                        Size = 1,
-                        SlidingExpiration = TimeSpan.FromMinutes(2),
-                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-                    };
-                    _memoryCache.Set(cacheKey, jsonString, cacheOptions);
-                    return Ok(jsonString);
-                }
-                else
+                // TODO: Sort the data before returning it.
+                // INFO: The object itself is being placed in cache instead of the serialized string.
+                // This is meant to avoid storing the same data twice and to stop the data from being sorted in the frontend.
+                if (data is null)
                 {
                     return BadRequest("Invalid return type");
                 }
+                
+                var sorted = SortObjects(sortOrder, data);
+                if (sorted is null)
+                {
+                    throw new Exception("Invalid Object Passed to SortObjects Method.");
+                }
+                
+                var jsonString = JsonConvert.SerializeObject(data);
+                var cacheOptions = new MemoryCacheEntryOptions()
+                {
+                    Size = 1,
+                    SlidingExpiration = TimeSpan.FromMinutes(2),
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                };
+                _memoryCache.Set(cacheKey,sorted, cacheOptions);
+                return Ok(jsonString);
             }
             catch (Exception error)
             {
                 Console.WriteLine(error.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
+        }
+
+        private static object? SortObjects(string sortOrder, object? jsonObjects)
+        {
+            if (jsonObjects is null)
+            {
+                return null;
+            }
+            if (sortOrder.ToUpper() == "ASC")
+            {
+                return jsonObjects switch
+                {
+                    List<StudyJsonDTO> studies => studies.OrderBy(s => s.Name).ToList(),
+                    List<IndividualJsonDTO> individuals => individuals.OrderBy(i => i.LocalIdentifier).ToList(),
+                    List<TagJsonDTO> tagged => tagged.OrderBy(t => t.LocalIdentifier).ToList(),
+                    _ => null,
+                };
+            }
+            return jsonObjects switch
+            {
+                List<StudyJsonDTO> studies => studies.OrderByDescending(s => s.Name).ToList(),
+                List<IndividualJsonDTO> individuals => individuals.OrderByDescending(i => i.LocalIdentifier).ToList(),
+                List<TagJsonDTO> tagged => tagged.OrderByDescending(t => t.LocalIdentifier).ToList(),
+                _ => null,
+            };
         }
 
         // NOTE: 

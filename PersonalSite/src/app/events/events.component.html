@@ -1,39 +1,77 @@
 <mat-tab-group preserveContent animationDuration="0ms">
   <mat-tab label="Individuals">
-    @if (currentStudy && this.currentIndividuals$ | async; as currentIndividuals){
-    <span>{{currentStudy?.name}}</span>
-    <table mat-table [dataSource]="mapToArray(currentIndividuals)" class="animal-table">
-      <ng-container matColumnDef="select">
-        <th mat-header-cell *matHeaderCellDef>
-          <mat-checkbox (change)="$event"></mat-checkbox>
-        </th>
-      </ng-container>
-
-      <ng-container matColumnDef="name" class="ng-container">
-        <th mat-header-cell *matHeaderCellDef>
-          <span>Local Identifiers</span>
-          <mat-icon matTooltip="A unique individual identifier provided by the owner of the study." aria-label="false"
-            fontIcon="info"></mat-icon>
-        </th>
-        <td mat-cell *matCellDef="let individual; let j = index;" class="individual-header-cell">
-          <mat-expansion-panel class="mat-elevation-z0">
-            <mat-expansion-panel-header>
-              <span>{{individual.LocalIdentifier}}</span>
-            </mat-expansion-panel-header>
-            <ng-template matExpansionPanelContent>
-              <span>{{individual.Id}}</span>
-            </ng-template>
-          </mat-expansion-panel>
-
-        </td>
-      </ng-container>
-
-      <tr mat-header-row class="header-row" *matHeaderRowDef="displayedColumns; sticky:true"></tr>
-      <tr mat-row class="rows" *matRowDef="let row; let i = index; columns:displayedColumns;"></tr>
-
-    </table>
+    @switch (pageState()){
+    @case ("initial"){
+    <span>Initial State</span>
     }
 
+    @case ("loading"){
+    <span>Loading State</span>
+    }
+
+    @case ("error"){
+    <span>Http Error</span>
+    }
+    }
+
+    <form [formGroup]="eventForm">
+
+      @if (eventForm.dirty && eventForm.hasError("noOptionSelected")){
+      <mat-error>No Option Selected.</mat-error>
+      }
+      <table mat-table matSort matSortDisableClear matSortActive="name" matSortDirection="asc" [dataSource]="example"
+        #Table [trackBy]="trackIndividuals" class="animal-table">
+
+        <!-- Checkbox Column -->
+        <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef>
+
+            <!-- NOTE: Make edit here. -->
+            <mat-checkbox [disabled]="pageState() !=='loaded'" [checked]="selectionModel.hasValue() && isAllSelected()"
+              [indeterminate]="selectionModel.hasValue() && !isAllSelected()"
+              (change)="$event ? toggleAllRows() : null"></mat-checkbox>
+
+          </th>
+          <!-- TODO: Decide if a form needs to be used or if a request can be made with the selectionModel only -->
+          <!-- And set the aria-label -->
+
+          <td mat-cell formArrayName="checkboxes" *matCellDef="let individual; let j = index;"
+            class="checkbox-header-cell">
+
+            <span>{{eventForm.controls.checkboxes.length}}</span>
+
+            <!-- TODO: Begin work on making api call to the backend using the formgroup as the source of truth. -->
+            <mat-checkbox (click)="$event.stopPropagation()" [id]="j" [formControlName]="j"
+              [checked]="selectionModel.isSelected(j)" (change)="$event ? toggleRow(j) : null"></mat-checkbox>
+
+          </td>
+
+        </ng-container>
+
+        <ng-container matColumnDef="name" class="ng-container">
+
+          <th mat-header-cell *matHeaderCellDef>
+            <span>Local Identifiers</span>
+            <mat-icon matTooltip="A unique individual identifier provided by the owner of the study." aria-label="false"
+              fontIcon="info"></mat-icon>
+          </th>
+
+          <!-- INFO: This the templating for the individual local identifiers -->
+          <td mat-cell *matCellDef="let individual; let j = index;" class="individual-header-cell">
+
+            {{ individual.LocalIdentifier }}
+
+          </td>
+        </ng-container>
+
+
+        <tr mat-header-row class="header-row" *matHeaderRowDef="displayedColumns; sticky:true"></tr>
+        <tr mat-row class="rows" *matRowDef="let row; let i = index; columns:displayedColumns;"></tr>
+      </table>
+
+      <!-- <mat-paginator length="10"  pageSize="100"></mat-paginator> -->
+
+    </form>
 
   </mat-tab>
 

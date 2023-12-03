@@ -1,5 +1,5 @@
 export interface IndividualJsonDTO {
     type: "individual";
-    Id: number;
+    Id: bigint;
     LocalIdentifier: string;
 }

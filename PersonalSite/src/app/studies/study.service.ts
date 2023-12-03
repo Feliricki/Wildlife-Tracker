@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse, HttpParams,  HttpStatusCode } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams, HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, of, catchError, tap, map } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -74,7 +74,7 @@ export class StudyService {
 
     return response.pipe(
 
-      tap(response => console.log(response)), // this function is optional
+      tap(response => console.log(response)),
       map(response => {
         // Status Code 204
         if (response.status == HttpStatusCode.NoContent) {
@@ -89,10 +89,10 @@ export class StudyService {
         }
       }),
 
-      catchError((error: HttpErrorResponse) => {
-        console.error(`Status: ${error.type} Message: ${error.message}`);
-        return of([]);
-      })
+      // catchError((error: HttpErrorResponse) => {
+      //   console.error(`Status: ${error.type} Message: ${error.message}`);
+      //   return of([]);
+      // })
     )
   }
 

@@ -20,7 +20,7 @@
               class="search-input" formControlName="filterQuery" />
 
             <!-- </mat-form-field> -->
-            <mat-autocomplete class="auto-complete" (optionSelected)="selectOption($event)"  #auto="matAutocomplete">
+            <mat-autocomplete class="auto-complete" (optionSelected)="selectOption($event)" #auto="matAutocomplete">
               <!-- NOTE: currentOptions is a writable signal that contains the current options. -->
               @for (option of currentOptions(); track option){
               <mat-option [value]="option">{{option}}</mat-option>
@@ -66,11 +66,11 @@
           <!--  place icon	<mat-icon> place</mat-icon> -->
           <!-- TODO: Create a custom pipe to convert to local date format -->
           @if(hasLocation(study)){
-          <button class="mini-button" mat-mini-fab (click)="panToMarker(study.id)">
-            <mat-icon>location_searching</mat-icon>
+          <button class="mini-button" matTooltip="Pan to study location." mat-mini-fab (click)="panToMarker(study.id)">
+            <mat-icon aria-label="false" fontIcon="location_searching"></mat-icon>
           </button>
           } @else {
-          <button class="mini-button" mat-mini-fab>
+          <button class="mini-button" matTooltop="Location not available." mat-mini-fab>
             <mat-icon>location_disabled</mat-icon>
           </button>
           }

@@ -1,17 +1,16 @@
-import { Component, Input, Output, OnChanges, EventEmitter, SimpleChanges } from '@angular/core';
+import { AfterViewInit, Component, Input, OnChanges, SimpleChanges, ViewChild, WritableSignal, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StudyDTO } from '../studies/study';
-import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
-import { Observable, tap, map } from 'rxjs';
+import { Observable, tap, map, of, startWith, switchAll, Subject } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { IndividualJsonDTO } from '../studies/JsonResults/IndividualJsonDTO';
 import { TagJsonDTO } from '../studies/JsonResults/TagJsonDTO';
 import { isLocationSensor } from '../studies/locationSensors';
 import { MatListModule } from '@angular/material/list';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatTableModule } from '@angular/material/table';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { AsyncPipe } from '@angular/common';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormArray, FormBuilder, FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,45 +19,96 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { SelectionModel } from '@angular/cdk/collections';
+import { checkboxOptionSelectedValidator } from './Validators/ValidateCheckbox';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+
+type PageState = "loaded" | "loading" | "error" | "initial";
+
+// NOTE: Make the tableSource an array of FormControls.
+//
 
 @Component({
   selector: 'app-events',
   standalone: true,
-  imports: [CommonModule, MatListModule,
-    MatTabsModule, MatTableModule,
+  imports: [
+    CommonModule, MatListModule, MatSortModule,
+    MatTabsModule, MatTableModule, MatPaginatorModule,
     AsyncPipe, ReactiveFormsModule, MatFormFieldModule,
     MatInputModule, MatIconModule, MatButtonModule,
     MatExpansionModule, MatTooltipModule, MatCheckboxModule],
   templateUrl: './events.component.html',
   styleUrl: './events.component.css'
 })
-export class EventsComponent implements OnChanges {
+export class EventsComponent implements OnChanges, AfterViewInit {
   // NOTE: These studies are toggled to have their events appear on the map if
   // at all possible
   toggledStudies?: Map<bigint, StudyDTO>;
-  displayedColumns: string[] = ['name', 'select'];
+  displayedColumns: string[] = ['select', 'name'];
+  displayedColumnsWithExpanded: string[] = [...this.displayedColumns, 'expanded'];
 
-  @Input() currentStudy: StudyDTO | undefined;
-
+  @Input() currentStudy?: StudyDTO;
   currentLocationSensors: string[] = [];
-  // These observable will hold the local identifiers which are assumed to be unique
-  // currentIndividuals?: Map<string, IndividualJsonDTO>;
-  currentIndividuals$?: Observable<Map<string, IndividualJsonDTO>>;
-  currentTags$?: Observable<Map<string, TagJsonDTO>>;
 
-  currentEvents: EventJsonDTO[] = [];
-  @Output() studyEventEmitter = new EventEmitter<Observable<EventJsonDTO>>();
+  // currentIndividuals$?: Observable<Map<string, IndividualJsonDTO>>;
+  // currentTags$?: Observable<Map<string, TagJsonDTO>>;
 
-  searchForm = new FormGroup({
-    filterQuery: new FormControl<string>("", { nonNullable: true }),
+  // INFO: This is a higher order observable that the emits the latest observable from
+  // a http request
+  allAnimals$ = new Subject<Observable<IndividualJsonDTO[]>>;
+  allTaggedAnimals$ = new Subject<Observable<TagJsonDTO[]>>;
+
+  tableSource$: Observable<IndividualJsonDTO[]> = of([]);
+  example = new MatTableDataSource([]);
+  // tableSource$?: Observable<MatTableDataSource<IndividualJsonDTO>>;
+  currentTagged$: Observable<TagJsonDTO[]> = of([]);
+
+  allToggles: WritableSignal<boolean[]> = signal([]);
+  currentIndividuals: WritableSignal<IndividualJsonDTO[]> = signal([]);
+  pageState: WritableSignal<PageState> = signal("initial" as const);
+  // @Output() studyEventEmitter = new EventEmitter<Observable<EventJsonDTO>>();
+
+  // @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild(MatSort) sort!: MatSort;
+  // The formGroup has the checkboxes formArray and the following validators.
+  // FormGroup<{checkboxes: FormArray<FormControl<boolean>>;}>
+  eventForm = this.formBuilder.nonNullable.group({
+    checkboxes: this.formBuilder.nonNullable.array([] as boolean[]),
+  }, {
+    validators: checkboxOptionSelectedValidator(),
+    updateOn: "change"
   });
-  // NOTE: This is to be used as an input for the api call
-  selection = new SelectionModel<IndividualJsonDTO>(true, []);
 
-  constructor(private studyService: StudyService) {
-    return;
+  // NOTE: This is to be used as an input for the api call
+  selectionModel = new SelectionModel<number>(true, []);
+
+  constructor(
+    private studyService: StudyService,
+    private formBuilder: FormBuilder) {
+    this.initializeTableSource();
   }
 
+  initializeTableSource(): void {
+    this.tableSource$ = this.allAnimals$.pipe(
+      startWith([]),
+      switchAll(),
+      tap(arr => {
+        console.log(arr);
+        this.currentIndividuals.set(arr);
+        // NOTE: This array is probably redundant.
+        this.allToggles.set(arr.map(() => false));
+        this.InitializeFormArray(arr);
+        this.pageState.set("loaded");
+      }),
+    );
+  }
+
+  initializeTaggedSource(): void {
+    this.currentTagged$ = this.allTaggedAnimals$.pipe(
+      startWith([]),
+      switchAll(),
+    );
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     for (const propertyName in changes) {
@@ -70,19 +120,21 @@ export class EventsComponent implements OnChanges {
         continue;
       }
       // NOTE: The inputs currently in use are jsonPayload and currentStudy
+      // TODO: Set the aria labels for other components.
+      // Performance issues are caused by not using attributes that react to changes.
       switch (propertyName) {
         // The current study being focused on.
         case "currentStudy":
-          console.log("Recieved study in events component");
-          console.info(currentValue as StudyDTO);
+          this.allAnimals$.next(of([]));
+          this.selectionModel.clear();
+          this.pageState.set("loading");
+
           this.currentStudy = currentValue as StudyDTO;
           this.currentLocationSensors = this.getLocationSensor(this.currentStudy);
-          this.currentIndividuals$ = this.getIndividuals(this.currentStudy).pipe(
-            // tap(map => {
-            //   this.currentIndividuals = map;
-            // }),
-          )
-          this.currentTags$ = this.getTags(this.currentStudy);
+
+          // INFO: switchMap is preferable since it unsubscribes from the previous source observable.
+          this.allAnimals$.next(this.getIndividualsArray(currentValue as StudyDTO));
+          // this.currentTags$ = this.getTags(this.currentStudy);
           break
         default:
           break;
@@ -91,26 +143,85 @@ export class EventsComponent implements OnChanges {
     return;
   }
 
-  isAllSelected(individuals?: IndividualJsonDTO[] | Map<bigint, IndividualJsonDTO>): boolean {
-    if (!individuals){
-      return false;
-    }
-    if (Array.isArray(individuals)){
-      return this.selection.selected.length === individuals.length;
-    } else {
-      return this.selection.selected.length === individuals.size;
+  ngAfterViewInit(): void {
+    return;
+    // this.sort.sortChange.subscribe(() => this.paginator.pageIndex = 0)
+  }
+
+  InitializeFormArray(individuals: IndividualJsonDTO[]): void {
+    this.eventForm.markAsPristine();
+    this.eventForm.controls.checkboxes.reset();
+    for (let i = 0; i < individuals.length; i++) {
+      const formControl = new FormControl<boolean>(false, { nonNullable: true });
+      this.eventForm.controls.checkboxes.push(formControl);
     }
   }
 
-  checkBoxLabel(index: number, row?: IndividualJsonDTO): string {
-    if (!row) {
+  get CheckboxForm(): FormArray<FormControl<boolean>> {
+    return this.eventForm.controls.checkboxes;
+  }
+
+  // INFO: This section includes methods for the selection of rows
+  checkboxLabel(index?: number, row?: IndividualJsonDTO): string {
+    console.log(`Calling checkboxLabel with index = ${index} row = ${row?.LocalIdentifier}`);
+    if (!row || index === undefined) {
       return `${this.isAllSelected() ? 'deselect' : 'select'} all`;
     }
-    return `${this.selection.isSelected(row) ? 'deselect' : 'select'} row ${index + 1}`;
+    return `${this.selectionModel.isSelected(index) ? 'deselect' : 'select'} row ${index + 1}`;
+  }
+
+  isAllSelected(): boolean {
+    if (!this.tableSource$) {
+      return false;
+    }
+    return this.currentIndividuals().length === this.selectionModel.selected.length;
+  }
+
+  toggleRow(index: number): void {
+    if (index < 0 || index >= this.allToggles().length) {
+      return;
+    }
+
+    this.selectionModel.toggle(index);
+    this.allToggles.update(prev => {
+      prev[index] = this.selectionModel.isSelected(index);
+      return prev;
+    });
+
+    this.CheckboxForm.controls[index].setValue(this.selectionModel.isSelected(index));
+    this.CheckboxForm.markAsDirty();
+  }
+
+  toggleAllRows() {
+    if (this.isAllSelected()) {
+      this.selectionModel.clear();
+      this.allToggles.update(prev => {
+        for (let i = 0; i < prev.length; i++) {
+          prev[i] = false;
+        }
+        this.eventForm.markAsDirty();
+        return prev;
+      });
+      this.CheckboxForm.controls.forEach(formControl => {
+        formControl.patchValue(false);
+      })
+      return;
+    }
+    this.selectionModel.select(...this.allToggles().map((_, i) => i));
+    this.allToggles.update(prev => {
+      for (let i = 0; i < prev.length; i++) {
+        prev[i] = true;
+      }
+      return prev;
+    });
+    this.CheckboxForm.controls.forEach(formControl => {
+      formControl.patchValue(true);
+    });
+    this.eventForm.markAsDirty();
   }
 
   trackIndividuals(index: number, item: IndividualJsonDTO): string {
-    return `${item.Id}`
+    return `${item.Id}`;
   }
 
   mapToArray<T, U>(map: Map<T, U>): U[] {
@@ -151,6 +262,12 @@ export class EventsComponent implements OnChanges {
       tap(res => console.log(res)),
     );
     return retVal;
+  }
+
+  getIndividualsArray(studyDTO: StudyDTO): Observable<IndividualJsonDTO[]> {
+    return this.studyService.jsonRequest("individual" as const, studyDTO.id).pipe(
+      map(data => data as IndividualJsonDTO[])
+    );
   }
 
 

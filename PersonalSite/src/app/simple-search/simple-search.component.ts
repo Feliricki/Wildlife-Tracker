@@ -19,6 +19,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete'
 import { AutoComplete } from '../auto-complete/auto-complete';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 interface WikiLinks {
   title: string;
@@ -31,7 +32,7 @@ interface WikiLinks {
   styleUrls: ['./simple-search.component.scss'],
   standalone: true,
   imports: [
-    NgIf, MatTableModule,
+    NgIf, MatTableModule, MatTooltipModule,
     FormsModule, ReactiveFormsModule,
     MatFormFieldModule, MatInputModule,
     MatSelectModule, MatOptionModule,
