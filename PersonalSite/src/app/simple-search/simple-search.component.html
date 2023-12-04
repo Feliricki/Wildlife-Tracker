@@ -24,6 +24,7 @@
               <!-- NOTE: currentOptions is a writable signal that contains the current options. -->
               @for (option of currentOptions(); track option){
               <mat-option [value]="option">{{option}}</mat-option>
+              <mat-divider></mat-divider>
               }
 
             </mat-autocomplete>

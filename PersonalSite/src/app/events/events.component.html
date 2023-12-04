@@ -16,11 +16,29 @@
 
     <form [formGroup]="eventForm">
 
+      <mat-form-field>
+        <mat-label>Event Profile</mat-label>
+        <mat-select matTooltip="Some information.">
+
+          <mat-option value="None">None</mat-option>
+          <mat-divider></mat-divider>
+          <mat-option value="EURING_01">24 hours between events.</mat-option>
+          <mat-divider></mat-divider>
+          <mat-option value="EURING_02">50 kilometers between events.</mat-option>
+          <mat-divider></mat-divider>
+          <mat-option value="EURING_03">Last 30 days.</mat-option>
+          <mat-divider></mat-divider>
+          <mat-option value="EURING_04">0.25 degrees movement.</mat-option>
+
+        </mat-select>
+      </mat-form-field>
+
       @if (eventForm.dirty && eventForm.hasError("noOptionSelected")){
       <mat-error>No Option Selected.</mat-error>
       }
-      <table mat-table matSort matSortDisableClear matSortActive="name" matSortDirection="asc" [dataSource]="example"
-        #Table [trackBy]="trackIndividuals" class="animal-table">
+
+      <table mat-table matSort matSortDisableClear matSortActive="name" matSortDirection="asc"
+        [dataSource]="tableSource" #Table [trackBy]="trackById" class="animal-table">
 
         <!-- Checkbox Column -->
         <ng-container matColumnDef="select">
@@ -38,7 +56,7 @@
           <td mat-cell formArrayName="checkboxes" *matCellDef="let individual; let j = index;"
             class="checkbox-header-cell">
 
-            <span>{{eventForm.controls.checkboxes.length}}</span>
+            <!-- <span>{{eventForm.controls.checkboxes.length}}</span> -->
 
             <!-- TODO: Begin work on making api call to the backend using the formgroup as the source of truth. -->
             <mat-checkbox (click)="$event.stopPropagation()" [id]="j" [formControlName]="j"

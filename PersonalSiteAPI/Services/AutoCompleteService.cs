@@ -327,23 +327,25 @@ public class AutoCompleteService : IAutoCompleteService
             Console.WriteLine("Database context is unavailable in AutoCompleteService initialization.");
             return;
         }
+        // NOTE: This service is not properly initialized for the time being.
+
         // var watch = System.Diagnostics.Stopwatch.StartNew();
-        var hasValidLicense = _validLicenseExp.Compile();
-        var hasDownloadAccess = _hasDownloadAccess.Compile();
-        int index = 0;
-        foreach (var study in source)
-        {
-            if (hasValidLicense(study) && hasDownloadAccess(study))
-            {
-                _trie.Insert(study.Name, false);
-            }
-            else
-            {
-                _trie.Insert(study.Name, true);
-            }
-            index++;
-        }
-        Console.WriteLine($"{index} records added to trie");
+        // var hasValidLicense = _validLicenseExp.Compile();
+        // var hasDownloadAccess = _hasDownloadAccess.Compile();
+        // int index = 0;
+        // foreach (var study in source)
+        // {
+        //     if (hasValidLicense(study) && hasDownloadAccess(study))
+        //     {
+        //         _trie.Insert(study.Name, false);
+        //     }
+        //     else
+        //     {
+        //         _trie.Insert(study.Name, true);
+        //     }
+        //     index++;
+        // }
+        // Console.WriteLine($"{index} records added to trie");
     }
 
     public long Count()

@@ -49,7 +49,7 @@ builder.Services.AddHealthChecks();
 builder.Services.AddTransient<IMoveBankService, MoveBankService>();
 builder.Services.AddHttpClient<IMoveBankService, MoveBankService>(client =>
 {
-    client.BaseAddress = new Uri("https://www.movebank.org/movebank/service/");    
+    client.BaseAddress = new Uri("https://www.movebank.org/movebank/service/");
 });
 
 builder.Services.AddHttpContextAccessor();
@@ -61,7 +61,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), options =>
     {
         options.CommandTimeout(60);
-    }); 
+    });
 });
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>

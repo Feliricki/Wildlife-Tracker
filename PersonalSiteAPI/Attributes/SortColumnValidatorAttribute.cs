@@ -18,20 +18,17 @@ namespace MyBGList.Attributes
         {
             // TODO: Test this validation attribute for wanted behavior
             bool isNullable(Type type) => Nullable.GetUnderlyingType(type) != null;
-            if (isNullable(validationContext.ObjectType))
+            if (isNullable(validationContext.ObjectType) && value is null)
             {
                 return ValidationResult.Success;
             }
-
-            if (EntityType != null)
-            {
-                var strValue = value as string;
-                if (!string.IsNullOrEmpty(strValue)
-                    && EntityType.GetProperties()
-                        .Any(p => p.Name == strValue))
-                    return ValidationResult.Success;
-            }
-
+            
+            var strValue = value as string;
+            if (!string.IsNullOrEmpty(strValue)
+                && EntityType.GetProperties()
+                    .Any(p => p.Name == strValue))
+                return ValidationResult.Success;
+            
             return new ValidationResult(ErrorMessage);
         }
     }

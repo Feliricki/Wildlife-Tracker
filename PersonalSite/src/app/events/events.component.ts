@@ -8,7 +8,7 @@ import { TagJsonDTO } from '../studies/JsonResults/TagJsonDTO';
 import { isLocationSensor } from '../studies/locationSensors';
 import { MatListModule } from '@angular/material/list';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
+import { MatTableModule } from '@angular/material/table';
 import { AsyncPipe } from '@angular/common';
 import { FormArray, FormBuilder, FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -22,11 +22,13 @@ import { SelectionModel } from '@angular/cdk/collections';
 import { checkboxOptionSelectedValidator } from './Validators/ValidateCheckbox';
 import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
+import { FormDataSource } from '../HelperTypes/FormDataSource';
+import { MatSelectModule } from '@angular/material/select';
+import { MatDividerModule } from '@angular/material/divider';
 
 type PageState = "loaded" | "loading" | "error" | "initial";
 
 // NOTE: Make the tableSource an array of FormControls.
-//
 
 @Component({
   selector: 'app-events',
@@ -36,7 +38,8 @@ type PageState = "loaded" | "loading" | "error" | "initial";
     MatTabsModule, MatTableModule, MatPaginatorModule,
     AsyncPipe, ReactiveFormsModule, MatFormFieldModule,
     MatInputModule, MatIconModule, MatButtonModule,
-    MatExpansionModule, MatTooltipModule, MatCheckboxModule],
+    MatExpansionModule, MatTooltipModule, MatCheckboxModule,
+    MatSelectModule, MatDividerModule],
   templateUrl: './events.component.html',
   styleUrl: './events.component.css'
 })
@@ -50,16 +53,14 @@ export class EventsComponent implements OnChanges, AfterViewInit {
   @Input() currentStudy?: StudyDTO;
   currentLocationSensors: string[] = [];
 
-  // currentIndividuals$?: Observable<Map<string, IndividualJsonDTO>>;
-  // currentTags$?: Observable<Map<string, TagJsonDTO>>;
-
   // INFO: This is a higher order observable that the emits the latest observable from
   // a http request
   allAnimals$ = new Subject<Observable<IndividualJsonDTO[]>>;
   allTaggedAnimals$ = new Subject<Observable<TagJsonDTO[]>>;
 
   tableSource$: Observable<IndividualJsonDTO[]> = of([]);
-  example = new MatTableDataSource([]);
+
+  tableSource = new FormDataSource(this.studyService);
   // tableSource$?: Observable<MatTableDataSource<IndividualJsonDTO>>;
   currentTagged$: Observable<TagJsonDTO[]> = of([]);
 
@@ -72,6 +73,8 @@ export class EventsComponent implements OnChanges, AfterViewInit {
   @ViewChild(MatSort) sort!: MatSort;
   // The formGroup has the checkboxes formArray and the following validators.
   // FormGroup<{checkboxes: FormArray<FormControl<boolean>>;}>
+
+  // TODO: Update formGroup for new fields.
   eventForm = this.formBuilder.nonNullable.group({
     checkboxes: this.formBuilder.nonNullable.array([] as boolean[]),
   }, {
@@ -99,7 +102,9 @@ export class EventsComponent implements OnChanges, AfterViewInit {
         this.allToggles.set(arr.map(() => false));
         this.InitializeFormArray(arr);
         this.pageState.set("loaded");
+
       }),
+
     );
   }
 
@@ -132,9 +137,9 @@ export class EventsComponent implements OnChanges, AfterViewInit {
           this.currentStudy = currentValue as StudyDTO;
           this.currentLocationSensors = this.getLocationSensor(this.currentStudy);
 
-          // INFO: switchMap is preferable since it unsubscribes from the previous source observable.
+          // TODO: Refactor this file to switch to using table source and the formgroup only.
+          this.tableSource.getAnimalData(this.currentStudy.id, "asc");
           this.allAnimals$.next(this.getIndividualsArray(currentValue as StudyDTO));
-          // this.currentTags$ = this.getTags(this.currentStudy);
           break
         default:
           break;
@@ -145,7 +150,6 @@ export class EventsComponent implements OnChanges, AfterViewInit {
 
   ngAfterViewInit(): void {
     return;
-    // this.sort.sortChange.subscribe(() => this.paginator.pageIndex = 0)
   }
 
   InitializeFormArray(individuals: IndividualJsonDTO[]): void {
@@ -220,8 +224,9 @@ export class EventsComponent implements OnChanges, AfterViewInit {
     this.eventForm.markAsDirty();
   }
 
-  trackIndividuals(index: number, item: IndividualJsonDTO): string {
-    return `${item.Id}`;
+  // INFO: The row is tracked by the individual local identifier.
+  trackById(index: number, item: FormControl<[boolean, string]>): string {
+    return `${item.value[1]}`;
   }
 
   mapToArray<T, U>(map: Map<T, U>): U[] {

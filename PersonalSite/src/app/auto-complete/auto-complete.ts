@@ -4,32 +4,46 @@ type char = string;
 class CaseInsensitiveMap<T, U> extends Map<T, U> {
   override set(key: T, value: U): this {
     if (typeof key === 'string') {
-      key = key.toLowerCase() as T;
+      // key = this.normalizeAccents(key);
+      key = this.normalizeAccents(key).toLocaleLowerCase() as T;
     }
     return super.set(key, value);
   }
 
   override get(key: T): U | undefined {
     if (typeof key === 'string') {
-      key = key.toLowerCase() as T;
+      // key = key.toLocaleLowerCase() as T;
+      // key = this.normalizeAccents(key) as T;
+      key = this.normalizeAccents(key).toLocaleLowerCase() as T;
     }
     return super.get(key);
   }
 
   override has(key: T): boolean {
     if (typeof key === 'string') {
-      key = key.toLowerCase() as T;
+      // key = key.toLocaleLowerCase() as T;
+      // key = this.normalizeAccents(key) as T;
+      key = this.normalizeAccents(key).toLocaleLowerCase() as T;
     }
     return super.has(key);
+  }
+
+  normalizeAccents(word: string): string {
+    return word.normalize("NFD").replace(/[\u0300-\u036f]/g, '');
   }
 }
 
 class TreeNode {
+  private word: string;
+
   public count: number;
   public children: CaseInsensitiveMap<char, TreeNode>;
-  constructor(private value: char) {
+  constructor(private value: char, word?: string) {
+
     this.count = 0;
     this.children = new CaseInsensitiveMap<char, TreeNode>();
+    this.word = word ?? "";
+
   }
   get Value(): char {
     return this.value;
@@ -39,6 +53,12 @@ class TreeNode {
   }
   set Count(newCount: number) {
     this.count = newCount;
+  }
+  set Word(newWord: string) {
+    this.word = newWord;
+  }
+  get Word() {
+    return this.word;
   }
   incrementCount(): void {
     this.count++;
@@ -73,7 +93,11 @@ class Trie {
       }
       searchSpace = latest.children;
     }
-    latest?.incrementCount();
+    if (!latest){
+      return;
+    }
+    latest.incrementCount();
+    latest.Word = word;
     this.totalCount++;
   }
 
@@ -140,11 +164,12 @@ class Trie {
         }
       }
       if (root.Count > 0) {
-        allWords.push(curWord!.join(""));
+        allWords.push(root.Word);
+        // allWords.push(curWord!.join(""));
       }
 
       if (curWord!.length > 0) {
-        curWord!.pop();
+        curWord?.pop();
       }
     }
 

@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using MyBGList.Attributes;
 using Newtonsoft.Json;
 using PersonalSiteAPI.Attributes;
 using PersonalSiteAPI.Attributes.MoveBankAttributes;
@@ -21,11 +20,8 @@ using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
-using Microsoft.Data.SqlClient;
-
-// using PersonalSiteAPI.Mappings;
+using Microsoft.AspNetCore.Components.Web;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -58,6 +54,7 @@ namespace PersonalSiteAPI.Controllers
             _mapper = mapper;
         }
 
+        // INFO: Not in use.
         [HttpGet(Name = "AutoComplete")]
         [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
         public async Task<IActionResult> AutoComplete(
@@ -65,7 +62,7 @@ namespace PersonalSiteAPI.Controllers
             long maxCount = 10)
         {
             try
-            {              
+            {
                 var words = await _moveBankService.GetWordsWithPrefix(prefix, maxCount,
                     User.IsInRole(RoleNames.Administrator));
 
@@ -134,6 +131,7 @@ namespace PersonalSiteAPI.Controllers
                 {
                     return Unauthorized("User is not authorized.");
                 }
+
                 var cacheOptions = new MemoryCacheEntryOptions()
                 {
                     Size = 1,
@@ -149,7 +147,7 @@ namespace PersonalSiteAPI.Controllers
             }
         }
 
-        // TODO: Test this method with filterQueries and the sorting of different columns
+        // TODO: Consider all of the studies in cache and then molding the data afterwards.
         [HttpGet(Name = "GetStudies")]
         [ResponseCache(CacheProfileName = "Any-60")]
         public async Task<ActionResult<ApiResult<StudyDTO>>> GetStudies(
@@ -168,7 +166,7 @@ namespace PersonalSiteAPI.Controllers
                 {
                     return BadRequest();
                 }
-
+                
                 IQueryable<Studies> source = _context.Studies
                     .AsNoTracking()
                     .Where(study => study.IHaveDownloadAccess);
@@ -178,18 +176,38 @@ namespace PersonalSiteAPI.Controllers
                 {
                     Console.WriteLine("User is not authorized.");
                     // Valid Licenses are: "CC_0", "CC_BY", "CC_BY_NC"                    
-                    source = source.Where(ValidLicenseExp);
+                    source = source.Where(_validLicenseExp);
                     authorized = false;
                 }
 
-                var cacheKey = $"GetStudies: {authorized}-{pageIndex}-{pageSize}-{sortColumn}-{sortOrder}-{filterColumn}-{filterQuery}";
+                var cacheKey = $"GetAllStudies:{User.IsInRole(RoleNames.Administrator)}";
+                if (_memoryCache.TryGetValue<StudyDTO[]>(cacheKey, out var allStudies) && allStudies is not null)
+                {
+                    Console.WriteLine("Using cached result from GetAllStudies in GetStudies endpoint.");
+                    var newSource = !User.IsInRole(RoleNames.Administrator)
+                        ? allStudies.Where(s => ValidLicenseDto(s)) 
+                        : allStudies.AsEnumerable();
+
+                    return ApiResult<StudyDTO>.Create(
+                        newSource,
+                        pageIndex,
+                        pageSize,
+                        sortColumn,
+                        sortOrder,
+                        filterColumn,
+                        filterQuery);
+                }
+
+
+                // TODO: New Idea; if the entire table has been stored in memory cache then just shape this data rather than making an api call.
+                cacheKey = $"GetStudies: {authorized}-{pageIndex}-{pageSize}-{sortColumn}-{sortOrder}-{filterColumn}-{filterQuery}";
                 if (_memoryCache.TryGetValue<ApiResult<StudyDTO>>(cacheKey, out var storedResult))
                 {
-                    return storedResult ?? throw new NullReferenceException();
+                    return storedResult ?? throw new Exception("Invalid object placed in cache.");
                 }
 
                 var dataSource = source.ProjectToType<StudyDTO>();
-
+                // TODO: Store the entire table in cache in apiResult?
                 ApiResult<StudyDTO> apiResult = await ApiResult<StudyDTO>.CreateAsync(
                     dataSource,
                     pageIndex,
@@ -216,6 +234,7 @@ namespace PersonalSiteAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
+
         [HttpGet(Name = "GetAllStudies")]
         [ResponseCache(CacheProfileName = "Any-60")]
         public async Task<ActionResult<StudyDTO[]>> GetAllStudies()
@@ -230,13 +249,14 @@ namespace PersonalSiteAPI.Controllers
                 {
                     Console.WriteLine("User is not authorized");
                     source = source
-                      .Where(ValidLicenseExp);
+                      .Where(_validLicenseExp);
                 }
-                var cacheKey = "GetAllStudies";
+
+                var cacheKey = $"GetAllStudies:{User.IsInRole(RoleNames.Administrator)}";
                 if (_memoryCache.TryGetValue<StudyDTO[]>(cacheKey, out var result))
                 {
                     Console.WriteLine("Cache hit on GetAllStudies");
-                    return result!;
+                    return result ?? throw new Exception("Unexpected object placed in cache.");
                 }
 
                 IQueryable<StudyDTO> dataSource = source.ProjectToType<StudyDTO>();
@@ -280,7 +300,6 @@ namespace PersonalSiteAPI.Controllers
                 }
 
                 // TODO: This service method might be in need of a refactor.
-                // The method should convey what type is being returned in the response
                 // Possible options: "csv file", "json text" or null
                 var response = await _moveBankService.JsonRequest(
                     studyId: studyId,
@@ -317,7 +336,7 @@ namespace PersonalSiteAPI.Controllers
                     throw new UnauthorizedAccessException("GetJsonData: Did not receive a valid response from external api.");
                 }
 
-                object? data = null;
+                object? data;
                 // NOTE: The CSV file will return the sensor types all capitalized.
                 if (returnType == "csv")
                 {
@@ -350,13 +369,13 @@ namespace PersonalSiteAPI.Controllers
                 {
                     return BadRequest("Invalid return type");
                 }
-                
+
                 var sorted = SortObjects(sortOrder, data);
                 if (sorted is null)
                 {
-                    throw new Exception("Invalid Object Passed to SortObjects Method.");
+                    throw new Exception("Invalid object passed to SortObjects method.");
                 }
-                
+
                 var jsonString = JsonConvert.SerializeObject(data);
                 var cacheOptions = new MemoryCacheEntryOptions()
                 {
@@ -364,7 +383,7 @@ namespace PersonalSiteAPI.Controllers
                     SlidingExpiration = TimeSpan.FromMinutes(2),
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
                 };
-                _memoryCache.Set(cacheKey,sorted, cacheOptions);
+                _memoryCache.Set(cacheKey, sorted, cacheOptions);
                 return Ok(jsonString);
             }
             catch (Exception error)
@@ -490,9 +509,22 @@ namespace PersonalSiteAPI.Controllers
             }
         }
 
-        private readonly Expression<Func<Studies, bool>> ValidLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
-        protected bool ValidLicense(Studies study)
+        private readonly Expression<Func<Studies, bool>> _hasDownloadAccess = study => study.IHaveDownloadAccess;
+        private readonly Expression<Func<Studies, bool>> _validLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
+        private readonly Expression<Func<StudyDTO, bool>> _validLicenseExpDto = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
+
+        private static bool ValidLicense(Studies study)
         {
+            string[] licenses = { "CC_0", "CC_BY", "CC_BY_NC" };
+            return licenses.Contains(study.LicenseType.Trim());
+        }
+
+        private static bool ValidLicenseDto(StudyDTO study)
+        {
+            if (study.LicenseType is null)
+            {
+                return false;
+            }
             string[] licenses = { "CC_0", "CC_BY", "CC_BY_NC" };
             return licenses.Contains(study.LicenseType.Trim());
         }

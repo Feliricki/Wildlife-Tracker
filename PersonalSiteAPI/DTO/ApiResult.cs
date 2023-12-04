@@ -1,4 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Collections;
+using System.Globalization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System.Linq.Dynamic.Core;
 using System.Reflection;
 
@@ -21,6 +24,10 @@ namespace PersonalSiteAPI.DTO
         public string? SortOrder { get; private set; }
         public string? FilterColumn { get; private set; }
         public string? FilterQuery { get; private set; }
+
+        private readonly string _cacheKey = "GetStudies";
+        
+
         private ApiResult(
             List<T> data,
             int count,
@@ -42,6 +49,73 @@ namespace PersonalSiteAPI.DTO
             FilterQuery = filterQuery;
         }
 
+        public static ApiResult<T> Create(
+            IEnumerable<T> source,
+            int pageIndex,
+            int pageSize,
+            string? sortColumn = null,
+            string? sortOrder = null,
+            string? filterColumn = null,
+            string? filterQuery = null)
+        {
+            var list = source.ToList();
+            var queryable = list.AsQueryable();
+            
+            // var filters = new List<Func<T, bool>>();
+            
+            if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery) && IsValidProperty(filterColumn))
+            {
+                queryable = queryable.Where(
+                    string.Format("{0}.StartsWith(@0, @1)", filterColumn), filterQuery, StringComparison.InvariantCultureIgnoreCase);
+            }
+
+            if (!string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(sortOrder) && IsValidProperty(sortColumn))
+            {
+                Console.WriteLine($"Sorting: Column={sortColumn} Order={sortOrder}");
+                sortOrder = !string.IsNullOrEmpty(sortOrder)
+                    && sortOrder.ToUpper() == "ASC"
+                    ? "ASC"
+                    : "DESC";
+                queryable = queryable.OrderBy(
+                    string.Format(
+                        "{0} {1}",
+                        sortColumn,
+                        sortOrder)
+                );
+            }
+
+            queryable = queryable
+                .Skip(pageIndex * pageSize)
+                .Take(pageSize);
+
+            var data = queryable.ToList();
+            return new ApiResult<T>(
+                data,
+                list.Count,
+                pageIndex,
+                pageSize,
+                sortColumn,
+                sortOrder,
+                filterColumn,
+                filterQuery
+                );
+        }
+
+        // TODO: Move caching strategy to this class. 
+        // Check cache for other endpoints aswell
+        private List<T>? CheckCache(IMemoryCache memoryCache, string key)
+        {
+            if (!memoryCache.TryGetValue<List<T>>(key, out var result))
+            {
+                return null;
+            }
+            if (!memoryCache.TryGetValue<List<T>>(_cacheKey, out var result2))
+            {
+                return null;
+            }
+            return result ?? result2;
+        }
+
         public static async Task<ApiResult<T>> CreateAsync(
             IQueryable<T> source,
             int pageIndex,
@@ -52,16 +126,16 @@ namespace PersonalSiteAPI.DTO
             string? filterQuery = null
             )
         {
-
-            // Studies are indexed by name in the database
+            // TODO - Test the runtime of the creation method with pulling the entire table vs. sorting, filtering and paginating on the database.
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery)
                 && IsValidProperty(filterColumn))
             {
-                Console.WriteLine($"Prefix search: Checking if {filterColumn} start with {filterQuery}");
+                Console.WriteLine($"Prefix search: Checking if {filterColumn} start with {filterQuery} (Case insensitive)");
                 source = source.Where(
-                    string.Format("{0}.StartsWith(@0)",
+                    string.Format("{0}.StartsWith(@0, @1)",
                     filterColumn),
-                    filterQuery);
+                    filterQuery,
+                    StringComparison.InvariantCultureIgnoreCase);
             }
             Console.WriteLine("Count the number of records in the database.");
             var count = await source.CountAsync();
@@ -85,6 +159,7 @@ namespace PersonalSiteAPI.DTO
             source = source
                 .Skip(pageIndex * pageSize)
                 .Take(pageSize);
+
             Console.WriteLine("Creating the final list");
             List<T> data = await source.ToListAsync();
             return new ApiResult<T>(
