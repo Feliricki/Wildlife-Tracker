@@ -17,7 +17,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadDTOs
 
         [Required]
         [Name("id")]
-        public int Id { get; set; }
+        public long Id { get; set; }
 
         [Required]
         [Name("local_identifier")]

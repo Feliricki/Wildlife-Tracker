@@ -17,12 +17,14 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
 
   public dataState: WritableSignal<SourceState> = signal("initial");
 
+  // private forms: WritableSignal<FormType[]> = signal([]);
+  // private formArray: WritableSignal<FormArray<FormType>>;
   private formArray: WritableSignal<FormArray<FormControl<boolean>>>;
-  private currentIndividuals: WritableSignal<IndividualJsonDTO[]> = signal([]);
 
   private currentAnimals = signal(new Map<string, IndividualJsonDTO>());
   private currentTaggedAnimals = signal(new Map<string, TagJsonDTO>());
 
+  // private sourceSubject$ = new BehaviorSubject<FormControl<[boolean, string]>[]>([]);
   private sourceSubject$: BehaviorSubject<FormArray<FormControl<boolean>>>;
   private selectionModel = new SelectionModel<number>(true, []);
 
@@ -30,6 +32,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
 
   constructor(
     private readonly studyService: StudyService,
+    // readonly formArrayInput: FormArray<FormControl<[boolean, string]>>) {
     readonly formArrayInput: FormArray<FormControl<boolean>>) {
     this.formArray = signal(formArrayInput);
     this.sourceSubject$ = new BehaviorSubject(this.formArray());
@@ -60,8 +63,6 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     this.dataState.set("loading");
     this.formArray().clear();
     this.selectionModel.clear();
-    this.currentIndividuals.set([]);
-
     this.hasValue.set(false);
     this.sourceSubject$.next(this.formArray());
 
@@ -75,8 +76,6 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
 
         const newAnimals = new Map<string, IndividualJsonDTO>();
         const newTagged = new Map<string, TagJsonDTO>();
-
-        this.currentIndividuals.set(tuple[0]);
 
         tuple[0].forEach((individual) => {
           newAnimals.set(individual.LocalIdentifier, individual);
@@ -203,13 +202,8 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     return computed(() => this.currentAnimals());
   }
 
-  getIndividual(index: number): Signal<IndividualJsonDTO | null> {
-    return computed(() => {
-      if (index < 0 || index >= this.currentIndividuals().length){
-        return null;
-      }
-      return this.currentIndividuals()[index];
-    })
+  get Individual(index: number) {
+    return;
   }
 
   get allTaggedIndividuals(): Signal<Map<string, TagJsonDTO>> {
