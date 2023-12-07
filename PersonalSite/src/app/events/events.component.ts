@@ -1,7 +1,6 @@
 import { AfterViewInit, Component, Input, OnChanges, Signal, SimpleChanges, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StudyDTO } from '../studies/study';
-import { Observable, Subject } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { IndividualJsonDTO } from '../studies/JsonResults/IndividualJsonDTO';
 import { TagJsonDTO } from '../studies/JsonResults/TagJsonDTO';
@@ -29,7 +28,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 
 export type EventProfiles = null | "EURING_01" | "EURING_02" | "EURING_03" | "EURING_04";
 
-// NOTE: Make the tableSource an array of FormControls.
+// TODO: Work on grouping all individuals by their tagged status.
 
 @Component({
   selector: 'app-events',
@@ -47,18 +46,16 @@ export type EventProfiles = null | "EURING_01" | "EURING_02" | "EURING_03" | "EU
 export class EventsComponent implements OnChanges, AfterViewInit {
   // NOTE: These studies are toggled to have their events appear on the map if
   // at all possible
+  // Switch to using tagged individuals as the main source.
+  // Paginate results.
+  // Limit show event data to one individual at a time?
   toggledStudies?: Map<bigint, StudyDTO>;
-  // displayedColumns: string[] = ['select', 'name'];
   displayedColumns: string[] = ['name', 'select'];
   displayedColumnsWithExpanded: string[] = [...this.displayedColumns, 'expanded'];
 
   @Input() currentStudy?: StudyDTO;
+  currentSortOrder: 'asc' | 'desc' = 'asc';
   currentLocationSensors: string[] = [];
-
-  // INFO: This is a higher order observable that the emits the latest observable from
-  // a http request
-  allAnimals$ = new Subject<Observable<IndividualJsonDTO[]>>;
-  allTaggedAnimals$ = new Subject<Observable<TagJsonDTO[]>>;
 
   // @Output() studyEventEmitter = new EventEmitter<Observable<EventJsonDTO>>();
 
@@ -99,7 +96,7 @@ export class EventsComponent implements OnChanges, AfterViewInit {
         case "currentStudy":
           console.log(currentValue);
           this.currentStudy = currentValue as StudyDTO;
-          this.tableSource.getAnimalData(this.currentStudy.id, "asc");
+          this.tableSource.getAnimalData(this.currentStudy.id, this.currentSortOrder);
           this.eventForm.markAsPristine();
           break
 
@@ -142,9 +139,15 @@ export class EventsComponent implements OnChanges, AfterViewInit {
     return this.tableSource.IsAllSelected;
   }
 
-  getIndividual(index: number): Signal<IndividualJsonDTO | null> {
+  updateState(): void {
+    this.tableSource;
+  }
+
+  getIndividual(index: number): Signal<TagJsonDTO | null> {
     return this.tableSource.getIndividual(index);
   }
+
+  // get TaggedIndividual
 
   toggleRow(index: number, event?: MatCheckboxChange): void {
     console.log("toggling row");
@@ -160,13 +163,21 @@ export class EventsComponent implements OnChanges, AfterViewInit {
     this.eventForm.markAsDirty();
   }
 
+  sortChange(): void {
+    if (!this.currentStudy) {
+      return;
+    }
+    this.currentSortOrder = this.currentSortOrder === 'asc' ? 'desc' : 'asc';
+    this.tableSource.getAnimalData(this.currentStudy.id, this.currentSortOrder);
+  }
+
   isSelected(index: number): Signal<boolean> {
     return this.tableSource.isSelected(index);
   }
 
-  // INFO: The row is tracked by the individual local identifier.
+  // TODO: Refactor this to use the id.
   trackById(index: number, form: FormControl<boolean>): string {
-    console.log(`tracking by index ${index} and value ${form.value}`);
+    // console.log(`tracking by index ${index} and value ${form.value}`);
     return `${index}`;
   }
 

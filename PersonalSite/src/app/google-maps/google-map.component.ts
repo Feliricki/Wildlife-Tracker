@@ -11,6 +11,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NgElement, WithProperties } from '@angular/elements';
 import { InfoWindowComponent } from './info-window/info-window.component';
+import { environment } from 'src/environments/environment';
+
+// const glyphImage = require("../../assets/glyph1.png");
 
 @Component({
   selector: 'app-google-map',
@@ -43,8 +46,11 @@ export class MapComponent implements OnInit, OnChanges {
     clickable: true,
   };
 
+  // defaultGlyphOptions: google.maps.marker.
+
   defaultPinOptions: google.maps.marker.PinElementOptions = {
     scale: 1, // default = 1
+    // glyph: new URL(`/img/house-icon.png`),
   };
 
   defaultInfoWindowOptions: google.maps.InfoWindowOptions = {
@@ -132,14 +138,15 @@ export class MapComponent implements OnInit, OnChanges {
             if (studyDTO.mainLocationLon === undefined || studyDTO.mainLocationLat === undefined) {
               continue;
             }
+            const imageIcon = document.createElement('img');
+            imageIcon.src = '../../assets/location-pin2.png';
+            imageIcon.style['height'] = '45px';
+            imageIcon.style['width'] = '45px';
 
-            // Scale this to an appropriate size
-            const pin = new google.maps.marker.PinElement(
-              this.defaultPinOptions);
 
             const marker = new google.maps.marker.AdvancedMarkerElement({
               map: this.map,
-              content: pin.element,
+              content: imageIcon,
               position: {
                 lat: studyDTO.mainLocationLat,
                 lng: studyDTO.mainLocationLon

@@ -28,19 +28,42 @@ export class CustomRenderer1 implements Renderer {
     para.innerText = `${count}`;
 
     if (MarkerUtils.isAdvancedMarkerAvailable(map)) {
-      const pinGlyph = new google.maps.marker.PinElement({
-        glyph: para,
-        glyphColor: 'white',
-        scale: 1.0,
-      });
+      const divContainer = document.createElement('div');
+      divContainer.style['position'] = 'relative';
+      divContainer.style['textAlign'] = 'center';
+      // divContainer.style['color'] = 'white';
+
+      const imageIcon = document.createElement('img');
+      imageIcon.src = '../../assets/location-pin-noglyph.png';
+      imageIcon.style['height'] = '45px';
+      imageIcon.style['width'] = '45px';
+
+      const span = document.createElement('span');
+      span.style['position'] = 'absolute';
+      span.style['fontSize'] = '15px';
+      span.style['top'] = '50%';
+      span.style['left'] = '50%';
+      span.style['transform'] = 'translate(-50%, -90%)';
+
+      span.innerText = `${count}`;
+      span.style['color'] = 'white';
+
+      divContainer.appendChild(imageIcon);
+      divContainer.appendChild(span);
+
+      // const pinGlyph = new google.maps.marker.PinElement({
+      //   glyph: para,
+      //   glyphColor: 'white',
+      //   scale: 1.0,
+      // });
 
       const clusterOptions: google.maps.marker.AdvancedMarkerElementOptions = {
         map,
         position,
         zIndex,
         title,
-        content: pinGlyph.element
-        // content: svgEl,
+        // content: pinGlyph.element
+        content: divContainer,
       };
       return new google.maps.marker.AdvancedMarkerElement(clusterOptions);
     }

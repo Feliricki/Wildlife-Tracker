@@ -18,7 +18,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
   public dataState: WritableSignal<SourceState> = signal("initial");
 
   private formArray: WritableSignal<FormArray<FormControl<boolean>>>;
-  private currentIndividuals: WritableSignal<IndividualJsonDTO[]> = signal([]);
+  private currentSource: WritableSignal<TagJsonDTO[]> = signal([]);
 
   private currentAnimals = signal(new Map<string, IndividualJsonDTO>());
   private currentTaggedAnimals = signal(new Map<string, TagJsonDTO>());
@@ -40,7 +40,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     console.log(collectionViewer);
     return this.sourceSubject$.asObservable().pipe(
       map(formArray => {
-        console.log("Transforming FormArray into array of controls.")
+        console.log("Transforming FormArray into array of controls.");
         return formArray.controls;
       })
     );
@@ -60,7 +60,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     this.dataState.set("loading");
     this.formArray().clear();
     this.selectionModel.clear();
-    this.currentIndividuals.set([]);
+    this.currentSource.set([]);
 
     this.hasValue.set(false);
     this.sourceSubject$.next(this.formArray());
@@ -70,13 +70,23 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
 
     const combined = forkJoin([individuals, taggedAnimals]) as Observable<[IndividualJsonDTO[], TagJsonDTO[]]>;
     combined.pipe(
+      map(tuple => {
+        // INFO: This is necessary since some studies will avoiding listing the same animal twice
+        // resulting in the individuals having no local identifier (or viceversa).
+        const filtered1 = tuple[0].filter(val => val.LocalIdentifier.length > 0);
+        const filtered2 = tuple[1].filter(val => val.LocalIdentifier.length > 0);
+
+        return [filtered1, filtered2] as [IndividualJsonDTO[], TagJsonDTO[]];
+      }),
 
       tap(tuple => {
 
+        console.log(`Tapping into new source with id = ${studyId}`);
         const newAnimals = new Map<string, IndividualJsonDTO>();
         const newTagged = new Map<string, TagJsonDTO>();
 
-        this.currentIndividuals.set(tuple[0]);
+        // this.currentIndividuals.set(tuple[0]);
+        this.currentSource.set(tuple[1]);
 
         tuple[0].forEach((individual) => {
           newAnimals.set(individual.LocalIdentifier, individual);
@@ -88,6 +98,8 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
 
         this.currentAnimals.set(newAnimals);
         this.currentTaggedAnimals.set(newTagged);
+        console.log(this.currentAnimals());
+        console.log(this.currentTaggedAnimals());
       }),
 
       catchError(err => {
@@ -96,7 +108,10 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
         return of([[], []]) as Observable<[IndividualJsonDTO[], TagJsonDTO[]]>;
       }),
       map(tuple => {
-        return tuple[0].map(() => {
+        // return tuple[0].map(() => {
+        //   return new FormControl<boolean>(false, { nonNullable: true });
+        // });
+        return tuple[1].map(() => {
           return new FormControl<boolean>(false, { nonNullable: true });
         });
       }),
@@ -146,9 +161,6 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
       return;
     }
     this.selectionModel.toggle(index);
-    const toUpdate = this.formArray().controls[index];
-
-    this.toggleFormHelper(toUpdate)
     this.hasValue.set(this.selectionModel.hasValue());
   }
 
@@ -203,12 +215,14 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     return computed(() => this.currentAnimals());
   }
 
-  getIndividual(index: number): Signal<IndividualJsonDTO | null> {
+  getIndividual(index: number): Signal<TagJsonDTO | null> {
     return computed(() => {
-      if (index < 0 || index >= this.currentIndividuals().length){
+      if (index < 0 || index >= this.currentSource().length) {
+        // console.log(this.currentIndividuals());
+        console.error("Out of bounds error.");
         return null;
       }
-      return this.currentIndividuals()[index];
+      return this.currentSource()[index]
     })
   }
 
