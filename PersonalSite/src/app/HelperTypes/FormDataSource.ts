@@ -14,6 +14,9 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
   // TODO: Use a subject tp keep track of the latest changes
   // and then use a loadAnimals method to update to the latest
   // observable and ubsubcribe from the previous one.
+  // Find a way to reduce the payload coming from the front end.
+  // Decide on how many records should actually be sent
+  // and decide what fields are actually required.
 
   public dataState: WritableSignal<SourceState> = signal("initial");
 

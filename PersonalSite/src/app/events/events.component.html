@@ -71,7 +71,6 @@
 
             <mat-checkbox [formControlName]="j" (click)="$event.stopPropagation()" (change)="toggleRow(j)"
               [id]="j"></mat-checkbox>
-
           </td>
 
         </ng-container>
@@ -80,8 +79,8 @@
 
           <th mat-header-cell *matHeaderCellDef mat-sort-header sortActionDescription="Sort by name">
             <span>Local Identifiers</span>
-            <span># Individuals = {{Individuals().size}}</span>
-            <span># Tagged = {{TaggedIndividuals().size}}</span>
+            <!-- <span># Individuals = {{Individuals().size}}</span> -->
+            <!-- <span># Tagged = {{TaggedIndividuals().size}}</span> -->
             <mat-icon matTooltip="A unique individual identifier provided by the owner of the study." aria-label="false"
               fontIcon="info"></mat-icon>
           </th>

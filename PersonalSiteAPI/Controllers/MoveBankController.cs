@@ -180,7 +180,16 @@ namespace PersonalSiteAPI.Controllers
                     authorized = false;
                 }
 
-                var cacheKey = $"GetAllStudies:{User.IsInRole(RoleNames.Administrator)}";
+                // TODO: New Idea; if the entire table has been stored in memory cache then just shape this data rather than making an api call.
+                var cacheKey = $"GetStudies: {authorized}-{pageIndex}-{pageSize}-{sortColumn}-{sortOrder}-{filterColumn}-{filterQuery}";
+                if (_memoryCache.TryGetValue<ApiResult<StudyDTO>>(cacheKey, out var storedResult))
+                {
+                    Console.WriteLine("Using cached result in GetStudies");
+                    return storedResult ?? throw new Exception("Invalid object placed in cache.");
+                }
+
+
+                cacheKey = $"GetAllStudies:{User.IsInRole(RoleNames.Administrator)}";
                 if (_memoryCache.TryGetValue<StudyDTO[]>(cacheKey, out var allStudies) && allStudies is not null)
                 {
                     Console.WriteLine("Using cached result from GetAllStudies in GetStudies endpoint.");
@@ -196,14 +205,6 @@ namespace PersonalSiteAPI.Controllers
                         sortOrder,
                         filterColumn,
                         filterQuery);
-                }
-
-
-                // TODO: New Idea; if the entire table has been stored in memory cache then just shape this data rather than making an api call.
-                cacheKey = $"GetStudies: {authorized}-{pageIndex}-{pageSize}-{sortColumn}-{sortOrder}-{filterColumn}-{filterQuery}";
-                if (_memoryCache.TryGetValue<ApiResult<StudyDTO>>(cacheKey, out var storedResult))
-                {
-                    return storedResult ?? throw new Exception("Invalid object placed in cache.");
                 }
 
                 var dataSource = source.ProjectToType<StudyDTO>();
@@ -224,8 +225,10 @@ namespace PersonalSiteAPI.Controllers
                     SlidingExpiration = TimeSpan.FromMinutes(2),
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
                 };
-
-                _memoryCache.Set(cacheKey, apiResult, cacheOptions);
+                if (pageIndex == 0){
+                    _memoryCache.Set(cacheKey, apiResult, cacheOptions);    
+                }
+                // _memoryCache.Set(cacheKey, apiResult, cacheOptions);
                 return apiResult;
             }
             catch (Exception e)

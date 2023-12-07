@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { FormGroup, FormControl, Validators, AbstractControl, AsyncValidatorFn, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormGroup, FormControl, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { BaseFormComponent } from '../base-form.component';
 import { AuthService } from './auth.service';
@@ -32,6 +32,7 @@ export class LoginComponent extends BaseFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    console.log("loading login form");
     this.form = new FormGroup({
       username: new FormControl('', Validators.required),
       password: new FormControl('', Validators.required)
