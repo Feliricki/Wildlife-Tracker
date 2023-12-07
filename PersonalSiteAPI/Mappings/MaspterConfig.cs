@@ -14,7 +14,9 @@ namespace PersonalSiteAPI.Mappings
             TypeAdapterConfig<Studies, StudyDTO>
                 .NewConfig()
                 .Map(studyDto => studyDto.MainLocationLat, source => FloatParser(source.MainLocationLat))
-                .Map(studyDto => studyDto.MainLocationLon, source => FloatParser(source.MainLocationLon));
+                .Map(studyDto => studyDto.MainLocationLon, source => FloatParser(source.MainLocationLon))
+                .Map(studyDto => studyDto.TimestampFirstDeployedLocation, source => source.TimeStampFirstDeployedLocation)
+                .Map(studyDto => studyDto.TimestampLastDeployedLocation, source => source.TimeStampLastDeployedLocation);
 
             TypeAdapterConfig.GlobalSettings.Scan(Assembly.GetExecutingAssembly());
 

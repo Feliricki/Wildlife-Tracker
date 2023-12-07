@@ -1,7 +1,7 @@
-import { Component, OnInit, ViewChild, signal, WritableSignal, Output, EventEmitter, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, OnInit, ViewChild, signal, WritableSignal, Output, EventEmitter, Input, OnChanges, SimpleChanges, AfterViewInit } from '@angular/core';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
-import { Observable, Subject, reduce, distinctUntilChanged, debounceTime, map, catchError, of, concat, EMPTY, tap, finalize } from 'rxjs';
+import { Observable, Subject, reduce, distinctUntilChanged, debounceTime, map, catchError, of, concat, EMPTY } from 'rxjs';
 import { FormGroup, FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginator, PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { MatRadioModule } from '@angular/material/radio';
@@ -44,7 +44,7 @@ interface WikiLinks {
     AsyncPipe, DatePipe, MatProgressSpinnerModule,
     MatRadioModule, MatButtonModule, MatAutocompleteModule]
 })
-export class SimpleSearchComponent implements OnInit, OnChanges {
+export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit {
 
   studies: MatTableDataSource<StudyDTO> | undefined;
   displayedColumns = ["name"];
@@ -74,6 +74,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   // NOTE: This message is sent to the tracker component and is then sent to the map component
   @Output() panToMarkerEvent = new EventEmitter<bigint>();
+  @Output() componentInitialized = new EventEmitter<true>();
   @Input() allStudies?: Map<bigint, StudyDTO>;
   studyNames: string[] = [];
 
@@ -110,6 +111,11 @@ export class SimpleSearchComponent implements OnInit, OnChanges {
       }
     }
   }
+
+  ngAfterViewInit(): void {
+    this.componentInitialized.emit(true);
+  }
+
   getAutoCompleteOptions(query: string): string[] {
     return this.autoComplete?.getWordsWithPrefix(query, 5) ?? [];
   }

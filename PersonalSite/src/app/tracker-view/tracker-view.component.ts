@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, WritableSignal, signal } from '@angular/core';
 import { MapComponent } from '../google-maps/google-map.component';
 import { SimpleSearchComponent } from '../simple-search/simple-search.component';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -23,6 +23,8 @@ export class TrackerViewComponent implements OnInit {
     bottom: 0,
     top: 0
   };
+  searchOpened: WritableSignal<boolean> = signal(false);
+
   currentMarker: bigint | undefined;
   currentStudies: Map<bigint, StudyDTO> | undefined;
 
@@ -39,10 +41,11 @@ export class TrackerViewComponent implements OnInit {
     return;
   }
 
-  // updateMarkers(studies: Map<bigint, StudyDTO>): void {
-  //   console.log("Updated studies in tracker view");
-  //   this.currentStudies = studies;
-  // }
+  initializeSearchNav(): void {
+    console.log("Initializing search component");
+    this.searchOpened.set(true);
+  }
+
   switchSearchMode(): void {
     return;
   }

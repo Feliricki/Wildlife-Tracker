@@ -22,6 +22,7 @@ using System.Globalization;
 using System.Linq.Expressions;
 using System.Text;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -185,6 +186,7 @@ namespace PersonalSiteAPI.Controllers
                 if (_memoryCache.TryGetValue<ApiResult<StudyDTO>>(cacheKey, out var storedResult))
                 {
                     Console.WriteLine("Using cached result in GetStudies");
+                    Console.WriteLine(storedResult?.Data[0].TimestampFirstDeployedLocation.ToString());
                     return storedResult ?? throw new Exception("Invalid object placed in cache.");
                 }
 
@@ -206,7 +208,7 @@ namespace PersonalSiteAPI.Controllers
                         filterColumn,
                         filterQuery);
                 }
-
+                // INFO: The type Studies is projected to StudyDTO.
                 var dataSource = source.ProjectToType<StudyDTO>();
                 // TODO: Store the entire table in cache in apiResult?
                 ApiResult<StudyDTO> apiResult = await ApiResult<StudyDTO>.CreateAsync(
@@ -259,6 +261,7 @@ namespace PersonalSiteAPI.Controllers
                 if (_memoryCache.TryGetValue<StudyDTO[]>(cacheKey, out var result))
                 {
                     Console.WriteLine("Cache hit on GetAllStudies");
+                    Console.WriteLine(result?[0].TimestampFirstDeployedLocation.ToString());
                     return result ?? throw new Exception("Unexpected object placed in cache.");
                 }
 
@@ -272,6 +275,8 @@ namespace PersonalSiteAPI.Controllers
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
                 };
                 result = await dataSource.ToArrayAsync();
+                Console.WriteLine("Fetched result from GetAllStudies");
+                Console.WriteLine(result[0].TimestampFirstDeployedLocation.ToString());
                 _memoryCache.Set(cacheKey, result, cacheOptions);
 
                 return result;

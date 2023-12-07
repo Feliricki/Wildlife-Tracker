@@ -1,28 +1,40 @@
 <!-- <div class="main-content"> -->
 <mat-sidenav-container class="sidenav-container" [hasBackdrop]="false">
 
-  <mat-sidenav #sidenav mode="over" [opened]="true" [fixedInViewport]="true" class="sidenav" [disableClose]="true">
-    <!-- allStudies is an input property in simple-search -->
-    <app-simple-search [allStudies]="currentStudies" (panToMarkerEvent)="panToMarker($event)"></app-simple-search>
-    <!-- <button mat-button class="toggle-button">Button</button> -->
+  <mat-sidenav layout="row" #sidenav mode="over" [opened]="false" [fixedInViewport]="true" fixedTopGap="50"
+    class="sidenav" [disableClose]="true">
+
+    @if(sidenav.opened || searchOpened()){
+    <app-simple-search [hidden]="!searchOpened" [allStudies]="currentStudies"
+      (componentInitialized)="initializeSearchNav()" (panToMarkerEvent)="panToMarker($event)"></app-simple-search>
+    }
+    <!-- @placeholder { -->
+    <!-- <span>placeholder</span> -->
+    <!-- } -->
   </mat-sidenav>
 
   <mat-sidenav-content class="sidenav-content">
 
+    <!-- <button mat-button class="toggle-button">Button</button> -->
     <!-- NOTE: This is another sidenav within the outer sidenav -->
-    <mat-sidenav class="right-sidenav" #rightSidenav [opened]="true" position="end" [disableClose]="true" mode="side"
+    <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="side"
       [fixedInViewport]="true">
 
+      @if (false){
       <!-- NOTE: Here, a specific study is toggled and has it's events displaye or removed from the map. -->
       <app-events [currentStudy]="currentStudy"></app-events>
-
+      }
     </mat-sidenav>
 
-    <mat-sidenav-content>
 
-      <!-- content:  -->
-      <!-- <app-google-map (studiesEmitter)="studiesMessage($event)" (studyEmitter)="studyMessage($event)" -->
-      <!--   [focusedMarker]="currentMarker"></app-google-map> -->
+    <mat-sidenav-content class="sidenav-content-right">
+
+      <div class="button-container">
+        <button mat-fab (click)="sidenav.toggle()" class="toggle-button">Button</button>
+      </div>
+      <!-- content: -->
+      <app-google-map (studiesEmitter)="studiesMessage($event)" (studyEmitter)="studyMessage($event)"
+        [focusedMarker]="currentMarker"></app-google-map>
 
     </mat-sidenav-content>
 

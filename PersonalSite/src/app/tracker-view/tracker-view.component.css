@@ -1,5 +1,6 @@
 .sidenav-container {
     position: fixed;
+    /* z-index: 1; */
     /* display: flex; */
     height: 100%;
     width: 100%;
@@ -10,31 +11,43 @@
   /* margin: 1em; */
   /*TODO: set up correct margins */
   /* margin: 5em 1em; */
-  margin-top: 6em;
-  margin-left: 2em;
-  margin-bottom: 4em;
+  /* margin-top: 6em; */
+  /* margin-left: 2em; */
+  /* margin-bottom: 4em; */
   width: 500px;
   min-width: 5%;
   max-width: 60%;
-  border-radius: 15px;
+  /* This make the edges round. */
+  /* border-radius: 15px; */
+}
+
+.button-container {
+  position: fixed;
+  z-index: 100;
+  /* width: 100%; */
 }
 
 .sidenav-content {
   position: fixed;
+  /* position: relative; */
   /* background-color: blue; */
   background-color: lightblue;
   width: 100%;
+  /* height: 100%; */
   height: 95%;
+}
+
+.toggle-button {
+  position: relative;
+  margin-left: 500px;
+  margin-top: 25%;
+  float: left;
 }
 
 .right-sidenav {
   min-width: 100px;
-  width: 400px;
+  /* width: 400px; */
   margin-top:3.5em;
   /* margin-top:6em; */
   /* position:fixed; */
 }
-/**/
-/* .toggle-button { */
-/**/
-/* } */

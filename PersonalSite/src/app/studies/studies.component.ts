@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, WritableSignal, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, WritableSignal, signal, Output, EventEmitter, AfterViewInit } from '@angular/core';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { StudyDTO } from './study';
@@ -27,7 +27,7 @@ import { NgIf } from '@angular/common';
     MatPaginatorModule, DefaultPipe,
     TruncatePipe]
 })
-export class StudiesComponent implements OnInit, OnDestroy {
+export class StudiesComponent implements OnInit, AfterViewInit, OnDestroy {
   public displayedColumns: string[] = ['name'];
   public sizeLimit = 50;
 
@@ -61,12 +61,15 @@ export class StudiesComponent implements OnInit, OnDestroy {
     this.loadData();
   }
 
+  ngAfterViewInit(): void {
+    this.componentInitialized.emit(true);
+  }
+
   ngOnDestroy(): void {
     this.filterTextChanged.complete();
   }
 
   rowClicked(curIndex: number): void {
-    // console.log(this.rowSignal());
     this.rowSignal.update(rows => {
       rows[curIndex] = !rows[curIndex];
       return rows;
