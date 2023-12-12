@@ -16,7 +16,7 @@ import { InfoWindowComponent } from './info-window/info-window.component';
 // import { AccessorFunction, Position } from '@deck.gl/core/typed';
 import { GoogleMapsOverlay } from '@deck.gl/google-maps/typed';
 import { GeoJsonLayer } from '@deck.gl/layers/typed';
-import { TripsLayer } from '@deck.gl/geo-layers/typed';
+// import { TripsLayer } from '@deck.gl/geo-layers/typed';
 // import { ArcLayer } from '@deck.gl/layers/typed';
 
 // type Properties = { scalerank: number, mag: number };
@@ -32,7 +32,7 @@ import { TripsLayer } from '@deck.gl/geo-layers/typed';
 })
 export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   googleDeckOverlay?: GoogleMapsOverlay;
-  mainSubcription$?: Subscription;
+  mainSubscription$?: Subscription;
 
   @Input() focusedMarker: bigint | undefined;
   @Output() JsonDataEmitter = new EventEmitter<Observable<JsonResponseData[]>>();
@@ -45,8 +45,8 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     },
     zoom: 4,
     tilt: 30,
-    mapId: "ccfbcc384aa699ff",
-    // mapTypeId: "roadmap",
+    mapId: "ccfbcc384aa699ff", // Vector map
+    // mapTypeId: "hybrid",
     gestureHandling: "auto",
   };
 
@@ -79,7 +79,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   map: google.maps.Map | undefined;
   // @ViewChild(google.maps.Map)
-  studies: Map<bigint, StudyDTO> | undefined;
+  studies?: Map<bigint, StudyDTO>;
 
   // TODO: Make sure this message recieved in the trigger view component
   @Output() studiesEmitter = new EventEmitter<Map<bigint, StudyDTO>>();
@@ -121,7 +121,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   }
 
   ngOnDestroy(): void {
-    this.mainSubcription$?.unsubscribe();
+    this.mainSubscription$?.unsubscribe();
   }
 
   async initMap(): Promise<boolean> {
@@ -132,7 +132,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     const studies$ = this.studyService.getAllStudies();
 
 
-    this.mainSubcription$ = forkJoin({
+    this.mainSubscription$ = forkJoin({
 
       map: mapRes$,
       marker: markerRes$,
@@ -284,11 +284,8 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     google.maps.event.trigger(curMarker, "click");
   }
 
-  emitJsonData(entityType: "study" | "individual" | "tag", studyId: bigint): void {
-    this.JsonDataEmitter.emit(this.studyService.jsonRequest(entityType, studyId));
-  }
 
-  // INFO: This message is recieved in the event component.
+  // INFO: This message is received in the event component.
   emitStudy(study: StudyDTO): void {
     this.studyEmitter.emit(study);
   }

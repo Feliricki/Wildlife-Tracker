@@ -196,7 +196,7 @@ namespace PersonalSiteAPI.Controllers
                 {
                     Console.WriteLine("Using cached result from GetAllStudies in GetStudies endpoint.");
                     var newSource = !User.IsInRole(RoleNames.Administrator)
-                        ? allStudies.Where(s => ValidLicenseDto(s)) 
+                        ? allStudies.Where(ValidLicense) 
                         : allStudies.AsEnumerable();
 
                     return ApiResult<StudyDTO>.Create(
@@ -425,12 +425,12 @@ namespace PersonalSiteAPI.Controllers
                 _ => null,
             };
         }
-
-        // NOTE: 
-        // TODO: Figure out a caching strategy
-        // 1) Work out a plan for a caching service 
-        // to reuse overlapping data 
-        // 2) Check model state for validation state
+        
+        // TODO: Forget about caching this endpoint.
+        // TODO: This endpoint is actually untested as of now.
+        // 1) Check model state for validation state
+        // 2) Sort data by timestamp.
+        // 3) Include DateTime objects
         [HttpGet(Name = "GetEventData")]
         [ResponseCache(CacheProfileName = "Any-60")]
         public async Task<ActionResult<EventJsonDTO>> GetEventData(
@@ -491,23 +491,33 @@ namespace PersonalSiteAPI.Controllers
                 }
                 var responseString = Encoding.UTF8.GetString(responseContentArray);
                 // TODO: This pattern is incomplete for the "csv" case
-                // // There is appropriate dto class to cast this object to
+                // TODO: Consider sending more fields to the frontend. (if I ever switch to only using CSV requests)
                 var data = responseType switch
                 {
                     "json" => System.Text.Json.JsonSerializer.Deserialize<EventJsonDTO>(responseString),
                     "csv" => System.Text.Json.JsonSerializer.Deserialize<EventJsonDTO>(responseString),
                     _ => null
                 };
-
-
-                if (data is not null)
+                
+                if (data is null)
                 {
-                    return data;
+                    throw new Exception("Data was null");
                 }
-                else
+                
+                // TODO: Consider returning the data in pairs to prevent more work in the frontend.
+                foreach (var individualEvents in data.IndividualEvents)
                 {
-                    throw new Exception("Data was null.");
+                    // Purpose of using this method is to avoid allocating more memory than necessary.
+                    individualEvents.Locations.Sort((x, y) => x.Timestamp.CompareTo(y.Timestamp));
+                    foreach (var location in individualEvents.Locations)
+                    {
+                        // NOTE: this conversion is untested.
+                        location.Date = DateTimeOffset.FromUnixTimeMilliseconds(location.Timestamp).LocalDateTime;
+                    }
+                    
                 }
+                return data;
+                
 
             }
             catch (Exception error)
@@ -527,7 +537,7 @@ namespace PersonalSiteAPI.Controllers
             return licenses.Contains(study.LicenseType.Trim());
         }
 
-        private static bool ValidLicenseDto(StudyDTO study)
+        private static bool ValidLicense(StudyDTO study)
         {
             if (study.LicenseType is null)
             {

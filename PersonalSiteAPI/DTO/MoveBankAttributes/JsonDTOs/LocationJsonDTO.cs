@@ -13,6 +13,8 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs
 
         [JsonPropertyName("location_lat")]
         public float LocationLat { get; set; }
+        
+        public DateTime Date { get; set; }
 
         // // Optional fields
         // [JsonPropertyName("eobs_speed_accuracy_estimate")]

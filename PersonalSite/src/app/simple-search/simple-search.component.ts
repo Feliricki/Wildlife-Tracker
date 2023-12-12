@@ -211,8 +211,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
     this.filterTextChanged.next(text);
   }
 
-  // TODO: Find more testing methods
-  // Find a study with no vald location listed
   panToMarker(studyId: bigint): void {
     this.panToMarkerEvent.emit(studyId);
     // TODO: This message emits for smaller screens.

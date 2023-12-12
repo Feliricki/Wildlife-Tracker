@@ -1,9 +1,11 @@
-import { Component, EventEmitter, Input, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { StudyDTO } from 'src/app/studies/study';
 
+// INFO: Templating and logic for the info window used in the googlemap component.
+// This component is registered as a custom element in app.component
 @Component({
   selector: 'app-info-window',
   standalone: true,
@@ -17,7 +19,7 @@ import { StudyDTO } from 'src/app/studies/study';
     `,
   styleUrl: './info-window.component.css'
 })
-export class InfoWindowComponent implements OnDestroy {
+export class InfoWindowComponent {
   @Input()
   currentStudy?: StudyDTO;
   @Input()
@@ -33,7 +35,4 @@ export class InfoWindowComponent implements OnDestroy {
     this.eventRequest?.emit(studyDTO);
   }
 
-  ngOnDestroy(): void {
-    return;
-  }
 }
