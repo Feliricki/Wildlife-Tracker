@@ -1,17 +1,27 @@
-import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, WritableSignal, signal, AfterViewInit } from '@angular/core';
-import { map, Observable } from 'rxjs';
+import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, WritableSignal, signal, AfterViewInit, OnDestroy } from '@angular/core';
+import { forkJoin, from, Observable, Subscription } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
 import { Loader } from '@googlemaps/js-api-loader';
 import { NgIf, AsyncPipe } from '@angular/common';
 import { CustomRenderer1 } from './renderers';
-import { MarkerClusterer, Marker, SuperClusterAlgorithm, SuperClusterOptions } from '@googlemaps/markerclusterer';
+import { MarkerClusterer, SuperClusterAlgorithm, SuperClusterOptions } from '@googlemaps/markerclusterer';
 import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NgElement, WithProperties } from '@angular/elements';
 import { InfoWindowComponent } from './info-window/info-window.component';
 
+// import type * as GeoJSON from "geojson";
+// import { AccessorFunction, Position } from '@deck.gl/core/typed';
+import { GoogleMapsOverlay } from '@deck.gl/google-maps/typed';
+import { GeoJsonLayer } from '@deck.gl/layers/typed';
+import { TripsLayer } from '@deck.gl/geo-layers/typed';
+// import { ArcLayer } from '@deck.gl/layers/typed';
+
+// type Properties = { scalerank: number, mag: number };
+// type Feature = GeoJSON.Feature<GeoJSON.Point, Properties>;
+// type Data = GeoJSON.FeatureCollection<GeoJSON.Point, Properties>;
 
 @Component({
   selector: 'app-google-map',
@@ -20,21 +30,24 @@ import { InfoWindowComponent } from './info-window/info-window.component';
   standalone: true,
   imports: [NgIf, AsyncPipe, MatButtonModule, MatIconModule]
 })
-export class MapComponent implements OnInit, AfterViewInit, OnChanges {
+export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
+  googleDeckOverlay?: GoogleMapsOverlay;
+  mainSubcription$?: Subscription;
+
   @Input() focusedMarker: bigint | undefined;
   @Output() JsonDataEmitter = new EventEmitter<Observable<JsonResponseData[]>>();
   @Output() componentInitialized = new EventEmitter<true>;
 
   defaultMapOptions: google.maps.MapOptions = {
     center: {
-      lat: 0,
-      lng: 0,
+      lat: 40,
+      lng: -100,
     },
     zoom: 4,
-    mapId: "initial_map",
-    mapTypeId: "roadmap",
-    gestureHandling: "cooperative",
-    // restriction: { strictBounds: true }
+    tilt: 30,
+    mapId: "ccfbcc384aa699ff",
+    // mapTypeId: "roadmap",
+    gestureHandling: "auto",
   };
 
   defaultAlgorithmOptions: SuperClusterOptions = {
@@ -45,12 +58,9 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges {
     clickable: true,
   };
 
-  // defaultGlyphOptions: google.maps.marker.
-
   defaultPinOptions: google.maps.marker.PinElementOptions = {
     scale: 1, // default = 1
-    // glyph: new URL(`/img/house-icon.png`),
-  };
+  }
 
   defaultInfoWindowOptions: google.maps.InfoWindowOptions = {
   };
@@ -68,6 +78,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges {
   });
 
   map: google.maps.Map | undefined;
+  // @ViewChild(google.maps.Map)
   studies: Map<bigint, StudyDTO> | undefined;
 
   // TODO: Make sure this message recieved in the trigger view component
@@ -85,9 +96,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges {
   }
 
   ngOnInit(): void {
-    // console.log("loading map component");
     this.initMap();
-    // console.log("loaded map component");
   }
 
   ngAfterViewInit(): void {
@@ -111,128 +120,138 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges {
     }
   }
 
+  ngOnDestroy(): void {
+    this.mainSubcription$?.unsubscribe();
+  }
+
   async initMap(): Promise<boolean> {
 
     // TODO: Consider loading the neded components only. Refactor is potentially needed to ensure optimal performance.
-    // return await this.loader.importLibrary("maps").then((({ Map }) => {
-    //   this.map = new Map(document.getElementById("map") as HTMLElement, this.defaultMapOptions);
-    //   this.mapLoaded.set(true);
-    //   return true;
-    // })).catch(e => {
-    //   console.error(e);
-    //   this.mapLoaded.set(false);
-    //   return e;
-    // });
-
-    return this.loader.load().then(() => {
-
-      // console.log("Loaded content from google.");
-      this.map = new google.maps.Map(document.getElementById("map") as HTMLElement, this.defaultMapOptions);
-
-      // google.maps.event.addListener(this.map, 'idle', async () => {
-      //   if (this.map === undefined || this.markers === undefined || this.mapCluster === undefined) {
-      //     return;
-      //   }
-      //   this.mapCluster.clearMarkers(); // this.mapCluster.addMarkers(Array.from(this.markers.values()));
-      //   const bounds = this.map.getBounds()!;
-      //   for (const marker of this.markers.values()) {
-      //     if (marker.position && bounds.contains(marker.position)) {
-      //       this.mapCluster.addMarker(marker);
-      //     }
-      //   }
-      // });
-
-      this.infoWindow = new google.maps.InfoWindow();
-      this.infoWindow.set("toggle", false);
-      this.infoWindow.set("studyId", -1n);
-
-      this.studyService.getAllStudies().pipe(
-
-        map(StudyDTOs => {
-
-          const mappings = new Map<bigint, StudyDTO>();
-          StudyDTOs.forEach(studyDTO => {
-            mappings.set(studyDTO.id, studyDTO);
-          })
-          return mappings;
-        }),
-
-      ).subscribe({
-        next: mappings => {
-          this.studies = mappings;
-          this.emitStudies(this.studies);
-          const markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> = new Map<bigint, google.maps.marker.AdvancedMarkerElement>();
-
-          for (const studyDTO of this.studies.values()) {
-
-            if (studyDTO.mainLocationLon === undefined || studyDTO.mainLocationLat === undefined) {
-              continue;
-            }
-
-            const imageIcon = document.createElement('img');
-            imageIcon.src = '../../assets/location-pin2.png';
-            imageIcon.style['height'] = '45px';
-            imageIcon.style['width'] = '45px';
+    const mapRes$ = from(this.loader.importLibrary('maps'));
+    const markerRes$ = from(this.loader.importLibrary('marker'));
+    const studies$ = this.studyService.getAllStudies();
 
 
-            const marker = new google.maps.marker.AdvancedMarkerElement({
-              map: this.map,
-              content: imageIcon,
-              position: {
-                lat: studyDTO.mainLocationLat,
-                lng: studyDTO.mainLocationLon
-              },
-              title: studyDTO.name,
-            });
+    this.mainSubcription$ = forkJoin({
 
-            // NOTE: This is where the listener functions is defined.
-            marker.addListener("click", () => {
+      map: mapRes$,
+      marker: markerRes$,
+      studies: studies$,
 
-              if (this.infoWindow === undefined) {
-                return;
-              }
-              if (this.infoWindow.get("studyId") !== undefined
-                && this.infoWindow.get("studyId") === studyDTO.id
-                && this.infoWindow.get("toggle") === true) {
-                this.infoWindow.close();
-                this.infoWindow.set("toggle", false);
-                return;
-              }
-              this.infoWindow.close();
-              this.infoWindow.setContent(this.buildInfoWindowContent(studyDTO));
+    }).subscribe({
 
-              this.infoWindow.set("toggle", !this.infoWindow.get("toggle"));
-              this.infoWindow.set("studyId", studyDTO.id);
-              this.infoWindow.open(this.map, marker);
-            });
-            markers.set(studyDTO.id, marker);
+      next: async (objRes) => {
+        const mapEl = document.getElementById("map");
+        console.log(objRes);
+        this.map = new google.maps.Map(mapEl as HTMLElement, this.defaultMapOptions);
+
+        this.infoWindow = new google.maps.InfoWindow();
+        this.infoWindow.set("toggle", false);
+        this.infoWindow.set("studyId", -1n);
+
+        const studyDTOs = objRes.studies;
+
+        const mappings = new Map<bigint, StudyDTO>();
+        studyDTOs.forEach(studyDTO => {
+          mappings.set(studyDTO.id, studyDTO);
+        });
+        this.studies = mappings;
+
+        this.emitStudies(this.studies);
+        const markers = new Map<bigint, google.maps.marker.AdvancedMarkerElement>();
+
+        for (const studyDTO of this.studies.values()) {
+
+          if (studyDTO.mainLocationLon === undefined || studyDTO.mainLocationLat === undefined) {
+            continue;
           }
-          this.markers = markers;
-          this.mapCluster = new MarkerClusterer({
+
+          // const imageIcon = this.markerImage;
+          const imageIcon = document.createElement('img');
+          imageIcon.src = '../../assets/location-pin2-small.png';
+
+          const marker = new google.maps.marker.AdvancedMarkerElement({
             map: this.map,
-            markers: Array.from(markers.values()),
-            renderer: new CustomRenderer1(),
-            algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
-            onClusterClick: (_, cluster, map) => {
-              // If any cluster is clicked, then the infowindow is restored to its initial state more or less
-              if (this.infoWindow && this.infoWindow.get("toggle") === true) {
-                this.infoWindow.close();
-                this.infoWindow.set("toggle", false);
-                this.infoWindow.set("studyId", -1n);
-              }
-              map.fitBounds(cluster.bounds as google.maps.LatLngBounds);
-            }
+            content: imageIcon,
+            position: {
+              lat: studyDTO.mainLocationLat,
+              lng: studyDTO.mainLocationLon
+            },
+            title: studyDTO.name,
           });
 
-        },
-        error: err => console.error(err)
-      });
-      return true;
+          // NOTE: This is where the infowindow logic is handled.
+          marker.addListener("click", () => {
 
-    }).catch(e => {
-      console.error(e);
-      return false;
+            if (this.infoWindow === undefined) {
+              return;
+            }
+            if (this.infoWindow.get("studyId") !== undefined
+              && this.infoWindow.get("studyId") === studyDTO.id
+              && this.infoWindow.get("toggle") === true) {
+              this.infoWindow.close();
+              this.infoWindow.set("toggle", false);
+              return;
+            }
+            this.infoWindow.close();
+
+            this.infoWindow.setContent(this.buildInfoWindowContent(studyDTO));
+
+            this.infoWindow.set("toggle", !this.infoWindow.get("toggle"));
+            this.infoWindow.set("studyId", studyDTO.id);
+            this.infoWindow.open(this.map, marker);
+          });
+          markers.set(studyDTO.id, marker);
+        }
+
+        this.markers = markers;
+        this.mapCluster = new MarkerClusterer({
+          map: this.map,
+          markers: Array.from(markers.values()),
+          renderer: new CustomRenderer1(),
+          algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
+          onClusterClick: (_, cluster, map) => {
+            // If any cluster is clicked, then the infowindow is restored to its initial state more or less
+            if (this.infoWindow && this.infoWindow.get("toggle") === true) {
+              this.infoWindow.close();
+              this.infoWindow.set("toggle", false);
+              this.infoWindow.set("studyId", -1n);
+            }
+            map.fitBounds(cluster.bounds as google.maps.LatLngBounds);
+          }
+        });
+
+        this.googleDeckOverlay = this.initializeDeckOverlay();
+        this.googleDeckOverlay.setMap(this.map);
+
+      },
+      error: err => console.error(err)
+    });
+    return true;
+  }
+
+
+  initializeDeckOverlay(): GoogleMapsOverlay {
+
+    const EARTHQUAKES = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson";
+    const earthquakeLayer = new GeoJsonLayer({
+      id: "earthquakes",
+      data: EARTHQUAKES,
+      filled: true,
+      pointRadiusMinPixels: 2,
+      pointRadiusMaxPixels: 200,
+      opacity: 0.4,
+      pointRadiusScale: 0.3,
+      getPointRadius: (f) => Math.pow(10, f.properties!['mag']),
+      getFillColor: [255, 70, 30, 180],
+      autoHighlight: true,
     })
+
+    const overlay = new GoogleMapsOverlay({
+      layers: [earthquakeLayer],
+    });
+    console.log("Returning overlay.");
+    return overlay;
   }
 
   // NOTE: This function serves to create a dynamic button element every time the info window is opened
@@ -242,9 +261,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges {
     infoWindowEl.currentStudy = studyDTO;
     infoWindowEl.eventRequest = this.studyEmitter;
 
-    infoWindowEl.addEventListener('closed', () => {
-      document.body.removeChild(infoWindowEl)
-    });
     return infoWindowEl;
   }
 
@@ -252,7 +268,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges {
     return this.studyService.jsonRequest(entityType, studyId);
   }
 
-  // NOTE: This function only effects the map component
+  // NOTE: This function only affects the map component
   panToMarker(studyId: bigint): void {
     const curMarker = this.markers?.get(studyId);
     if (curMarker === undefined) {
@@ -272,28 +288,13 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges {
     this.JsonDataEmitter.emit(this.studyService.jsonRequest(entityType, studyId));
   }
 
-  // Use this to emit specific to the parent component
-  //  Tentatively, this will only be recieved in the event and tracker view component
+  // INFO: This message is recieved in the event component.
   emitStudy(study: StudyDTO): void {
     this.studyEmitter.emit(study);
   }
 
   emitStudies(studies: Map<bigint, StudyDTO>): void {
-    console.log("Emitting studies in google maps component");
     this.studiesEmitter.emit(studies);
   }
 
-  getMarkers(studies: Map<bigint, StudyDTO>, map: google.maps.Map): Marker[] {
-    const markers = [];
-    for (const studyDTO of studies.values()) {
-      if (studyDTO.mainLocationLat !== undefined && studyDTO.mainLocationLon !== undefined) {
-        const marker = new google.maps.marker.AdvancedMarkerElement({
-          position: { lat: studyDTO.mainLocationLat, lng: studyDTO.mainLocationLon },
-          map: map
-        });
-        markers.push(marker);
-      }
-    }
-    return markers;
-  }
 }

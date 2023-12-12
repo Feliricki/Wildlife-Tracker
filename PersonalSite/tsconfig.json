@@ -4,6 +4,7 @@
   "compilerOptions": {
     "baseUrl": "./",
     "outDir": "./dist/out-tsc",
+    "skipLibCheck": true, // Consider removing this options when luma.core is fully typed.
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noImplicitOverride": true,

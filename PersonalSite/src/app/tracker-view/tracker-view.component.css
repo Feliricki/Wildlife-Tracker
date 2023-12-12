@@ -1,53 +1,42 @@
 .sidenav-container {
-    position: fixed;
-    /* z-index: 1; */
-    /* display: flex; */
+    position:fixed;
     height: 100%;
     width: 100%;
-    /* border-style: solid; */
 }
 
-.sidenav {
-  /* margin: 1em; */
-  /*TODO: set up correct margins */
-  /* margin: 5em 1em; */
-  /* margin-top: 6em; */
-  /* margin-left: 2em; */
-  /* margin-bottom: 4em; */
-  width: 500px;
-  min-width: 5%;
-  max-width: 60%;
-  /* This make the edges round. */
-  /* border-radius: 15px; */
-}
-
-.button-container {
-  position: fixed;
-  z-index: 100;
-  /* width: 100%; */
+.search-container {
+  position:relative;
+  display: flex;
 }
 
 .sidenav-content {
-  position: fixed;
-  /* position: relative; */
-  /* background-color: blue; */
+  position: relative;
   background-color: lightblue;
   width: 100%;
-  /* height: 100%; */
-  height: 95%;
+  height: 100%;
 }
 
+/* NOTE: This section is used if the button is placed after the search compnent.*/
 .toggle-button {
-  position: relative;
-  margin-left: 500px;
-  margin-top: 25%;
-  float: left;
+  position: absolute;
+  /* position: fixed; */
+  color:black;
+  background-color: white;
+  margin-top:50vh;
+  z-index: 3;
 }
+
 
 .right-sidenav {
   min-width: 100px;
-  /* width: 400px; */
+  height: 100%;
   margin-top:3.5em;
-  /* margin-top:6em; */
-  /* position:fixed; */
 }
+
+/* .test-button { */
+/*   position: fixed; */
+/*   z-index:3; */
+/*   margin-top: 400px; */
+/*   margin-left: 600px; */
+/*   background-color:white; */
+/* } */

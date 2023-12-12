@@ -1,11 +1,15 @@
-import { Component, OnInit, WritableSignal, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, WritableSignal, signal } from '@angular/core';
 import { MapComponent } from '../google-maps/google-map.component';
 import { SimpleSearchComponent } from '../simple-search/simple-search.component';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
 import { EventsComponent } from '../events/events.component';
 import { StudyDTO } from '../studies/study';
 import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
+import { MatIconModule } from '@angular/material/icon';
+import { animate, style, transition, trigger } from '@angular/animations';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-tracker-view',
@@ -15,9 +19,21 @@ import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
   imports: [
     EventsComponent, MatSidenavModule,
     MatButtonModule, SimpleSearchComponent,
-    MapComponent]
+    MapComponent, MatIconModule],
+  animations: [
+
+    trigger('toggleClick', [
+
+      transition('void => *', [
+        style({ transform: 'translateX(-100%)' }),
+        animate('.3s ease-in')
+      ]),
+
+    ]),
+
+  ]
 })
-export class TrackerViewComponent implements OnInit {
+export class TrackerViewComponent implements OnInit, OnDestroy {
   options = {
     fixed: true,
     bottom: 0,
@@ -25,20 +41,31 @@ export class TrackerViewComponent implements OnInit {
   };
   searchOpened: WritableSignal<boolean> = signal(false);
 
-  currentMarker: bigint | undefined;
-  currentStudies: Map<bigint, StudyDTO> | undefined;
+  currentMarker?: bigint;
+  currentStudies?: Map<bigint, StudyDTO>;
 
-  displayedEvents: EventJsonDTO[] | undefined;
+  displayedEvents?: EventJsonDTO[];
 
-  currentStudy: StudyDTO | undefined;
-  studyEventMessage: StudyDTO | undefined;
+  currentStudy?: StudyDTO;
+  studyEventMessage?: StudyDTO;
+  @ViewChild(MatSidenav) sidenav!: MatSidenav;
 
-  constructor() {
+  buttonFlag: WritableSignal<boolean> = signal(false);
+
+  breakpointSubcriptions: Subscription[] = [];
+
+  constructor(private breakpointObserver: BreakpointObserver) {
     return;
   }
 
   ngOnInit(): void {
     return;
+  }
+
+  ngOnDestroy(): void {
+    for (const subscription of this.breakpointSubcriptions) {
+      subscription.unsubscribe();
+    }
   }
 
   initializeSearchNav(): void {
@@ -49,7 +76,7 @@ export class TrackerViewComponent implements OnInit {
   switchSearchMode(): void {
     return;
   }
-  // This message is received on the event component
+  // NOTE: This message is received on the event component
   studyMessage(study: StudyDTO): void {
     this.currentStudy = study;
   }
@@ -63,7 +90,18 @@ export class TrackerViewComponent implements OnInit {
     this.currentMarker = studyId;
   }
 
-  toggleLeft(): void {
-    return;
+  closeSearchNav(): void {
+    this.sidenav.close();
+    // this.sidenav.close().then(() => {
+    //   console.log("closed nav.");
+    //   this.buttonFlag.set(true);
+    // });
+    this.buttonFlag.set(true);
+  }
+
+  openSearchNav(): void {
+    this.sidenav.open().then(() => {
+      this.buttonFlag.set(false);
+    })
   }
 }

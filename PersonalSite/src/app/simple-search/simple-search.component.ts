@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, signal, WritableSignal, Output, EventEmitter, Input, OnChanges, SimpleChanges, AfterViewInit } from '@angular/core';
+import { Component, OnInit, ViewChild, signal, WritableSignal, Output, EventEmitter, Input, OnChanges, SimpleChanges, AfterViewInit, OnDestroy } from '@angular/core';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
 import { Observable, Subject, reduce, distinctUntilChanged, debounceTime, map, catchError, of, concat, EMPTY } from 'rxjs';
@@ -13,7 +13,7 @@ import { MatOptionModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { NgIf, NgFor, AsyncPipe, DatePipe } from '@angular/common';
+import { NgIf, NgFor, AsyncPipe, DatePipe, NgStyle } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -21,8 +21,8 @@ import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/ma
 import { AutoComplete } from '../auto-complete/auto-complete';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/layout';
 
-// type pageState = "loading" | "loaded";
 
 interface WikiLinks {
   title: string;
@@ -39,12 +39,12 @@ interface WikiLinks {
     FormsModule, ReactiveFormsModule,
     MatFormFieldModule, MatInputModule,
     MatSelectModule, MatOptionModule,
-    MatExpansionModule, MatIconModule,
+    MatExpansionModule, MatIconModule, NgStyle,
     NgFor, MatPaginatorModule, MatDividerModule,
     AsyncPipe, DatePipe, MatProgressSpinnerModule,
     MatRadioModule, MatButtonModule, MatAutocompleteModule]
 })
-export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit {
+export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
 
   studies: MatTableDataSource<StudyDTO> | undefined;
   displayedColumns = ["name"];
@@ -60,28 +60,58 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit {
   defaultSortColumn = "name";
   defaultFilterColumn = "name";
   filterTextChanged: Subject<string> = new Subject<string>();
-  // filterTextValue: string = "";
 
   currentOptions: WritableSignal<string[]> = signal([]);
   studiesLoaded: WritableSignal<boolean> = signal(false);
+
   // This form group is the source of truth
   searchForm = new FormGroup({
     filterQuery: new FormControl<string>("", { nonNullable: true }),
     dropDownList: new FormControl<"asc" | "desc">("asc", { nonNullable: true }),
   });
 
-
   @ViewChild(MatPaginator) paginator!: MatPaginator;
+
   // NOTE: This message is sent to the tracker component and is then sent to the map component
   @Output() panToMarkerEvent = new EventEmitter<bigint>();
   @Output() componentInitialized = new EventEmitter<true>();
+  @Output() closeComponent = new EventEmitter<true>();
+
   @Input() allStudies?: Map<bigint, StudyDTO>;
   studyNames: string[] = [];
+
+  // We can use the breakpoint observer to change the expanded and collapsed height dynamically.
+  breakpointMatches: WritableSignal<boolean> = signal(false);
+  screenChange?: Observable<boolean>;
+
+  smallHeaderStyle = {
+    'min-width': '200px',
+    'max-width': '500px',
+    'word-break': 'break-word'
+  }
+
+  largeHeaderStyle = {
+    'width': '500px'
+  }
+
+  smallContentStyle = {
+    'min-width': '200px',
+    'max-width': '450px',
+    'word-break': 'break-word'
+  }
+
+  largeContentStyle = {
+    'width': '450px',
+    'word-break': 'break-word'
+  }
 
   constructor(
     private studyService: StudyService,
     private enaService: ENAAPIService,
-    private wikipediaService: WikipediaSearchService) {
+    private wikipediaService: WikipediaSearchService,
+    private breakpointObserver: BreakpointObserver,
+  ) {
+    return;
   }
 
   ngOnInit(): void {
@@ -89,7 +119,21 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit {
       this.commonNames$.push(undefined);
       this.wikipediaLinks$.push(undefined);
     }
+
+    // TODO: When an location is panned to, toggle the sidenav off.
+    // On smaller screens, make sure the two sidenavs are not open at the same time.
+    // Refactor these changes to the right sidenav.
+    // The map cuts off at the bottom currently
+    // Finish the events forms and its validation.
+    // Get to work on displaying event data?
     this.loadData();
+    this.screenChange = this.breakpointObserver
+      .observe([Breakpoints.XSmall, Breakpoints.Small]).pipe(
+        map((state: BreakpointState) => {
+          this.breakpointMatches.set(state.matches)
+          return state.matches;
+        }),
+      );
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -99,9 +143,8 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit {
         continue;
       }
       switch (propertyName) {
-        // This message originates
+        // INFO: This component recieves studies retreived from the map component to use autocomplete.
         case "allStudies":
-          console.log("Received allStudies message in simple search.");
           this.allStudies = currentValue as Map<bigint, StudyDTO>;
           this.studyNames = Array.from(this.allStudies.values()).map(value => value.name);
           this.initializeAutoComplete(this.studyNames);
@@ -114,6 +157,14 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit {
 
   ngAfterViewInit(): void {
     this.componentInitialized.emit(true);
+  }
+
+  ngOnDestroy(): void {
+    return;
+  }
+
+  emitCloseComponentMessage(): void {
+    this.closeComponent.emit(true);
   }
 
   getAutoCompleteOptions(query: string): string[] {
@@ -164,7 +215,12 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit {
   // Find a study with no vald location listed
   panToMarker(studyId: bigint): void {
     this.panToMarkerEvent.emit(studyId);
+    // TODO: This message emits for smaller screens.
+    if (this.breakpointMatches()) {
+      this.emitCloseComponentMessage();
+    }
   }
+
   // getters
   get filterQuery(): FormControl<string> {
     return this.searchForm.controls.filterQuery;
@@ -334,6 +390,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit {
           console.error(error);
         }
       }
-      )
+      );
   }
 }

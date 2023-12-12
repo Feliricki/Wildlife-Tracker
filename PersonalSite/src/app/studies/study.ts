@@ -1,26 +1,30 @@
+// TODO: Make most of these fields optional
+// consider using a helper type to make fields
+// undefined or required based on where this
+// interface is being used.
 export interface StudyDTO {
-  acknowledgements: string;
-  citation: string;
-  grantsUsed: string;
+  readonly acknowledgements: string;
+  readonly citation: string;
+  readonly grantsUsed: string;
 
-  id: bigint;
-  licenseType: string;
-  mainLocationLat?: number;
-  mainLocationLon?: number;
-  name: string;
+  readonly id: bigint;
+  readonly licenseType: string;
+  readonly mainLocationLat?: number;
+  readonly mainLocationLon?: number;
+  readonly name: string;
 
-  numberOfDeployments: number;
-  numberOfIndividuals: number;
-  numberOfTags: number;
+  readonly numberOfDeployments: number;
+  readonly numberOfIndividuals: number;
+  readonly numberOfTags: number;
 
-  studyObjective: string;
+  readonly studyObjective: string;
 
-  timestampFirstDeployedLocation?: Date;
-  timestampLastDeployedLocation?: Date;
-  numberOfDeployedLocations: number;
+  readonly timestampFirstDeployedLocation?: Date;
+  readonly timestampLastDeployedLocation?: Date;
+  readonly numberOfDeployedLocations: number;
 
-  taxonIds?: string;
-  sensorTypeIds?: string;
+  readonly taxonIds?: string;
+  readonly sensorTypeIds?: string;
 
-  contactPersonName: string;
+  readonly contactPersonName: string;
 }

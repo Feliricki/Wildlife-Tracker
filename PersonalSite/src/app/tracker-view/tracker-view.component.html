@@ -1,43 +1,45 @@
 <!-- <div class="main-content"> -->
 <mat-sidenav-container class="sidenav-container" [hasBackdrop]="false">
 
-  <mat-sidenav layout="row" #sidenav mode="over" [opened]="false" [fixedInViewport]="true" fixedTopGap="50"
-    class="sidenav" [disableClose]="true">
+  <!-- <div class="button-container"> -->
+  <!-- NOTE: Change the opened state to false later. -->
+  <mat-sidenav #sidenav mode="over" [opened]="true" [fixedInViewport]="true" fixedTopGap="50" class="sidenav"
+    [disableClose]="true">
 
-    @if(sidenav.opened || searchOpened()){
-    <app-simple-search [hidden]="!searchOpened" [allStudies]="currentStudies"
-      (componentInitialized)="initializeSearchNav()" (panToMarkerEvent)="panToMarker($event)"></app-simple-search>
-    }
-    <!-- @placeholder { -->
-    <!-- <span>placeholder</span> -->
-    <!-- } -->
+    <div class="search-container">
+
+      <!-- <button mat-mini-fab class="mat-elevation-z0" id="toggle-button"><mat-icon>close</mat-icon></button> -->
+      @if(sidenav.opened || searchOpened()){
+      <app-simple-search [hidden]="!searchOpened" [allStudies]="currentStudies" (closeComponent)="closeSearchNav()"
+        (componentInitialized)="initializeSearchNav()" (panToMarkerEvent)="panToMarker($event)"></app-simple-search>
+      }
+      <!-- <button mat-icon-button class="mat-elevation-z0" id="toggle-button"><mat-icon>close</mat-icon></button> -->
+      <!-- <button mat-icon-button class="toggle-button"><mat-icon>close</mat-icon></button> -->
+    </div>
   </mat-sidenav>
-
   <mat-sidenav-content class="sidenav-content">
 
-    <!-- <button mat-button class="toggle-button">Button</button> -->
     <!-- NOTE: This is another sidenav within the outer sidenav -->
     <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="side"
       [fixedInViewport]="true">
 
       @if (false){
-      <!-- NOTE: Here, a specific study is toggled and has it's events displaye or removed from the map. -->
       <app-events [currentStudy]="currentStudy"></app-events>
       }
     </mat-sidenav>
 
-
     <mat-sidenav-content class="sidenav-content-right">
 
-      <div class="button-container">
-        <button mat-fab (click)="sidenav.toggle()" class="toggle-button">Button</button>
-      </div>
-      <!-- content: -->
+      @if (buttonFlag() === true){
+      <button mat-fab [hidden]="!buttonFlag()" @toggleClick (click)="openSearchNav()"
+        class="toggle-button"><mat-icon>chevron_right</mat-icon></button>
+      }
+
+      <!-- TODO: Move the toggle button belongs the search component --> <!-- content: -->
       <app-google-map (studiesEmitter)="studiesMessage($event)" (studyEmitter)="studyMessage($event)"
         [focusedMarker]="currentMarker"></app-google-map>
 
     </mat-sidenav-content>
 
   </mat-sidenav-content>
-
 </mat-sidenav-container>

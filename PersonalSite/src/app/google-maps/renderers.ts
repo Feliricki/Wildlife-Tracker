@@ -34,9 +34,9 @@ export class CustomRenderer1 implements Renderer {
       // divContainer.style['color'] = 'white';
 
       const imageIcon = document.createElement('img');
-      imageIcon.src = '../../assets/location-pin-noglyph.png';
-      imageIcon.style['height'] = '45px';
-      imageIcon.style['width'] = '45px';
+      imageIcon.src = '../../assets/location-pin-noglyph-smaller.png';
+      // imageIcon.style['height'] = '45px';
+      // imageIcon.style['width'] = '45px';
 
       const span = document.createElement('span');
       span.style['position'] = 'absolute';

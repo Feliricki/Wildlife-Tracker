@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using System.Linq.Dynamic.Core;
 using System.Reflection;
+using System.Linq.Expressions;
 
 //using System.Linq.
 //using EFCore.BulkExtensions;
@@ -60,7 +61,7 @@ namespace PersonalSiteAPI.DTO
         {
             var list = source.ToList();
             var queryable = list.AsQueryable();
-            
+            Console.WriteLine("Creating apiResult synchronously");
             // var filters = new List<Func<T, bool>>();
             
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery) && IsValidProperty(filterColumn))
@@ -125,17 +126,14 @@ namespace PersonalSiteAPI.DTO
             string? filterColumn = null,
             string? filterQuery = null
             )
-        {
+        {            
             // TODO - Test the runtime of the creation method with pulling the entire table vs. sorting, filtering and paginating on the database.
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery)
                 && IsValidProperty(filterColumn))
-            {
+            {                
                 Console.WriteLine($"Prefix search: Checking if {filterColumn} start with {filterQuery} (Case insensitive)");
-                source = source.Where(
-                    string.Format("{0}.StartsWith(@0, @1)",
-                    filterColumn),
-                    filterQuery,
-                    StringComparison.InvariantCultureIgnoreCase);
+                Expression<Func<string, bool>> stringExpression = (a) => a.StartsWith(filterQuery, StringComparison.InvariantCultureIgnoreCase);
+                source = source.Where(stringExpression);
             }
             Console.WriteLine("Count the number of records in the database.");
             var count = await source.CountAsync();

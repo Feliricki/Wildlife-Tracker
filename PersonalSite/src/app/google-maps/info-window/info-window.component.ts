@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,7 +17,7 @@ import { StudyDTO } from 'src/app/studies/study';
     `,
   styleUrl: './info-window.component.css'
 })
-export class InfoWindowComponent {
+export class InfoWindowComponent implements OnDestroy {
   @Input()
   currentStudy?: StudyDTO;
   @Input()
@@ -31,5 +31,9 @@ export class InfoWindowComponent {
     console.log("Emitting event request from info window component.");
     console.log(this.eventRequest);
     this.eventRequest?.emit(studyDTO);
+  }
+
+  ngOnDestroy(): void {
+    return;
   }
 }

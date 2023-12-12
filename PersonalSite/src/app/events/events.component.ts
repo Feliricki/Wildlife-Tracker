@@ -57,9 +57,8 @@ export class EventsComponent implements OnChanges, AfterViewInit {
   currentSortOrder: 'asc' | 'desc' = 'asc';
   currentLocationSensors: string[] = [];
 
-  // @Output() studyEventEmitter = new EventEmitter<Observable<EventJsonDTO>>();
-
   @ViewChild(MatSort) sort!: MatSort;
+
   eventForm = this.formBuilder.nonNullable.group({
 
     dateRange: this.formBuilder.group({
@@ -176,7 +175,7 @@ export class EventsComponent implements OnChanges, AfterViewInit {
   }
 
   // TODO: Refactor this to use the id.
-  trackById(index: number, form: FormControl<boolean>): string {
+  trackById(index: number, _: FormControl<boolean>): string {
     // console.log(`tracking by index ${index} and value ${form.value}`);
     return `${index}`;
   }

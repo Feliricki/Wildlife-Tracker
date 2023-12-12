@@ -1,24 +1,47 @@
-
 .spacer{
     flex: 1 1 auto;
 }
-.search-container {
+
+.first-row {
+  z-index:4;
   display: flex;
-  // position: relative;
-  flex-direction: row;
-  flex-wrap: wrap;
-  // margin: .5em .5em .5em .5em;
+}
+
+// .study-table {
+//   width: 200px;
+// }
+// .study-header-cell {
+//   display: table-cell;
+// }
+//
+// TODO: Switch between a width of 300px and ~500px depending on screen size.
+// #expansion-panel {
+//   // display: table-row;
+//   // width: 300px;
+// }
+
+
+// .header-content {
+//   min-width:100px;
+//   width: 400px;
+// }
+//
+// .expansion-content {
+//   min-width:100px;
+//   width: 450px;
+// }
+
+.search-container {
   margin-top: 1em;
   margin-left: 1em;
+  margin-bottom:.5em;
   // @include mat.input-density(-2); // note: These lines may need to be moved
   // @include mat.all-component-densities(-2);
 }
 
 .mini-button {
-  // outline: none;
   background-color: #efefef;
   color: black;
-  // opacity:1;
 }
 
 .spinner {
@@ -27,13 +50,6 @@
   margin-bottom:60%;
 }
 
-// mat-expansion-header {
-// }
-
-// .dropList {
-//   text-align: right;
-// }
-//
 // .drop-selector {
 //   text-align: right;
 // }
@@ -45,36 +61,4 @@
 // }
 // ::ng-deep .mat-form-field-appearance-outline .mat-form-field-infix {
 //     padding: .1em;
-// }
-
-// .search-input {
-//   /* font-size: 3pt; */
-//   outline-style: solid;
-//   outline-color: black;
-//   width: 50%;
-//   height: 15px;
-// }
-// .dropList-selector {
-//   height: 100%;
-// }
-// .dropList {
-//   width: 170px;
-//   height: 100%;
-//   background-color: lightcyan;
-// }
-// search-input + dropList {
-//   margin-left: 5px;
-// }
-//
-// mat-expansion-panel {
-//   width: 100%;
-// }
-//
-// .study-header-cell {
-//   padding: 0px;
-// }
-// .description-content {
-//   /* overflow-wrap: break-words; */
-//   word-break: break-all;
-//
 // }

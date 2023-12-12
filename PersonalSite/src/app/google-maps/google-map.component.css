@@ -15,10 +15,11 @@
   /* position: fixed; */
   /* display: flex; */
   /* flex-direction:row; */
-  position: fixed;
+  position: absolute;
   /* width:fit-content; */
-  background:green;
-  height:100%;
+  /* background:green; */
+  height: 100%;
+  width: 100%;
   /* width: 500px; */
   /* display:flex; */
   /* height: 500px; */
