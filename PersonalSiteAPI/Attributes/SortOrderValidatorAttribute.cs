@@ -4,7 +4,7 @@ namespace PersonalSiteAPI.Attributes
 {
     public class SortOrderValidatorAttribute: ValidationAttribute
     {
-        public string[] AllowedValues { get; set; } = new string[] { "asc", "desc", string.Empty };
+        private string[] AllowedValues { get; set; } = { "asc", "desc", string.Empty };
 
         public SortOrderValidatorAttribute() : base("Value must be one of the following: {0}.") { }
 

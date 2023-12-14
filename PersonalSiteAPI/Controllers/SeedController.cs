@@ -164,7 +164,7 @@ namespace PersonalSiteAPI.Controllers
                 int rowsAdded = 0;
                 int rowsSkipped = 0;
                 int rowsFiltered = 0;
-                var tagType = new TagTypes();
+
                 await foreach (var record in records)
                 {
                     // Filter invalid rows
@@ -177,7 +177,7 @@ namespace PersonalSiteAPI.Controllers
                     }
                     // Filter rows that can't be displayed or downloaded
                     if (string.IsNullOrEmpty(record.SensorTypeIds) ||
-                        !tagType.IsLocationSensor(record.SensorTypeIds) ||
+                        !TagTypes.IsLocationSensor(record.SensorTypeIds) ||
                         !record.IHaveDownloadAccess ||
                         !record.ICanSeeData
                         )
@@ -224,7 +224,7 @@ namespace PersonalSiteAPI.Controllers
                     _context.Studies.Add(study);
                     rowsAdded++;
                 }
-                //_context.Database.SetCommandTimeout(60);
+
                 using var transaction = _context.Database.BeginTransaction();
                 _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies ON");
                 var dbChanges = await _context.SaveChangesAsync();

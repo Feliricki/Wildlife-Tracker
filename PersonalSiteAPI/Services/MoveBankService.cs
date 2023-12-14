@@ -272,6 +272,8 @@ namespace PersonalSiteAPI.Services
         // 1) the study id
         // 2) At least one 'individual_local_identifiers'
         // 3) A sensor type (usually 'gps')
+        // 4) If the number of individuals exceeds a certain threshold than it may be prudent to enforce an event reduction profile.
+        
         // times are provided in milliseconds since 1970-01-01 UTC 
         // Coordinates are in WGS84 format.
         // NOTE: This method may need a direct request analogue as a failsafe
@@ -303,6 +305,7 @@ namespace PersonalSiteAPI.Services
                 ["study_id"] = studyId.ToString(),
                 ["sensor_type"] = sensorType,
             });
+            
             foreach (var localIdentifier in individualLocalIdentifiers)
             {
                 uri = QueryHelpers.AddQueryString(uri, "individual_local_identifiers", localIdentifier);
@@ -337,7 +340,7 @@ namespace PersonalSiteAPI.Services
         }
 
         // Entity type is one of the following: "study", "individual" or "tag".
-        // The return type is the new response message and wether the license terms were accepted
+        // The return type is the new response message and whether the license terms were accepted
         private async Task<Tuple<HttpResponseMessage, bool>> GetPermission(
             //long studyId,
             //string entityType,

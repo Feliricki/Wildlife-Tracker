@@ -19,10 +19,14 @@ using PersonalSiteAPI.Services;
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO.Enumeration;
 using System.Linq.Expressions;
 using System.Text;
+using Azure.Core.GeoJson;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using PersonalSiteAPI.DTO.GeoJSON;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -427,7 +431,7 @@ namespace PersonalSiteAPI.Controllers
         }
         
         // TODO: Forget about caching this endpoint.
-        // TODO: This endpoint is actually untested as of now.
+        // TODO: Test this endpoint.
         // 1) Check model state for validation state
         // 2) Sort data by timestamp.
         // 3) Include DateTime objects
@@ -441,26 +445,28 @@ namespace PersonalSiteAPI.Controllers
             long? timestampStart = null,
             long? timestampEnd = null,
             string? attributes = null,
-            string? eventProfiles = null)
+            string? eventProfiles = null,
+            string? geoJsonFormat = null)
         {
             try
             {
                 var parameters = new Dictionary<string, string?>();
 
-                if (maxEventsPerIndividual is int numEvents)
+                if (maxEventsPerIndividual is not null)
                 {
-                    parameters.Add("max_events_per_individual", numEvents.ToString());
+                    parameters.Add("max_events_per_individual", maxEventsPerIndividual.ToString());
                 }
-
+                // TODO: JsonRequest has support for additional attributes if they're provided.
+                // Consider using this parameter.
                 if (attributes is not null)
                 {
                     parameters.Add("attributes", attributes);
                 }
                 // These timestamp as given in Unix Epoch time
-                if (timestampStart is long start && timestampEnd is long end && end >= start)
+                if (timestampStart is not null && timestampEnd is not null && timestampEnd >= timestampStart)
                 {
-                    parameters.Add("timestamp_start", start.ToString());
-                    parameters.Add("timestamp_end", end.ToString());
+                    parameters.Add("timestamp_start", timestampStart.ToString());
+                    parameters.Add("timestamp_end", timestampEnd.ToString());
                 }
 
                 var response = await _moveBankService.JsonEventData(
@@ -476,6 +482,7 @@ namespace PersonalSiteAPI.Controllers
                 var responseType = "json";
                 if (responseContentArray.Length == 0)
                 {
+                    Console.WriteLine("Sending csv request for event data point.");
                     response = await _moveBankService.DirectRequest(
                         entityType: "event",
                         studyId: studyId,
@@ -485,19 +492,34 @@ namespace PersonalSiteAPI.Controllers
                         );
                     responseType = "csv";
                 }
+
+                Console.WriteLine($"Response type = {responseType} for event data endpoint.");
                 if (response is null)
                 {
                     throw new InvalidOperationException("Null response from movebank service");
                 }
                 var responseString = Encoding.UTF8.GetString(responseContentArray);
                 // TODO: This pattern is incomplete for the "csv" case
-                // TODO: Consider sending more fields to the frontend. (if I ever switch to only using CSV requests)
-                var data = responseType switch
+                // If a CSV request was sent then deserialize using csvHelper. 
+                // Consider sending more fields to the frontend. (if I ever switch to only using CSV requests)
+                EventJsonDTO? data;
+                if (responseType == "json")
                 {
-                    "json" => System.Text.Json.JsonSerializer.Deserialize<EventJsonDTO>(responseString),
-                    "csv" => System.Text.Json.JsonSerializer.Deserialize<EventJsonDTO>(responseString),
-                    _ => null
-                };
+                    data = JsonSerializer.Deserialize<EventJsonDTO>(responseString);
+                }
+                else
+                {
+                    Console.WriteLine("No Content Available For Public Viewing.");
+                    // return StatusCode(StatusCodes.Status204NoContent);
+                    return StatusCode(StatusCodes.Status403Forbidden);
+                    // If User is authorized, then considering sending another request with more permissions
+                    // and return a GeoJSON response.
+                    
+                    // var memStream = new MemoryStream(responseContentArray);
+                    // using var stream = new StreamReader(memStream, Encoding.UTF8);
+                    // using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
+                    // data = null;
+                }
                 
                 if (data is null)
                 {
@@ -505,20 +527,62 @@ namespace PersonalSiteAPI.Controllers
                 }
                 
                 // TODO: Consider returning the data in pairs to prevent more work in the frontend.
-                foreach (var individualEvents in data.IndividualEvents)
+                // TODO: Convert to GeoJSON format and sort the collection by timestamps.
+                if (geoJsonFormat is null)
                 {
-                    // Purpose of using this method is to avoid allocating more memory than necessary.
-                    individualEvents.Locations.Sort((x, y) => x.Timestamp.CompareTo(y.Timestamp));
-                    foreach (var location in individualEvents.Locations)
-                    {
-                        // NOTE: this conversion is untested.
-                        location.Date = DateTimeOffset.FromUnixTimeMilliseconds(location.Timestamp).LocalDateTime;
-                    }
-                    
+                    // Unsorted and unprocessed data.
+                    Console.WriteLine("Returning unprocessed json data");
+                    return new JsonResult(data);
                 }
-                return data;
-                
 
+                var linePropertiesFunc = (LocationJsonDTO from, LocationJsonDTO to) =>
+                {
+                    return new LineStringProperties
+                    {
+                        From = TimestampToDateTime(from.Timestamp),
+                        To = TimestampToDateTime(to.Timestamp),
+                        Content = $"{FormatTimestamp(from.Timestamp)}-{FormatTimestamp(to.Timestamp)}",
+                        Distance = EuclideanDistance(from, to)
+                    };
+
+                    double EuclideanDistance(LocationJsonDTO location1, LocationJsonDTO location2)
+                    {
+                        return Math.Sqrt(Math.Pow(location1.LocationLat - location2.LocationLat, 2) +
+                                         Math.Pow(location2.LocationLong - location2.LocationLong, 2));
+                    }
+                };
+                
+                data.IndividualEvents.ForEach(l => l.Locations.Sort((x, y) => x.Timestamp.CompareTo(y.Timestamp)));
+                // TODO: Refactor collection to pass a function to generate properties.
+                // TODO: Consider using the constructor to let the compiler infer the type of the object.
+                // TODO: Rather than creating an array of FeatureCollection which is not supported, we can combine then
+                // into one large collection then in the metadata including the length of consecutive events (we store events from individuals consecutively.)
+                object collection;
+                switch (geoJsonFormat.ToLower())
+                {
+                    case "linestring":
+                        var lineCollections = LineStringFeatureCollection<LineStringProperties>
+                            .CreateManyLineStringsCollections(data, linePropertiesFunc);
+                        collection = lineCollections;
+                        break;
+                    
+                    case "point":
+                        
+                        var propertyFunc = (LocationJsonDTO location) => new PointProperties
+                        {
+                            Date = TimestampToDateTime(location.Timestamp),
+                            DateString = FormatTimestamp(location.Timestamp),
+                        };
+                        var pointCollection = PointFeatureCollection<object>
+                            .CreateManyPointCollections(data, propertyFunc);
+                        collection = pointCollection;
+                        break;
+                    
+                    default:
+                        throw new ArgumentException("GeoJSON parameter was passed an invalid value.");
+                }
+                
+                return new JsonResult(collection);
             }
             catch (Exception error)
             {
@@ -526,10 +590,38 @@ namespace PersonalSiteAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
+        
+        // private static LineStringProperties LinePropertiesFunc(LocationJsonDTO from, LocationJsonDTO to)
+        // {
+        //     double EuclideanDistance(LocationJsonDTO location1, LocationJsonDTO location2)
+        //     {
+        //         return Math.Sqrt(Math.Pow(location1.LocationLat - location2.LocationLat, 2) +
+        //                          Math.Pow(location2.LocationLong - location2.LocationLong, 2));
+        //     }
+        //     
+        //     return new LineStringProperties
+        //     {
+        //         From = TimestampToDateTime(from.Timestamp),
+        //         To = TimestampToDateTime(to.Timestamp),
+        //         Content = $"{FormatTimestamp(from.Timestamp)}-{FormatTimestamp(to.Timestamp)}",
+        //         Distance = EuclideanDistance(from, to)
+        //     };
+        // }
 
-        private readonly Expression<Func<Studies, bool>> _hasDownloadAccess = study => study.IHaveDownloadAccess;
+        private static DateTime TimestampToDateTime(long timestamp)
+        {
+            return DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime;
+        }
+        private static string FormatTimestamp(long timestamp)
+        {
+            var date = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime;
+            return "Date: " + date.ToLongDateString() + " Time: " + date.ToLongTimeString();
+        }
+
+
         private readonly Expression<Func<Studies, bool>> _validLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
-        private readonly Expression<Func<StudyDTO, bool>> _validLicenseExpDto = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
+        // private readonly Expression<Func<Studies, bool>> _hasDownloadAccess = study => study.IHaveDownloadAccess;
+        // private readonly Expression<Func<StudyDTO, bool>> _validLicenseExpDto = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
 
         private static bool ValidLicense(Studies study)
         {

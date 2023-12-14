@@ -1,4 +1,6 @@
-﻿namespace PersonalSiteAPI.Constants
+﻿using System.Collections.ObjectModel;
+
+namespace PersonalSiteAPI.Constants
 {
     
     public class TagInfo
@@ -159,7 +161,7 @@
                 Name = "Proximity"
             },
         };
-        public HashSet<string> locationSensors = new HashSet<string>()
+        private static readonly HashSet<string> locationSensors = new HashSet<string>()
         {
             "GPS",
             "Bird Ring",
@@ -172,7 +174,7 @@
             "Natural Mark",
         };
 
-        public Dictionary<long, string> idToSensor = new Dictionary<long, string>()
+        private static readonly Dictionary<long, string> IdToSensor = new Dictionary<long, string>()
         {
             [397] = "bird-ring",
             [653] = "gps",
@@ -212,9 +214,13 @@
             SigfoxGeolocation = 2299894820,
             Proximity = 2645090675
         };
-        
 
-        public bool IsLocationSensor(string? location_sensor_ids)
+        public static string? SensorIdToName(long sensorId)
+        {
+            return IdToSensor.TryGetValue(sensorId, out var result) ? result : null;
+        }
+
+        public static bool IsLocationSensor(string? location_sensor_ids)
         {
             if (location_sensor_ids == null)
             {

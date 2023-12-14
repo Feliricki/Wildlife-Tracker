@@ -1,21 +1,26 @@
 import { GoogleMapsOverlay as DeckOverlay } from '@deck.gl/google-maps/typed';
-import { LineLayer } from '@deck.gl/layers/typed';
-import {EventJsonDTO} from "../studies/JsonResults/EventJsonDTO";
+import { GeoJsonLayer } from '@deck.gl/layers/typed';
+import type * as GeoJSON from "geojson";
 
-
-interface Point {
-  timestamp: bigint;
-  date: Date;
-  lat: number;
-  lng: number;
-  // Optional fields
-  taxonId?: string;
+// This is extra data used for a FeatureCollection.
+// TODO: This is probably in need of a rename here and in the backend,
+// TODO: Use the name "CollectionProperties" and the other fields name "MetaData".
+interface MetaData {
+  count: number;
+  pairs?: number;
+  sensorsUsed?: string;
+  localIdentifier: string;
+  Taxa: string;
 }
-interface Path {
-  inbound: number;
-  outbound: number;
-  from: Point[];
-  to: Point[];
+interface PointProperties {
+  date: Date;
+  dataString: string;
+}
+interface LineStringProperties {
+  from: Date;
+  to: Date;
+  Content: string;
+  Distance: number;
 }
 
 export class GoogleMapOverlay {
@@ -26,44 +31,15 @@ export class GoogleMapOverlay {
     this.deckOverlay = deckOverlay;
   }
 
-  preprocessEvents(events: EventJsonDTO): Path[] {
-    const allEvents = events.IndividualEvents;
-    const paths: Path[] = [];
-
-    for (const individualEvents of allEvents){
-
-      const path: Path = {
-        inbound: individualEvents.locations.length,
-        outbound: individualEvents.locations.length,
-        from: [],
-        to: [],
-      };
-
-      for (const locationEvent of individualEvents.locations){
-        const point : Point = {
-          timestamp: locationEvent.timestamp,
-          date: new Date(locationEvent.timestamp.toString()),
-          lat: locationEvent.locationLat,
-          lng: locationEvent.locationLong,
-        };
-        path.from.push(point);
-      }
-    }
-
-    return paths;
-  }
   // TODO: Ideally, we want clear the map when a new source is added and replace the source with the new information.
-  // An implicit assumption is that the events are sorted by date (using their timestamp).
   // TODO: The backend should preprocess this data into the following format.
-  // The datetime object can be generated on the frontend and used as a tooltip.
-  // Split up the responsibility into the separate methods and one updateAll method.
-  addLineLayer(events: EventJsonDTO) {
-    const lineLayer = new LineLayer({
+  // An implicit assumption is that the events are sorted by date (using their timestamp).
+  addLineLayer(lineStrings: GeoJSON.FeatureCollection<GeoJSON.LineString, LineStringProperties>) {
+    const lineLayer  = new GeoJsonLayer({
       id: 'event-path',
-      data: events,
+      data: lineStrings,
       pickable: true,
       getWidth: 30,
-
     });
 
     return lineLayer;

@@ -166,7 +166,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
             continue;
           }
 
-          // const imageIcon = this.markerImage;
           const imageIcon = document.createElement('img');
           imageIcon.src = '../../assets/location-pin2-small.png';
 
@@ -180,7 +179,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
             title: studyDTO.name,
           });
 
-          // NOTE: This is where the infowindow logic is handled.
+          // NOTE: This is where the info window logic is handled.
           marker.addListener("click", () => {
 
             if (this.infoWindow === undefined) {
@@ -211,7 +210,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           renderer: new CustomRenderer1(),
           algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
           onClusterClick: (_, cluster, map) => {
-            // If any cluster is clicked, then the infowindow is restored to its initial state more or less
+            // If any cluster is clicked, then the info window is restored to its initial state more or less
             if (this.infoWindow && this.infoWindow.get("toggle") === true) {
               this.infoWindow.close();
               this.infoWindow.set("toggle", false);
