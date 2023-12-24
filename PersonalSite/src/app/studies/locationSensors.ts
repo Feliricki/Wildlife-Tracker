@@ -18,9 +18,27 @@ export enum LocationSensors {
     SigfoxGeolocation = 2299894820,
     Proximity = 2645090675
 }
+const sensors = ["gps", "bird ring", "radio transmitter", "argos doppler shift",
+        "natural mark", "solar geolocator", "acoustic telemetry", "sigfox geolocation"];
 
 export function isLocationSensor(sensor: string): boolean {
-    const sensors = ["gps", "bird ring", "radio transmitter", "argos doppler shift",
-        "natural mark", "solar geolocator", "acoustic telemetry", "sigfox geolocation"];
-    return sensors.some(value => sensor.toLowerCase() === value);
+        return sensors.some(value => sensor.toLowerCase() === value);
+}
+
+export function containsLocationSensor(sensors: string | string[]): boolean {
+  if (typeof sensors === "string"){
+    sensors = sensors.trim().split(',');
+  }
+  return sensors.some(value => isLocationSensor(value));
+}
+
+export function filterForLocationsSensors(sensors?: string | string[]): string[] {
+  if (sensors === undefined){
+    return [];
+  }
+  if (typeof sensors === "string"){
+    sensors = sensors.trim().split(',');
+  }
+  const filtered = sensors.filter(value => isLocationSensor(value));
+  return filtered;
 }

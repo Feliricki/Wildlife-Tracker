@@ -11,30 +11,32 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NgElement, WithProperties } from '@angular/elements';
 import { InfoWindowComponent } from './info-window/info-window.component';
+import { GoogleMapOverlayController, LineStringFeatureCollection } from '../deckGL/GoogleOverlay';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
-// import type * as GeoJSON from "geojson";
-// import { AccessorFunction, Position } from '@deck.gl/core/typed';
-import { GoogleMapsOverlay } from '@deck.gl/google-maps/typed';
-import { GeoJsonLayer } from '@deck.gl/layers/typed';
-// import { TripsLayer } from '@deck.gl/geo-layers/typed';
-// import { ArcLayer } from '@deck.gl/layers/typed';
-
-// type Properties = { scalerank: number, mag: number };
-// type Feature = GeoJSON.Feature<GeoJSON.Point, Properties>;
-// type Data = GeoJSON.FeatureCollection<GeoJSON.Point, Properties>;
+type MapState =
+  'initial' |
+  'loading' |
+  'loaded' |
+  'error' |
+  'rate-limited';
 
 @Component({
   selector: 'app-google-map',
   templateUrl: './google-map.component.html',
   styleUrls: ['./google-map.component.css'],
   standalone: true,
-  imports: [NgIf, AsyncPipe, MatButtonModule, MatIconModule]
+  imports: [
+    NgIf, AsyncPipe, MatButtonModule,
+    MatIconModule, MatProgressSpinnerModule]
 })
 export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
-  googleDeckOverlay?: GoogleMapsOverlay;
   mainSubscription$?: Subscription;
+  mapState: WritableSignal<MapState> = signal('initial');
 
-  @Input() focusedMarker: bigint | undefined;
+  @Input() focusedMarker?: bigint;
+  @Input() pathEventData$?: Observable<LineStringFeatureCollection[] | null>;
+
   @Output() JsonDataEmitter = new EventEmitter<Observable<JsonResponseData[]>>();
   @Output() componentInitialized = new EventEmitter<true>;
 
@@ -46,8 +48,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     zoom: 4,
     tilt: 30,
     mapId: "ccfbcc384aa699ff", // Vector map
-    // mapTypeId: "hybrid",
-    gestureHandling: "auto",
+    gestureHandling: "auto", // This needs to be set manually.
   };
 
   defaultAlgorithmOptions: SuperClusterOptions = {
@@ -68,8 +69,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   defaultInfoWindowOpenOptions: google.maps.InfoWindowOpenOptions = {
   };
 
-  // apiLoaded = of(false);
-  mapLoaded: WritableSignal<boolean> = signal(false);
   // this api key is restricted
   loader = new Loader({
     apiKey: "AIzaSyB3YlH9v4TYdeP8Qc3x-HA6jRNYiHJKz1s",
@@ -81,22 +80,27 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   // @ViewChild(google.maps.Map)
   studies?: Map<bigint, StudyDTO>;
 
-  // TODO: Make sure this message recieved in the trigger view component
   @Output() studiesEmitter = new EventEmitter<Map<bigint, StudyDTO>>();
   @Output() studyEmitter = new EventEmitter<StudyDTO>();
-  // @Output() eventRequestEmitter = new EventEmitter<StudyDTO>();
+  @Output() mapStateEmitter = new EventEmitter<boolean>();
 
   markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> | undefined;
   mapCluster: MarkerClusterer | undefined;
 
   infoWindow: google.maps.InfoWindow | undefined;
 
+  deckOverlay?: GoogleMapOverlayController;
+
+  // NOTE: New event data in some form will come from the events component.
+  // lineDataStream: BehaviorSubject<Observable<LineStringSource>>;
+  // lineSource: Subscription<>;
+
   constructor(
     private studyService: StudyService) {
   }
 
   ngOnInit(): void {
-    this.initMap();
+    return;
   }
 
   ngAfterViewInit(): void {
@@ -114,6 +118,14 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           console.log(`Panning to ${currentValue}`);
           this.panToMarker(currentValue);
           break;
+
+        // Event data to be returned here in LineFeatureCollection format
+        case "eventObservable":
+          console.log(`Received event observable in google maps component.`);
+          console.log(currentValue);
+          this.pathEventData$ = currentValue as Observable<LineStringFeatureCollection[]>;
+          break;
+
         default:
           break;
       }
@@ -124,8 +136,16 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     this.mainSubscription$?.unsubscribe();
   }
 
-  async initMap(): Promise<boolean> {
+  sendMapState(loaded: boolean): void {
+    this.mapStateEmitter.emit(loaded);
+  }
 
+  async initMap(): Promise<boolean> {
+    if (this.map !== undefined) {
+      return true;
+    }
+
+    this.mapState.set('loading');
     // TODO: Consider loading the neded components only. Refactor is potentially needed to ensure optimal performance.
     const mapRes$ = from(this.loader.importLibrary('maps'));
     const markerRes$ = from(this.loader.importLibrary('marker'));
@@ -219,39 +239,40 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
             map.fitBounds(cluster.bounds as google.maps.LatLngBounds);
           }
         });
-
-        this.googleDeckOverlay = this.initializeDeckOverlay();
-        this.googleDeckOverlay.setMap(this.map);
-
+        this.deckOverlay = new GoogleMapOverlayController(this.map);
+        // In Order,
+        // The mapLoaded flag is changed for templating purposes.
+        // The event emitter is fired and a message is sent to the TrackeView component.
+        this.mapState.set('loaded');
+        this.sendMapState(true);
       },
       error: err => console.error(err)
     });
     return true;
   }
 
-
-  initializeDeckOverlay(): GoogleMapsOverlay {
-
-    const EARTHQUAKES = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson";
-    const earthquakeLayer = new GeoJsonLayer({
-      id: "earthquakes",
-      data: EARTHQUAKES,
-      filled: true,
-      pointRadiusMinPixels: 2,
-      pointRadiusMaxPixels: 200,
-      opacity: 0.4,
-      pointRadiusScale: 0.3,
-      getPointRadius: (f) => Math.pow(10, f.properties!['mag']),
-      getFillColor: [255, 70, 30, 180],
-      autoHighlight: true,
-    })
-
-    const overlay = new GoogleMapsOverlay({
-      layers: [earthquakeLayer],
-    });
-    console.log("Returning overlay.");
-    return overlay;
-  }
+  // initializeDeckOverlay(): GoogleMapsOverlay {
+  //
+  //   const EARTHQUAKES = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson";
+  //   const earthquakeLayer = new GeoJsonLayer({
+  //     id: "earthquakes",
+  //     data: EARTHQUAKES,
+  //     filled: true,
+  //     pointRadiusMinPixels: 2,
+  //     pointRadiusMaxPixels: 200,
+  //     opacity: 0.4,
+  //     pointRadiusScale: 0.3,
+  //     getPointRadius: (f) => Math.pow(10, f.properties!['mag']),
+  //     getFillColor: [255, 70, 30, 180],
+  //     autoHighlight: true,
+  //   })
+  //
+  //   const overlay = new GoogleMapsOverlay({
+  //     layers: [earthquakeLayer],
+  //   });
+  //   console.log("Returning overlay.");
+  //   return overlay;
+  // }
 
   // NOTE: This function serves to create a dynamic button element every time the info window is opened
   // On button click an event is emitted that makes send jsonData to the event component
@@ -266,6 +287,10 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   getJsonData(entityType: "study" | "individual" | "tag", studyId: bigint): Observable<JsonResponseData[]> {
     return this.studyService.jsonRequest(entityType, studyId);
   }
+
+  // getGeoJsonData(studyId: bigint, ) {
+  //   return this.studyService.getGeoJsonEventData(studyId, )
+  // }
 
   // NOTE: This function only affects the map component
   panToMarker(studyId: bigint): void {

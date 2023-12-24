@@ -62,7 +62,8 @@ export class StudiesComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.componentInitialized.emit(true);
+    //this.componentInitialized.emit(true);
+    return;
   }
 
   ngOnDestroy(): void {

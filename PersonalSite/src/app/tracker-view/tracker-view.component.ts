@@ -8,8 +8,9 @@ import { StudyDTO } from '../studies/study';
 import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
 import { MatIconModule } from '@angular/material/icon';
 import { animate, style, transition, trigger } from '@angular/animations';
-import { BreakpointObserver } from '@angular/cdk/layout';
-import { Subscription } from 'rxjs';
+import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/layout';
+import { Observable, firstValueFrom, map } from 'rxjs';
+import { LineStringFeatureCollection } from '../deckGL/GoogleOverlay';
 
 @Component({
   selector: 'app-tracker-view',
@@ -22,14 +23,22 @@ import { Subscription } from 'rxjs';
     MapComponent, MatIconModule],
   animations: [
 
-    trigger('toggleClick', [
+    trigger('leftToggleClick', [
 
       transition('void => *', [
         style({ transform: 'translateX(-100%)' }),
-        animate('.3s ease-in')
+        animate('.3s ease-in'),
       ]),
 
     ]),
+
+    trigger('rightToggleClick', [
+
+      transition('void => *', [
+        style({ transform: 'translateX(100%)' }),
+        animate('.3s ease-in'),
+      ]),
+    ])
 
   ]
 })
@@ -39,7 +48,12 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     bottom: 0,
     top: 0
   };
+  activeMap: 'google' | 'mapbox' = 'google';
+  mapLoaded: WritableSignal<boolean> = signal(false);
+
   searchOpened: WritableSignal<boolean> = signal(false);
+
+  currentEventLineData$?: Observable<LineStringFeatureCollection[] | null>;
 
   currentMarker?: bigint;
   currentStudies?: Map<bigint, StudyDTO>;
@@ -48,41 +62,70 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   currentStudy?: StudyDTO;
   studyEventMessage?: StudyDTO;
-  @ViewChild(MatSidenav) sidenav!: MatSidenav;
 
-  buttonFlag: WritableSignal<boolean> = signal(false);
+  @ViewChild('sidenav', { static: true }) sidenav!: MatSidenav;
+  @ViewChild('rightSidenav', { static: true }) rightNav!: MatSidenav;
+  @ViewChild('eventComponent') event!: EventsComponent;
 
-  breakpointSubcriptions: Subscription[] = [];
+  leftButtonFlag: WritableSignal<boolean> = signal(false);
+  rightButtonFlag: WritableSignal<boolean> = signal(true);
 
-  constructor(private breakpointObserver: BreakpointObserver) {
-    return;
-  }
+  // breakpointSubcription?: Subscription;
+  // breakpointMatches: WritableSignal<boolean> = signal(false);
+
+  constructor(private breakpointObserver: BreakpointObserver) { }
 
   ngOnInit(): void {
+    const observer = this.breakpointObserver
+      .observe([Breakpoints.XSmall, Breakpoints.Small]).pipe(
+        map((state: BreakpointState) => {
+          return state.matches;
+        }),
+      );
+
+    // Close the search component on smaller screens.
+    firstValueFrom(observer).then(value => {
+      if (value) {
+        this.closeSearchNav();
+      }
+    });
     return;
   }
 
   ngOnDestroy(): void {
-    for (const subscription of this.breakpointSubcriptions) {
-      subscription.unsubscribe();
-    }
+    return;
+  }
+
+  updateMapState(state: boolean): void {
+    this.mapLoaded.set(state);
   }
 
   initializeSearchNav(): void {
-    console.log("Initializing search component");
     this.searchOpened.set(true);
   }
 
   switchSearchMode(): void {
     return;
   }
+
+  updateLineStringData(
+    event: Observable<LineStringFeatureCollection[] | null>): void {
+    this.currentEventLineData$ = event;
+  }
+
   // NOTE: This message is received on the event component
+  // On mobile this should close the left sidenav if it's open.
   studyMessage(study: StudyDTO): void {
+    if (study === undefined) {
+      return;
+    }
+    this.openRightNav();
     this.currentStudy = study;
   }
 
+  // NOTE: This message comes from the google maps component and is received in the search component
+  // for it's autocomplete feature.
   studiesMessage(studies: Map<bigint, StudyDTO>): void {
-    console.log(`studiesMessage: size = ${studies.size}`);
     this.currentStudies = studies;
   }
 
@@ -90,18 +133,29 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     this.currentMarker = studyId;
   }
 
+  closeRightNav(): void {
+    this.rightNav.close();
+    this.rightButtonFlag.set(true);
+  }
+
+  openRightNav(): void {
+    console.log("Opening the event component.");
+    if (this.rightNav.opened) {
+      return;
+    }
+    this.rightNav.open().then(() => {
+      this.rightButtonFlag.set(false);
+    });
+  }
+
   closeSearchNav(): void {
     this.sidenav.close();
-    // this.sidenav.close().then(() => {
-    //   console.log("closed nav.");
-    //   this.buttonFlag.set(true);
-    // });
-    this.buttonFlag.set(true);
+    this.leftButtonFlag.set(true);
   }
 
   openSearchNav(): void {
     this.sidenav.open().then(() => {
-      this.buttonFlag.set(false);
+      this.leftButtonFlag.set(false);
     })
   }
 }

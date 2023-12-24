@@ -1,3 +1,5 @@
+@use "@angular/material";
+
 .spacer{
     flex: 1 1 auto;
 }
@@ -5,31 +7,13 @@
 .first-row {
   z-index:4;
   display: flex;
+  // flex-wrap: wrap;
 }
 
-// .study-table {
-//   width: 200px;
-// }
-// .study-header-cell {
-//   display: table-cell;
-// }
-//
-// TODO: Switch between a width of 300px and ~500px depending on screen size.
-// #expansion-panel {
-//   // display: table-row;
-//   // width: 300px;
-// }
+.search-form {
+  flex: 1 1 auto;
+}
 
-
-// .header-content {
-//   min-width:100px;
-//   width: 400px;
-// }
-//
-// .expansion-content {
-//   min-width:100px;
-//   width: 450px;
-// }
 
 .search-container {
   margin-top: 1em;
@@ -48,6 +32,14 @@
   margin-top: 60%;
   margin-left: 40%;
   margin-bottom:60%;
+}
+
+.close-button-container {
+  display: flex;
+  justify-content: right;
+  button {
+    margin-top: 5px;
+  }
 }
 
 // .drop-selector {

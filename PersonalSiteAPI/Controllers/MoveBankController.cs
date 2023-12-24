@@ -19,12 +19,8 @@ using PersonalSiteAPI.Services;
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
-using System.IO.Enumeration;
 using System.Linq.Expressions;
 using System.Text;
-using Azure.Core.GeoJson;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using PersonalSiteAPI.DTO.GeoJSON;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -308,7 +304,7 @@ namespace PersonalSiteAPI.Controllers
                 if (_memoryCache.TryGetValue<object>(cacheKey, out var result) && result is not null)
                 {
                     var sortedResult = SortObjects(sortOrder, result);
-                    return sortedResult is not null ? Ok(sortedResult) : throw new Exception("Invalid Object Found in Cache.");
+                    return sortedResult is not null ? Ok(JsonConvert.SerializeObject(result)) : throw new Exception("Invalid Object Found in Cache.");
                 }
 
                 // TODO: This service method might be in need of a refactor.
@@ -331,7 +327,6 @@ namespace PersonalSiteAPI.Controllers
                 if (responseContentArray.Length == 0)
                 {
                     Console.WriteLine("Sending a csv request in GetJsonData");
-                    //_logger.Log(LogLevel.Information, "Sent a direct request in GetJsonData.");
                     response = await _moveBankService.DirectRequest(
                         studyId: studyId,
                         entityType: entityType,
@@ -368,15 +363,15 @@ namespace PersonalSiteAPI.Controllers
                 {
                     data = entityType.ToLower() switch
                     {
-                        "study" => System.Text.Json.JsonSerializer.Deserialize<List<StudyJsonDTO>>(responseContentArray),
-                        "individual" => System.Text.Json.JsonSerializer.Deserialize<List<IndividualJsonDTO>>(responseContentArray),
-                        "tag" => System.Text.Json.JsonSerializer.Deserialize<List<TagJsonDTO>>(responseContentArray),
+                        "study" => JsonSerializer.Deserialize<List<StudyJsonDTO>>(responseContentArray),
+                        "individual" => JsonSerializer.Deserialize<List<IndividualJsonDTO>>(responseContentArray),
+                        "tag" => JsonSerializer.Deserialize<List<TagJsonDTO>>(responseContentArray),
                         _ => null
                     };
                 }
+
                 // TODO: Sort the data before returning it.
                 // INFO: The object itself is being placed in cache instead of the serialized string.
-                // This is meant to avoid storing the same data twice and to stop the data from being sorted in the frontend.
                 if (data is null)
                 {
                     return BadRequest("Invalid return type");
@@ -389,12 +384,14 @@ namespace PersonalSiteAPI.Controllers
                 }
 
                 var jsonString = JsonConvert.SerializeObject(data);
+                Console.WriteLine(jsonString);
                 var cacheOptions = new MemoryCacheEntryOptions()
                 {
                     Size = 1,
                     SlidingExpiration = TimeSpan.FromMinutes(2),
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
                 };
+
                 _memoryCache.Set(cacheKey, sorted, cacheOptions);
                 return Ok(jsonString);
             }
@@ -429,9 +426,7 @@ namespace PersonalSiteAPI.Controllers
                 _ => null,
             };
         }
-        
-        // TODO: Forget about caching this endpoint.
-        // TODO: Test this endpoint.
+        // TODO: This method needs more validation. 
         // 1) Check model state for validation state
         // 2) Sort data by timestamp.
         // 3) Include DateTime objects
@@ -457,7 +452,6 @@ namespace PersonalSiteAPI.Controllers
                     parameters.Add("max_events_per_individual", maxEventsPerIndividual.ToString());
                 }
                 // TODO: JsonRequest has support for additional attributes if they're provided.
-                // Consider using this parameter.
                 if (attributes is not null)
                 {
                     parameters.Add("attributes", attributes);
@@ -510,7 +504,6 @@ namespace PersonalSiteAPI.Controllers
                 else
                 {
                     Console.WriteLine("No Content Available For Public Viewing.");
-                    // return StatusCode(StatusCodes.Status204NoContent);
                     return StatusCode(StatusCodes.Status403Forbidden);
                     // If User is authorized, then considering sending another request with more permissions
                     // and return a GeoJSON response.
@@ -525,56 +518,30 @@ namespace PersonalSiteAPI.Controllers
                 {
                     throw new Exception("Data was null");
                 }
-                
-                // TODO: Consider returning the data in pairs to prevent more work in the frontend.
-                // TODO: Convert to GeoJSON format and sort the collection by timestamps.
                 if (geoJsonFormat is null)
                 {
-                    // Unsorted and unprocessed data.
+
                     Console.WriteLine("Returning unprocessed json data");
                     return new JsonResult(data);
                 }
 
-                var linePropertiesFunc = (LocationJsonDTO from, LocationJsonDTO to) =>
-                {
-                    return new LineStringProperties
-                    {
-                        From = TimestampToDateTime(from.Timestamp),
-                        To = TimestampToDateTime(to.Timestamp),
-                        Content = $"{FormatTimestamp(from.Timestamp)}-{FormatTimestamp(to.Timestamp)}",
-                        Distance = EuclideanDistance(from, to)
-                    };
-
-                    double EuclideanDistance(LocationJsonDTO location1, LocationJsonDTO location2)
-                    {
-                        return Math.Sqrt(Math.Pow(location1.LocationLat - location2.LocationLat, 2) +
-                                         Math.Pow(location2.LocationLong - location2.LocationLong, 2));
-                    }
-                };
-                
                 data.IndividualEvents.ForEach(l => l.Locations.Sort((x, y) => x.Timestamp.CompareTo(y.Timestamp)));
-                // TODO: Refactor collection to pass a function to generate properties.
-                // TODO: Consider using the constructor to let the compiler infer the type of the object.
-                // TODO: Rather than creating an array of FeatureCollection which is not supported, we can combine then
-                // into one large collection then in the metadata including the length of consecutive events (we store events from individuals consecutively.)
+                Console.WriteLine($"Response has {data.IndividualEvents.Aggregate(0, (prev, val) => prev + val.Locations.Count)} events.");
+
                 object collection;
                 switch (geoJsonFormat.ToLower())
                 {
                     case "linestring":
                         var lineCollections = LineStringFeatureCollection<LineStringProperties>
-                            .CreateManyLineStringsCollections(data, linePropertiesFunc);
+                            .CombineLineStringFeatures(data);
+                        
                         collection = lineCollections;
                         break;
-                    
+
                     case "point":
+                        var pointCollection = PointFeatureCollection<PointProperties>
+                            .CombinePointFeatures(data, PropertyFunc);
                         
-                        var propertyFunc = (LocationJsonDTO location) => new PointProperties
-                        {
-                            Date = TimestampToDateTime(location.Timestamp),
-                            DateString = FormatTimestamp(location.Timestamp),
-                        };
-                        var pointCollection = PointFeatureCollection<object>
-                            .CreateManyPointCollections(data, propertyFunc);
                         collection = pointCollection;
                         break;
                     
@@ -583,6 +550,14 @@ namespace PersonalSiteAPI.Controllers
                 }
                 
                 return new JsonResult(collection);
+                
+
+                PointProperties PropertyFunc(LocationJsonDTO location) => new()
+                {
+                    Date = TimestampToDateTime(location.Timestamp), 
+                    DateString = FormatTimestamp(location.Timestamp),
+                    Timestamp = location.Timestamp
+                };
             }
             catch (Exception error)
             {
@@ -590,23 +565,6 @@ namespace PersonalSiteAPI.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
-        
-        // private static LineStringProperties LinePropertiesFunc(LocationJsonDTO from, LocationJsonDTO to)
-        // {
-        //     double EuclideanDistance(LocationJsonDTO location1, LocationJsonDTO location2)
-        //     {
-        //         return Math.Sqrt(Math.Pow(location1.LocationLat - location2.LocationLat, 2) +
-        //                          Math.Pow(location2.LocationLong - location2.LocationLong, 2));
-        //     }
-        //     
-        //     return new LineStringProperties
-        //     {
-        //         From = TimestampToDateTime(from.Timestamp),
-        //         To = TimestampToDateTime(to.Timestamp),
-        //         Content = $"{FormatTimestamp(from.Timestamp)}-{FormatTimestamp(to.Timestamp)}",
-        //         Distance = EuclideanDistance(from, to)
-        //     };
-        // }
 
         private static DateTime TimestampToDateTime(long timestamp)
         {

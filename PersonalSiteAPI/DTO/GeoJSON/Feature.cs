@@ -9,12 +9,12 @@ public class Feature<TProp, TGeometry>
     public readonly string Type = "Feature";
 
     [JsonPropertyName(name: "geometry")] 
-    public TGeometry Geometry { get; set; } = default!;
+    public TGeometry Geometry { get; set; }
 
     [JsonPropertyName(name: "properties")]
-    public TProp? Properties { get; set; }
+    public TProp Properties { get; set; }
 
-    public Feature(TGeometry geometry, TProp? properties)
+    public Feature(TGeometry geometry, TProp properties)
     {
         Geometry = geometry;
         Properties = properties;

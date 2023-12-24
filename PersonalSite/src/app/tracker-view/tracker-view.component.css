@@ -11,7 +11,8 @@
 
 .sidenav-content {
   position: relative;
-  background-color: lightblue;
+  /* background-color: lightblue; */
+  background-color: white;
   width: 100%;
   height: 100%;
 }
@@ -19,10 +20,20 @@
 /* NOTE: This section is used if the button is placed after the search compnent.*/
 .toggle-button {
   position: absolute;
-  /* position: fixed; */
   color:black;
   background-color: white;
   margin-top:50vh;
+  z-index: 3;
+}
+
+.right-toggle-button {
+  /* position: absolute; */
+  position: relative;
+  color: black;
+  background-color: white;
+  margin-top: 50vh;
+  margin-left: calc(100vw - 4.250em);
+  /* margin-left: 97vw; */
   z-index: 3;
 }
 
@@ -32,11 +43,3 @@
   height: 100%;
   margin-top:3.5em;
 }
-
-/* .test-button { */
-/*   position: fixed; */
-/*   z-index:3; */
-/*   margin-top: 400px; */
-/*   margin-left: 600px; */
-/*   background-color:white; */
-/* } */

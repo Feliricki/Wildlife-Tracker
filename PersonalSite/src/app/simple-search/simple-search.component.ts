@@ -85,7 +85,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
   screenChange?: Observable<boolean>;
 
   smallHeaderStyle = {
-    'min-width': '200px',
+    'min-width': '180px',
     'max-width': '500px',
     'word-break': 'break-word'
   }
@@ -95,7 +95,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
   }
 
   smallContentStyle = {
-    'min-width': '200px',
+    'min-width': '180px',
     'max-width': '450px',
     'word-break': 'break-word'
   }

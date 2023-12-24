@@ -9,17 +9,30 @@ public record LineStringProperties()
     
     [JsonPropertyName(name: "to")]
     public DateTime To { get; set; }
+    [JsonPropertyName(name: "color")] public List<double> Color { get; set; } = new();
     
+    // NOTE: The following properties are unused.
     [JsonPropertyName(name: "content")]
     public string Content { get; set; } = default!;
-    
+
     [JsonPropertyName(name: "distance")]
     public double Distance { get; set; }
+
+    [JsonPropertyName(name: "distanceTravelled")]
+    public double DistanceTravelled { get; set; }
+
+    [JsonPropertyName(name: "timestamp")]
+    public long Timestamp { get; set; }
 };
-// var distance = Math.Sqrt(Math.Pow(to[0] - from[0], 2) + Math.Pow(to[1] - from[1], 2));
 public record PointProperties()
 {
     [JsonPropertyName(name: "date")] public DateTime Date { get; set; }
 
     public string DateString { get; set; } = default!;
+    
+    [JsonPropertyName(name:"color")]
+    public List<double>? Color { get; set; }
+
+    [JsonPropertyName(name: "timestamp")]
+    public long Timestamp { get; set; }
 }

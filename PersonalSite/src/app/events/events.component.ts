@@ -1,10 +1,10 @@
-import { AfterViewInit, Component, Input, OnChanges, Signal, SimpleChanges, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, Signal, SimpleChanges, ViewChild, WritableSignal, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StudyDTO } from '../studies/study';
 import { StudyService } from '../studies/study.service';
 import { IndividualJsonDTO } from '../studies/JsonResults/IndividualJsonDTO';
 import { TagJsonDTO } from '../studies/JsonResults/TagJsonDTO';
-import { isLocationSensor } from '../studies/locationSensors';
+import { filterForLocationsSensors } from '../studies/locationSensors';
 import { MatListModule } from '@angular/material/list';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
@@ -25,10 +25,19 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { dateRangeValidators } from './Validators/dateRangeValidator';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { maxEventsValidator } from './Validators/maxEventsValidator';
+import { sensorValidator } from './Validators/SensorValidator';
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { Observable, Subscription, distinctUntilChanged, map, tap } from 'rxjs';
+import { MatSliderModule } from '@angular/material/slider';
+import { EventOptions, EventProfiles } from '../studies/EventOptions';
+import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
+import { MAX_EVENTS } from './Validators/maxEventsValidator';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { LineStringFeatureCollection, LineStringMetaData, LineStringProperties } from '../deckGL/GoogleOverlay';
 
-export type EventProfiles = null | "EURING_01" | "EURING_02" | "EURING_03" | "EURING_04";
-
-// TODO: Work on grouping all individuals by their tagged status.
 
 @Component({
   selector: 'app-events',
@@ -39,64 +48,157 @@ export type EventProfiles = null | "EURING_01" | "EURING_02" | "EURING_03" | "EU
     AsyncPipe, ReactiveFormsModule, MatFormFieldModule,
     MatInputModule, MatIconModule, MatButtonModule,
     MatExpansionModule, MatTooltipModule, MatCheckboxModule,
-    MatSelectModule, MatDividerModule, MatDatepickerModule],
+    MatSelectModule, MatDividerModule, MatDatepickerModule,
+    MatSlideToggleModule, MatSliderModule, MatProgressBarModule],
   templateUrl: './events.component.html',
-  styleUrl: './events.component.css'
+  styleUrl: './events.component.scss'
 })
-export class EventsComponent implements OnChanges, AfterViewInit {
+export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
   // NOTE: These studies are toggled to have their events appear on the map if
   // at all possible
   // Switch to using tagged individuals as the main source.
-  // Paginate results.
-  // Limit show event data to one individual at a time?
+  readonly MAX_EVENTS_LIMIT = MAX_EVENTS;
+
   toggledStudies?: Map<bigint, StudyDTO>;
   displayedColumns: string[] = ['name', 'select'];
   displayedColumnsWithExpanded: string[] = [...this.displayedColumns, 'expanded'];
 
   @Input() currentStudy?: StudyDTO;
   currentSortOrder: 'asc' | 'desc' = 'asc';
-  currentLocationSensors: string[] = [];
+  currentLocationSensors: WritableSignal<string[]> = signal([]);
+
+  @Output() closeRightNavEmitter = new EventEmitter<true>(true);
+  @Output() lineDataEmitter = new EventEmitter<Observable<LineStringFeatureCollection[] | null>>;
 
   @ViewChild(MatSort) sort!: MatSort;
 
+  maxEventsToggle: WritableSignal<boolean> = signal(true);
+
   eventForm = this.formBuilder.nonNullable.group({
+
+    maxEvents: new FormControl<number | null>(
+      0,
+      { nonNullable: false }),
 
     dateRange: this.formBuilder.group({
       start: this.formBuilder.control(null as null | Date),
       end: this.formBuilder.control(null as null | Date),
     }),
     eventProfiles: this.formBuilder.control(null as EventProfiles),
+
+    sensorForm: this.formBuilder.control(null as null | string),
+
     checkboxes: new FormArray<FormControl<boolean>>([]),
   }, {
-    validators: checkboxOptionSelectedValidator(),
+    validators: [
+      checkboxOptionSelectedValidator(),
+      dateRangeValidators(),
+      maxEventsValidator(),
+      sensorValidator()],
     updateOn: "change"
   });
 
   tableSource = new FormDataSource(this.studyService, this.CheckboxForm);
+  tableState$?: Observable<SourceState>;
+  tableStateSubscription?: Subscription;
+
+  // TODO: The map component needs to be lazy loaded.
+  // TODO: Aria label needs to be for accessibility purposes.
+  // NOTE: These are the new styling when a screen change is detected.
+  smallTabSize = {
+    'min-width': '150px',
+    'max-width': '500px',
+  }
+
+  largeTabSize = {
+    'width': '500px',
+  }
+
+  fourthRowSmall = {
+    'justify-content': 'left'
+  }
+
+  fourthRowDefault = {
+    'justify-content': 'space-around',
+  }
+
+  breakpointSubscription?: Subscription;
+  screenChange?: Observable<boolean>;
+  extraSmallScreenChange?: Observable<boolean>;
+  screenChangeSignal: WritableSignal<boolean> = signal(false);
 
   constructor(
     private studyService: StudyService,
-    private formBuilder: FormBuilder) {
+    private formBuilder: FormBuilder,
+    private breakpointObserver: BreakpointObserver
+  ) {
     return;
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    for (const propertyName in changes) {
+  ngOnInit(): void {
+    this.eventForm.disable();
+    this.tableState$ = this.tableSource.DataStateAsObservable.pipe(
+      distinctUntilChanged(),
+      tap(value => {
+        console.log(`Current tableState is ${value}`);
+        switch (value) {
+          case "loading":
+            this.eventForm.disable();
+            break;
+          case "loaded":
+            this.eventForm.markAsPristine();
+            this.eventForm.enable();
+            this.sensorForm.setValue(this.currentLocationSensors().at(0) ?? null);
+            this.MaxEvents.setValue(10);
+            break;
+          case "error":
+            this.eventForm.disable();
+            break;
+          case "initial":
+            this.eventForm.disable();
+            break;
+          default:
+            break;
+        }
+      }),
+    );
+    this.tableStateSubscription = this.tableState$.subscribe();
 
+    this.screenChange =
+      this.breakpointObserver.observe([Breakpoints.XSmall, Breakpoints.Small])
+        .pipe(
+          map(state => state.matches),
+          tap(state => {
+            this.screenChangeSignal.set(state);
+          })
+        );
+
+    this.extraSmallScreenChange =
+      this.breakpointObserver.observe(Breakpoints.XSmall)
+        .pipe(
+          map(state => state.matches)
+        );
+
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+
+    for (const propertyName in changes) {
       const currentValue = changes[propertyName].currentValue;
       const previousValue = changes[propertyName].previousValue;
       if (currentValue === undefined || currentValue === previousValue) {
-        console.log(`Skipping undefined value for property value ${propertyName}`);
         continue;
       }
 
       // TODO: Set the aria labels for other components.
       switch (propertyName) {
         case "currentStudy":
+          this.eventForm.disable();
+
           console.log(currentValue);
           this.currentStudy = currentValue as StudyDTO;
+          this.currentLocationSensors.set(filterForLocationsSensors(this.currentStudy?.sensorTypeIds));
           this.tableSource.getAnimalData(this.currentStudy.id, this.currentSortOrder);
-          this.eventForm.markAsPristine();
           break
 
         default:
@@ -106,8 +208,31 @@ export class EventsComponent implements OnChanges, AfterViewInit {
     return;
   }
 
+  ngOnDestroy(): void {
+    this.breakpointSubscription?.unsubscribe();
+    this.tableStateSubscription?.unsubscribe();
+  }
+
+  closeRightNav(): void {
+    this.closeRightNavEmitter.emit(true);
+  }
+
   ngAfterViewInit(): void {
     return;
+  }
+
+  stringToNumber(num: string): number {
+    return Number(num);
+  }
+
+  setMaxEventsValue(value: number) {
+    this.MaxEvents.setValue(value);
+  }
+
+  get formEnabled(): Signal<boolean> {
+    return computed(() => {
+      return this.TableState() === "loaded"
+    })
   }
 
   get dateRange() {
@@ -120,6 +245,14 @@ export class EventsComponent implements OnChanges, AfterViewInit {
 
   get CheckboxForm(): FormArray<FormControl<boolean>> {
     return this.eventForm.controls.checkboxes;
+  }
+
+  get MaxEvents(): FormControl<number | null> {
+    return this.eventForm.controls.maxEvents;
+  }
+
+  get sensorForm(): FormControl<string | null> {
+    return this.eventForm.controls.sensorForm;
   }
 
 
@@ -142,14 +275,20 @@ export class EventsComponent implements OnChanges, AfterViewInit {
     this.tableSource;
   }
 
+  toggleMaxEvents(): void {
+    this.maxEventsToggle.update(prev => !prev);
+    if (this.maxEventsToggle()) {
+      this.MaxEvents.disable();
+    } else {
+      this.MaxEvents.enable();
+    }
+  }
+
   getIndividual(index: number): Signal<TagJsonDTO | null> {
     return this.tableSource.getIndividual(index);
   }
 
-  // get TaggedIndividual
-
   toggleRow(index: number, event?: MatCheckboxChange): void {
-    console.log("toggling row");
     if (event) {
       console.log(event);
     }
@@ -157,7 +296,7 @@ export class EventsComponent implements OnChanges, AfterViewInit {
   }
 
   toggleAllRows() {
-    console.log("toggling all rows");
+    // console.log("toggling all rows");
     this.tableSource.toggleAllRows();
     this.eventForm.markAsDirty();
   }
@@ -174,9 +313,7 @@ export class EventsComponent implements OnChanges, AfterViewInit {
     return this.tableSource.isSelected(index);
   }
 
-  // TODO: Refactor this to use the id.
-  trackById(index: number, _: FormControl<boolean>): string {
-    // console.log(`tracking by index ${index} and value ${form.value}`);
+  trackById(index: number): string {
     return `${index}`;
   }
 
@@ -184,12 +321,12 @@ export class EventsComponent implements OnChanges, AfterViewInit {
     return Array.from(map.values());
   }
 
-  get hasValue(): Signal<boolean> {
-    return this.tableSource.HasValue;
-  }
-
   isTagged(localIdentifier: string): Signal<boolean> {
     return this.tableSource.isTagged(localIdentifier);
+  }
+
+  get hasValue(): Signal<boolean> {
+    return computed(() => this.tableSource.HasValue() && this.TableState() === "loaded");
   }
 
   get Individuals(): Signal<Map<string, IndividualJsonDTO>> {
@@ -200,23 +337,67 @@ export class EventsComponent implements OnChanges, AfterViewInit {
     return this.tableSource.allTaggedIndividuals;
   }
 
-  getLocationSensor(studyDTO: StudyDTO): string[] {
+  // TODO: This form is better of being sent to another component.
+  // It should probably be sent to the google maps component.
+  submitForm() {
+    console.log(`EventForm State: ${this.eventForm.valid}`);
 
-    if (studyDTO.sensorTypeIds === undefined || studyDTO.sensorTypeIds.length === 0) {
-      return [];
+    if (this.eventForm.invalid) {
+      return null;
     }
-    const splitList = studyDTO.sensorTypeIds.trim()
-      .split(",")
-      .map(sensor => sensor.trim());
+    if (!this.currentStudy || this.TableState() !== "loaded"
+      || this.sensorForm.value == null) {
+      return null;
+    }
 
-    const locationSensors: string[] = [];
-    splitList.forEach(sensor => {
-      if (isLocationSensor(sensor)) {
-        locationSensors.push(sensor);
-      }
-    });
+    const studyId = this.currentStudy.id;
+    const localIdentifiers = this.tableSource.taggedAndSelectedIndividuals() as NonEmptyArray<string>;
 
-    return locationSensors;
+    // NOTE: Validators should cover these conditions.
+    // if (localIdentifiers.length === 0 || this.currentLocationSensors().length === 0) {
+    //   return;
+    // }
+
+    const sensor = this.sensorForm.value;
+    const geometryType = "linestring";
+    const eventOptions: EventOptions = {
+      maxEventsPerIndividual: this.MaxEvents.valid ? this.MaxEvents.value ?? undefined : undefined,
+      timestampStart: this.dateRange.valid ? this.timeStampHelper(this.dateRange.controls.start.value) : undefined,
+      timestampEnd: this.dateRange.valid ? this.timeStampHelper(this.dateRange.controls.end.value) : undefined,
+      attributes: undefined,
+      eventProfiles: this.eventProfiles.valid ? this.eventProfiles.value : undefined,
+    };
+
+    console.log(
+      `studyId = ${studyId} localIdentifiers = ${localIdentifiers}
+      sensor = ${sensor} geomtryType = ${geometryType}
+      matEventsPerIndividuals = ${eventOptions.maxEventsPerIndividual}
+      timestampStart = ${eventOptions.timestampStart}
+      timestampEnd = ${eventOptions.timestampEnd}
+      eventProfiles = ${eventOptions.eventProfiles}`);
+
+    console.log(eventOptions);
+
+    const request = this.studyService.
+      getGeoJsonEventData<GeoJSON.LineString, LineStringProperties, LineStringMetaData>
+      (studyId, localIdentifiers, sensor, geometryType, eventOptions) as
+      Observable<LineStringFeatureCollection | null>;
+
+    // TODO: Consider if an observable or the actual data should be sent to the current
+    // map component.
+
+    console.log(request);
+    return request;
   }
 
+  sendEventRequest(request: Observable<LineStringFeatureCollection[] | null>): void {
+    this.lineDataEmitter.emit(request);
+  }
+
+  timeStampHelper(date: Date | null): bigint | undefined {
+    if (date === null) {
+      return undefined;
+    }
+    return BigInt(date.valueOf());
+  }
 }

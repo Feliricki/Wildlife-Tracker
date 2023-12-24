@@ -2,4 +2,19 @@
 <!-- <script src="https://unpkg.com/@deck.gl/google-maps@8.9.23/dist.min.js"></script> -->
 <!-- optional if mapbox base map is needed -->
 <div class="map-container" id="map"></div>
+@switch(mapState()){
+
+@case('initial'){
+<div class="button-container">
+  <button mat-raised-button (click)="initMap()">Load Map</button>
+</div>
+}
+
+@case ('loading'){
+<div class="spinner-container">
+  <mat-spinner id="spinner"></mat-spinner>
+</div>
+}
+
+}
 <!-- <div *ngIf="apiLoaded | async as Loaded">Loading...</div> -->

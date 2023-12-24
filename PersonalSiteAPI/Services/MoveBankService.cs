@@ -107,11 +107,6 @@ namespace PersonalSiteAPI.Services
         // Restrict this function
         public async Task<ApiTokenResultDTO?> GetApiToken()
         {
-            // Check the cache for an existing API Token
-            // TODO - Cache Implementation is working
-            // Incorporate rotation/retrieval/ and insertion of keys
-            // Rotate when DateTime of API key expires
-            // Implement time limit for cache
             SecretCacheItem? secretCache = _secretsCache.GetCachedSecret(_configuration["ConnectionStrings:AWSKeyVault2ARN"]);
             GetSecretValueResponse? secretValue = await secretCache.GetSecretValue(new CancellationToken());
 
@@ -120,31 +115,32 @@ namespace PersonalSiteAPI.Services
             if (expirationDate != null && expirationDate > DateTime.Now)
             {
                 return secretObj;
-            }
-
-            var uri = _httpClient.BaseAddress!.OriginalString + "direct-read";
-            uri = QueryHelpers.AddQueryString(uri, "service", "request-token");
-
-            using var request = new HttpRequestMessage()
+            }            
+            // INFO: Rotations are scheduled for the first of every month so this code should never be reached.
+            var rotationRequest = new RotateSecretRequest()
             {
-                RequestUri = new Uri(uri),
-                Method = HttpMethod.Get,
+                SecretId = "MoveBankSecrets",
+                RotateImmediately = true,                
             };
 
-            using var response = await _httpClient.SendAsync(request);
+            await _amazonSecretsManager.RotateSecretAsync(rotationRequest);            
 
-            response.EnsureSuccessStatusCode();
-            //Console.WriteLine("Headers: " + response.Headers.ToString());
-            return await response.Content.ReadFromJsonAsync<ApiTokenResultDTO>();
+            secretCache = _secretsCache.GetCachedSecret(_configuration["ConnectionStrings:AWSKeyVault2ARN"]);
+            secretValue = await secretCache.GetSecretValue(new CancellationToken());
+
+            secretObj = JsonSerializer.Deserialize<ApiTokenResultDTO>(secretValue.SecretString)!;
+
+            return secretObj;
         }
+        
         // Helper method
         public DateTime? GetDateTime(string dateString, string timeZone = "CET")
         {
             // Hardcoded data - +1 is CET
-            string newDataString = dateString.Replace(timeZone, "+1");
-            string formatString = $"ddd MMM dd HH:mm:ss z yyyy";
+            var newDataString = dateString.Replace(timeZone, "+1");
+            const string formatString = $"ddd MMM dd HH:mm:ss z yyyy";
 
-            if (DateTime.TryParseExact(newDataString, formatString, null, DateTimeStyles.None, out DateTime result))
+            if (DateTime.TryParseExact(newDataString, formatString, null, DateTimeStyles.None, out var result))
             {
                 return result;
             }

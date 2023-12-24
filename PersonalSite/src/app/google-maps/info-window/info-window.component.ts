@@ -30,8 +30,6 @@ export class InfoWindowComponent {
   }
 
   emitEventRequest(studyDTO: StudyDTO): void {
-    console.log("Emitting event request from info window component.");
-    console.log(this.eventRequest);
     this.eventRequest?.emit(studyDTO);
   }
 

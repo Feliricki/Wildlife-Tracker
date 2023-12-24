@@ -1,3 +1,6 @@
+export type EventProfiles =
+  null | "EURING_01" | "EURING_02" | "EURING_03" | "EURING_04";
+
 export interface EventOptions {
   // studyId: bigint;
   // localIdentifiers: string[];
@@ -10,5 +13,5 @@ export interface EventOptions {
   timestampStart?: bigint;
   timestampEnd?: bigint;
   attributes?: string;
-  eventProfiles?: string;
+  eventProfiles?: EventProfiles;
 }
