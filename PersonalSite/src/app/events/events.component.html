@@ -1,4 +1,5 @@
-<mat-tab-group preserveContent animationDuration="0ms" [ngStyle]="(screenChange | async) ? smallTabSize : largeTabSize">
+<mat-tab-group class="tab-group" preserveContent animationDuration="0ms"
+  [ngStyle]="(screenChange | async) ? smallTabSize : largeTabSize">
   <!-- <mat-tab [label]="(screenChange | async) ? '' : 'Individuals'"> -->
   <mat-tab label="Animals" class="tab-1">
 
@@ -16,83 +17,78 @@
     <!-- } -->
     <!-- } -->
 
-    <button mat-icon-button (click)="closeRightNav()"><mat-icon>close</mat-icon></button>
+    <button mat-icon-button (click)="closeRightNav()">
+      <mat-icon>close</mat-icon>
+    </button>
+
     <br>
-      @if(extraSmallScreenChange | async){
-      <span>Xtra Small Screen</span>
-      }
+    <!-- @if(extraSmallScreenChange | async){ -->
+    <!-- <span>Xtra Small Screen</span> -->
+    <!-- } -->
     <br>
-    <!-- <span class="spacer"></span> -->
-    <form [formGroup]="eventForm" (ngSubmit)="submitForm()">
+
+    <form [formGroup]="eventForm" #EventRef (ngSubmit)="submitForm()" class="event-form">
       <!-- TODO: -->
       <!-- 1) implement the onSubmit() method to create the observable. -->
       <!-- 2) Consider using a promise and awaiting method result. -->
       <!-- 3) Consider if this data needs to be used in the google maps component. -->
 
-      <!-- NOTE: Error messages need to be placed below mat-form-fields -->
-      <div class="first-row">
-        <mat-form-field class="date-input">
+      <!-- TODO: Timestamp are used in conjunction with the studyId to retrieve event and nothing else. -->
+      <!-- <div class="first-row"> -->
+      <!--   <mat-form-field class="date-input"> -->
+      <!--     <mat-label>Enter a date range.</mat-label> -->
+      <!--     <mat-date-range-input [rangePicker]="picker" formGroupName="dateRange"> -->
+      <!--       <input matStartDate formControlName="start" placeholder="Start Date"> -->
+      <!--       <input matEndDate formControlName="end" placeholder="End Date"> -->
+      <!--     </mat-date-range-input> -->
 
-          <mat-label>Enter a date range.</mat-label>
-          <mat-date-range-input [rangePicker]="picker" formGroupName="dateRange">
-            <input matStartDate formControlName="start" placeholder="Start Date">
-            <input matEndDate formControlName="end" placeholder="End Date">
-          </mat-date-range-input>
+      <!--     <mat-hint>MM/DD/YYYY – MM/DD/YYYY</mat-hint> -->
+      <!--     <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle> -->
+      <!--     <mat-date-range-picker [touchUi]="extraSmallScreenChange | async" #picker></mat-date-range-picker> -->
 
-          <mat-hint>MM/DD/YYYY – MM/DD/YYYY</mat-hint>
-          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-          <mat-date-range-picker [touchUi]="extraSmallScreenChange | async" #picker></mat-date-range-picker>
+      <!--     @if (eventForm.hasError("IncompleteSubmission")){ -->
+      <!--     <mat-error>Incomplete Input.</mat-error> -->
+      <!--     } -->
+      <!--     @else if (eventForm.hasError("InvalidDateRange")){ -->
+      <!--     <mat-error>Invalid Date Range Entered.</mat-error> -->
+      <!--     } -->
+      <!--   </mat-form-field> -->
+      <!-- </div> -->
 
-          <!-- NOTE: Only show one error at a time. -->
-          @if (eventForm.hasError("IncompleteSubmission")){
-          <mat-error>Incomplete Input.</mat-error>
-          }
-          @else if (eventForm.hasError("InvalidDateRange")){
-          <mat-error>Invalid Date Range Entered.</mat-error>
-          }
-
-        </mat-form-field>
-
-      </div>
-
-      <div class="second-row">
-
-        <mat-slide-toggle class="slide-toggle" [disabled]="TableState() !== 'loaded'" #slideToggle>
-          Enable Event Limit
-        </mat-slide-toggle>
-
-        <!-- INFO: This is the text input form for the maximum number of events to request from MoveBank's api -->
-        <mat-form-field class="maxEventForm">
-          <mat-label>Maximum number of events</mat-label>
-          <input matInput class="maxEventInput" #maxEventInput formControlName="maxEvents" type="number" min="1"
-            [max]="MAX_EVENTS_LIMIT" />
-        </mat-form-field>
-
-        <br>
-
-        @if (eventForm.hasError("InvalidNumber")){
-        <mat-error>Invalid Input.</mat-error>
-        }
-
-      </div>
-      <!-- This slider should be synced with the text input box.-->
-      <!-- This is another form the maxEvents form. -->
-      <!-- [ngStyle]="(screenChange | async) ? smallTabSize : largeTabSize"-->
-      <div class="third-row">
-        <mat-slider min="1" [max]="MAX_EVENTS_LIMIT" discrete class="slider">
-          <input matSliderThumb name="slider" (valueChange)="setMaxEventsValue($event)"
-            [value]="maxEventInput.valueAsNumber">
-        </mat-slider>
-      </div>
-      <br>
+      <!-- <div class="second-row"> -->
+      <!---->
+      <!--   <mat-slide-toggle class="slide-toggle" [disabled]="TableState() !== 'loaded'" #slideToggle> -->
+      <!--     Enable Event Limit -->
+      <!--   </mat-slide-toggle> -->
+      <!---->
+      <!--   <!-- INFO: This is the text input form for the maximum number of events to request from MoveBank's api -->
+      <!--   <mat-form-field class="maxEventForm"> -->
+      <!--     <mat-label>Maximum number of events</mat-label> -->
+      <!--     <input matInput class="maxEventInput" #maxEventInput formControlName="maxEvents" type="number" min="1" -->
+      <!--       [max]="MAX_EVENTS_LIMIT" /> -->
+      <!--   </mat-form-field> -->
+      <!--   <br> -->
+      <!--   @if (eventForm.hasError("InvalidNumber")){ -->
+      <!--   <mat-error>Invalid Input.</mat-error> -->
+      <!--   } -->
+      <!-- </div> -->
+      <!-- <!-- This slider should be synced with the text input box.-->
+      <!-- <!-- This is another form the maxEvents form. -->
+      <!-- <!-- [ngStyle]="(screenChange | async) ? smallTabSize : largeTabSize"-->
+      <!-- <div class="third-row"> -->
+      <!--   <mat-slider min="1" [max]="MAX_EVENTS_LIMIT" discrete class="slider"> -->
+      <!--     <input matSliderThumb name="slider" (valueChange)="setMaxEventsValue($event)" -->
+      <!--       [value]="maxEventInput.valueAsNumber"> -->
+      <!--   </mat-slider> -->
+      <!-- </div> -->
+      <!-- <br> -->
 
       <div class="fourth-row" [ngStyle]="(screenChange | async) ? fourthRowSmall : fourthRowDefault">
         <mat-form-field class="reduction-profile-form">
           <mat-label>Reduction Profile</mat-label>
-          <mat-select formControlName="eventProfiles" matTooltip="Limit the number of events to improve performance.">
+          <mat-select formControlName="eventProfiles"
+            matTooltip="Limit the number of events to improve performance and reduce clutter.">
 
-            <mat-option [value]="null">None</mat-option>
-            <mat-divider></mat-divider>
             <mat-option value="EURING_01">24 hours between events.</mat-option>
             <mat-divider></mat-divider>
             <mat-option value="EURING_02">50 kilometers between events.</mat-option>
@@ -100,6 +96,8 @@
             <mat-option value="EURING_03">Last 30 days.</mat-option>
             <mat-divider></mat-divider>
             <mat-option value="EURING_04">0.25 degrees movement.</mat-option>
+            <mat-divider></mat-divider>
+            <mat-option [value]="null">None</mat-option>
 
           </mat-select>
         </mat-form-field>
@@ -108,6 +106,7 @@
           <mat-label>Sensor Type</mat-label>
           <mat-select formControlName="sensorForm" matTooltip="Select a sensor type.">
             <!-- <mat-option [value]="null">-</mat-option> -->
+            <!-- <mat-option [value]="null">Any Sensor Type</mat-option> -->
             @for (option of currentLocationSensors(); track option){
             <mat-divider></mat-divider>
             <mat-option [value]="option">{{option}}</mat-option>
@@ -115,22 +114,15 @@
             @empty {
             <mat-option [value]="null">-</mat-option>
             }
+
           </mat-select>
 
+          @if(eventForm.dirty && eventForm.hasError("noSensorSelected")){
+          <mat-error>No Sensor Selected.</mat-error>
+          }
         </mat-form-field>
-        @if(eventForm.dirty && eventForm.hasError("noSensorSelected")){
-        <mat-error>No Sensor Selected.</mat-error>
-        }
 
       </div>
-
-      <br>
-
-      <button class="submit-button" mat-flat-button [disabled]="TableState() !== 'loaded' || eventForm.invalid" color="primary" type="submit">
-        Submit
-      </button>
-
-      <br>
 
       <!-- TODO: Finalize using the formArray as the input source. -->
       <!-- This error warning should only display if individuals have loaded in. -->
@@ -139,60 +131,82 @@
       }
       @if (TableState() === "loading"){
       <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      }@else{
+      <br>
       }
-      <table mat-table formArrayName="checkboxes" matSort matSortDisableClear matSortActive="name"
-        matSortDirection="asc" [dataSource]="tableSource" #Table [trackBy]="trackById" class="animal-table">
+      <div class="table-container">
+        <table mat-table formArrayName="checkboxes" matSort matSortDisableClear matSortActive="name"
+          matSortDirection="asc" [dataSource]="tableSource" #Table [trackBy]="trackById" class="animal-table">
 
-        <!-- Checkbox Column -->
-        <ng-container matColumnDef="select">
-          <th mat-header-cell *matHeaderCellDef>
+          <!-- Checkbox Column -->
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef>
 
-            <mat-checkbox [checked]="hasValue() && isAllSelected()" [indeterminate]="hasValue() && !isAllSelected()"
-              (change)="$event ? toggleAllRows() : null"></mat-checkbox>
+              <mat-checkbox [checked]="hasValue() && isAllSelected()" [indeterminate]="hasValue() && !isAllSelected()"
+                (change)="$event ? toggleAllRows() : null"></mat-checkbox>
 
-          </th>
+            </th>
 
-          <!-- TODO: Decide if a form needs to be used or if a request can be made with the selectionModel only -->
-          <!-- And set the aria-label -->
-          <td mat-cell *matCellDef="let control; let j = index;" class="checkbox-header-cell">
+            <!-- TODO: Decide if a form needs to be used or if a request can be made with the selectionModel only -->
+            <!-- And set the aria-label -->
+            <td mat-cell *matCellDef="let control; let j = index;" class="checkbox-header-cell">
 
-            <mat-checkbox [formControlName]="j" (click)="$event.stopPropagation()" (change)="toggleRow(j)"
-              [id]="j"></mat-checkbox>
-          </td>
+              <mat-checkbox [formControlName]="j" (click)="$event.stopPropagation()" (change)="toggleRow(j)"
+                [id]="j"></mat-checkbox>
+            </td>
 
-          <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-        </ng-container>
+            <td mat-footer-cell *matFooterCellDef>
+
+              <button mat-icon-button (click)="EventRef.scrollIntoView(true)"><mat-icon>close</mat-icon></button>
+              <!-- Placeholder -->
+            </td>
+
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+          </ng-container>
 
 
-        <ng-container matColumnDef="name" class="ng-container">
+          <ng-container matColumnDef="name" class="ng-container">
 
-          <th mat-header-cell *matHeaderCellDef mat-sort-header sortActionDescription="Sort by name">
-            <span>Local Identifiers</span>
-            <mat-icon matTooltip="A unique individual identifier provided by the owner of the study." aria-label="false"
-              fontIcon="info"></mat-icon>
-          </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header sortActionDescription="Sort by name">
+              <span>Animals</span>
+              <mat-icon
+                matTooltip="Each animal is assigned a unique individual identifier provided by the owner of the study."
+                aria-label="false" fontIcon="info"></mat-icon>
+            </th>
 
-          <!-- TODO: Set the value attribute to the local identifier. -->
-          <!-- INFO: This the templating for the individual local identifiers -->
-          <td mat-cell *matCellDef="let control; let j = index;" class="individual-header-cell">
-            <!-- Format is [isSelected) as boolean, and a string representing the name]-->
-            <!-- <span>TableState ={{TableState()}}</span> -->
-            <!-- <p>IsTagged = {{isTagged(j)()}}</p> -->
-            <p>{{getIndividual(j)()?.LocalIdentifier ?? "N/A" }}</p>
+            <!-- TODO: Set the value attribute to the local identifier. -->
+            <!-- INFO: This the templating for the individual local identifiers -->
+            <td mat-cell *matCellDef="let control; let j = index;" class="individual-header-cell">
 
-          </td>
-        </ng-container>
+              <p>{{getIndividual(j)()?.LocalIdentifier ?? "N/A" }}</p>
 
-        <tr mat-header-row class="header-row" *matHeaderRowDef="displayedColumns; sticky:true"></tr>
-        <tr mat-row class="rows" *matRowDef="let row; let i = index; columns:displayedColumns;"></tr>
+            </td>
 
-      </table>
 
+            <td mat-footer-cell *matFooterCellDef>
+              <button mat-raised-button [disabled]="TableState() !== 'loaded' || eventForm.invalid" color="primary"
+                type="submit">
+                Submit
+              </button>
+            </td>
+
+          </ng-container>
+
+          <tr mat-header-row class="header-row" *matHeaderRowDef="displayedColumns; sticky:true"></tr>
+          <tr mat-row class="rows" *matRowDef="let row; let i = index; columns:displayedColumns;"></tr>
+          <tr mat-footer-row *matFooterRowDef="displayedColumns; sticky: true">
+        </table>
+
+      </div>
+      <!-- <mat-paginator [length]="tableSource.FormArray().length" pageSize="5"></mat-paginator> -->
     </form>
+    @if (TableState() === "loaded" && tableSource.TableSize() === 0){
+    <br>
+    <span>No Animals Found.</span>
+    }
 
   </mat-tab>
 
   <mat-tab [label]="(extraSmallScreenChange | async) ? 'Event Info.' : 'Event Information'">
-    <p>Some text.</p>
   </mat-tab>
 </mat-tab-group>

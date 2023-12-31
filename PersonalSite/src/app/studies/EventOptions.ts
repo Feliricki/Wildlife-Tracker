@@ -13,5 +13,5 @@ export interface EventOptions {
   timestampStart?: bigint;
   timestampEnd?: bigint;
   attributes?: string;
-  eventProfiles?: EventProfiles;
+  eventProfile?: EventProfiles;
 }

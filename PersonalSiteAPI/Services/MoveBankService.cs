@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.WebUtilities;
 using PersonalSiteAPI.DTO;
 using PersonalSiteAPI.Extensions;
 using Amazon.SecretsManager.Model;
-using System.Text.Json;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Collections.Immutable;
@@ -14,7 +13,10 @@ using PersonalSiteAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using Mapster;
 using MapsterMapper;
-using System.Text;
+using Microsoft.Extensions.Primitives;
+using Newtonsoft.Json;
+using PersonalSiteAPI.Constants;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace PersonalSiteAPI.Services
 {
@@ -25,13 +27,23 @@ namespace PersonalSiteAPI.Services
         DateTime? GetDateTime(string dateString, string timeZone = "CET");
         // Direct and Json request must specify an entity_type
         // Some entities are "individual, tag_type ,study"
+
+        Task<HttpResponseMessage?> DirectRequestEvents(
+            long studyId,
+            string[] individualLocalIdentifiers,
+            string? sensorType = null,
+            Dictionary<string, string?>? parameters = null,
+            (string, string)[]? headers = null,
+            bool authorizedUser = false);
+
         Task<HttpResponseMessage?> DirectRequest(
             string entityType,
             long? studyId = null,
             Dictionary<string, string?>? parameters = null,
+            IEnumerable<KeyValuePair<string, StringValues>>? listParameters = null,
             (string, string)[]? headers = null,
-            bool authorizedUser = false
-            );
+            bool authorizedUser = false);
+
         Task<HttpResponseMessage> JsonRequest(
             long studyId,
             string entityType,
@@ -110,7 +122,7 @@ namespace PersonalSiteAPI.Services
             SecretCacheItem? secretCache = _secretsCache.GetCachedSecret(_configuration["ConnectionStrings:AWSKeyVault2ARN"]);
             GetSecretValueResponse? secretValue = await secretCache.GetSecretValue(new CancellationToken());
 
-            var secretObj = JsonSerializer.Deserialize<ApiTokenResultDTO>(secretValue.SecretString)!;
+            var secretObj = System.Text.Json.JsonSerializer.Deserialize<ApiTokenResultDTO>(secretValue.SecretString)!;
             DateTime? expirationDate = GetDateTime(secretObj.ExpirationDate!);
             if (expirationDate != null && expirationDate > DateTime.Now)
             {
@@ -149,11 +161,47 @@ namespace PersonalSiteAPI.Services
                 return null;
             }
         }
+
+        public async Task<HttpResponseMessage?> DirectRequestEvents(
+            long studyId,
+            string[] individualLocalIdentifiers,
+            string? sensorType = null, // If no sensor type is specified then all sensors are used.
+            Dictionary<string, string?>? parameters = null,
+            (string, string)[]? headers = null,
+            bool authorizedUser = false)
+        {
+            if (individualLocalIdentifiers.Length == 0)
+            {
+                return null;
+            }
+
+            parameters ??= new();
+            parameters.Add("study_id", studyId.ToString());
+            // NOTE: This is necessary for direct requests to limit the results to one sensor type.
+            if (sensorType is not null)
+            {
+                parameters.Add("sensor_type_id", TagTypes.SensorNameToId(sensorType).ToString());
+            }
+            parameters.Add("individual_local_identifier", string.Join(",", individualLocalIdentifiers));
+            
+            var response = await DirectRequest(
+                entityType: "event",
+                studyId: studyId,
+                parameters: parameters,
+                listParameters: null,
+                headers: headers,
+                authorizedUser: authorizedUser);
+
+            return response;
+        }
+
+
         // NOTE: This method is also used as a fallthrough for json request are empty
         public async Task<HttpResponseMessage?> DirectRequest(
             string entityType,
             long? studyId = null,
             Dictionary<string, string?>? parameters = null,
+            IEnumerable<KeyValuePair<string, StringValues>>? listParameters = null,
             (string, string)[]? headers = null,
             bool authorizedUser = false)
         {
@@ -162,7 +210,7 @@ namespace PersonalSiteAPI.Services
 
             // Adding Parameters
             uri = QueryHelpers.AddQueryString(uri, "entity_type", entityType);
-            if (studyId is long studyIdLong)
+            if (studyId is long studyIdLong && (parameters is null || !parameters.ContainsKey("study_id")))
             {
                 uri = QueryHelpers.AddQueryString(uri, "study_id", studyIdLong.ToString());
             }
@@ -171,16 +219,24 @@ namespace PersonalSiteAPI.Services
             {
                 uri = QueryHelpers.AddQueryString(uri, parameters);
             }
-            // Keep if this is enough to handle all requests
+
             if (secretObj != null && !string.IsNullOrEmpty(secretObj.ApiToken))
             {
                 uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
             }
+            if (listParameters is not null)
+            {
+                uri = QueryHelpers.AddQueryString(uri, listParameters);                
+            }
+
+            Console.WriteLine($"Request uri = {uri}");
+            
             using var request = new HttpRequestMessage()
             {
                 RequestUri = new Uri(uri),
-                Method = HttpMethod.Get,
+                Method = HttpMethod.Get,                
             };
+            
             // Headers get set here
             if (headers is not null)
             {
@@ -189,7 +245,13 @@ namespace PersonalSiteAPI.Services
                     request.Headers.Add(header.Item1, header.Item2);
                 }
             }
-            var response = await _httpClient.SendAsync(request);
+
+            // Timeout after 20 seconds.
+            var cancellationToken = new CancellationTokenSource();
+            cancellationToken.CancelAfter(1000 * 20);
+
+            var response = await _httpClient.SendAsync(request, cancellationToken.Token);
+
             response.EnsureSuccessStatusCode();
 
             var responseContentBytes = await response.Content.ReadAsByteArrayAsync();
@@ -404,7 +466,7 @@ namespace PersonalSiteAPI.Services
 
         private static bool HasLicenseTerms(byte[] content)
         {
-            string responseStr = Encoding.UTF8.GetString(content);
+            string responseStr = System.Text.Encoding.UTF8.GetString(content);
             return responseStr.Contains("License Terms:");
         }
 

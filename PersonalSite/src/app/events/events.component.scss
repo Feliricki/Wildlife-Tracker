@@ -2,9 +2,15 @@
   flex: 1 1 auto;
 }
 
-.tab-1 {
-  width: 10px;
-}
+// .tab-group {
+//   overflow:visible;
+// }
+
+// .tab-1 {
+//   // width: 10px;
+//   // overflow-y:hidden;
+//   max-height: 50vh;
+// }
 
 .first-row {
   display: flex;
@@ -13,14 +19,17 @@
   margin-right: 1em;
 }
 
-.date-input {
-  flex: 1 1 30px;
-}
+// .date-input {
+//   flex: 1 1 30px;
+// }
+
+// .tab-1{
+//   // height: 50vh;
+// }
 
 .second-row {
   display: flex;
   flex-wrap: wrap;
-  // justify-content: space-around;
   justify-content: space-between;
 }
 
@@ -40,27 +49,41 @@
   display:flex;
   justify-content: center;
   flex: 1 1 0;
-  // min-width: 100px;
-  // width: 100%;
 }
 
 // NOTE: Alignment is changed dynamically.
+
 .fourth-row {
   display: flex;
   flex-wrap: wrap;
-  // resize:horizontal;
-}
-// NOTE: Fourth row items.
-
-.reduction-profile-form {
-  // flex: 1 1 70px;
-  margin-left: 1em;
+  // margin-left: 1em;
 }
 
-.sensor-form {
-  // flex: 1 1 70px;
-  margin-left: 1em;
+// .table-container {
+//   // max-height: 95vh;
+// }
+
+.event-form {
+  // overflow-y: scroll;
+  // max-height: 300px;
+  max-height: 80vh;
 }
+
+// .animal-table {
+//   // overflow: clip;
+//   // overflow: scroll;
+//   // background-color: lightblue;
+//   // height: 90vh;
+// }
+
+// .reduction-profile-form {
+//   // flex: 1 1 70px;
+// }
+//
+// .sensor-form {
+//   // flex: 1 1 70px;
+//   // margin-left: 1em;
+// }
 
 
 .slider {

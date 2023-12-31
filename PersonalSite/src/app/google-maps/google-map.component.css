@@ -1,13 +1,17 @@
 .map-container {
   position: absolute;
-  height: 100%;
+  margin-top: 2.5em;
+  height: calc(100% - 2.5em);
+  /* height: 100%; */
   width: 100%;
   background-color: white;
+  /* background-color: lightskyblue; */
 }
 
 .button-container {
   display:flex;
   justify-content: center;
+  z-index: 54;
 }
 
 .spinner-container {

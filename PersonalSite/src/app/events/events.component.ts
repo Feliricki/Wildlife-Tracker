@@ -37,6 +37,8 @@ import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
 import { MAX_EVENTS } from './Validators/maxEventsValidator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { LineStringFeatureCollection, LineStringMetaData, LineStringProperties } from '../deckGL/GoogleOverlay';
+import { HttpResponse } from '@angular/common/http';
+import { EventRequest } from '../studies/EventRequest';
 
 
 @Component({
@@ -68,7 +70,8 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   currentLocationSensors: WritableSignal<string[]> = signal([]);
 
   @Output() closeRightNavEmitter = new EventEmitter<true>(true);
-  @Output() lineDataEmitter = new EventEmitter<Observable<LineStringFeatureCollection[] | null>>;
+  @Output() lineDataEmitter = new EventEmitter<Observable<HttpResponse<LineStringFeatureCollection[] | null>>>;
+  @Output() fetchRequestEmitter = new EventEmitter<Request>();
 
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -76,6 +79,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
 
   eventForm = this.formBuilder.nonNullable.group({
 
+    // This field will go unused.
     maxEvents: new FormControl<number | null>(
       0,
       { nonNullable: false }),
@@ -102,9 +106,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   tableState$?: Observable<SourceState>;
   tableStateSubscription?: Subscription;
 
-  // TODO: The map component needs to be lazy loaded.
   // TODO: Aria label needs to be for accessibility purposes.
-  // NOTE: These are the new styling when a screen change is detected.
   smallTabSize = {
     'min-width': '150px',
     'max-width': '500px',
@@ -119,7 +121,9 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   }
 
   fourthRowDefault = {
-    'justify-content': 'space-around',
+    'justify-content': 'space-between',
+    'margin-left': '1em',
+    'margin-right': '1em',
   }
 
   breakpointSubscription?: Subscription;
@@ -149,7 +153,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
             this.eventForm.markAsPristine();
             this.eventForm.enable();
             this.sensorForm.setValue(this.currentLocationSensors().at(0) ?? null);
-            this.MaxEvents.setValue(10);
+            // this.MaxEvents.setValue(10);
             break;
           case "error":
             this.eventForm.disable();
@@ -179,6 +183,10 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
           map(state => state.matches)
         );
 
+  }
+
+  isSticky(): boolean {
+    return true;
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -275,16 +283,16 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     this.tableSource;
   }
 
-  toggleMaxEvents(): void {
-    this.maxEventsToggle.update(prev => !prev);
-    if (this.maxEventsToggle()) {
-      this.MaxEvents.disable();
-    } else {
-      this.MaxEvents.enable();
-    }
-  }
+  // toggleMaxEvents(): void {
+  //   this.maxEventsToggle.update(prev => !prev);
+  //   if (this.maxEventsToggle()) {
+  //     this.MaxEvents.disable();
+  //   } else {
+  //     this.MaxEvents.enable();
+  //   }
+  // }
 
-  getIndividual(index: number): Signal<TagJsonDTO | null> {
+  getIndividual(index: number): Signal<TagJsonDTO | IndividualJsonDTO | null> {
     return this.tableSource.getIndividual(index);
   }
 
@@ -313,8 +321,9 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     return this.tableSource.isSelected(index);
   }
 
-  trackById(index: number): string {
-    return `${index}`;
+  trackById(index: number) {
+    // console.log(`Tracking index ${index}`);
+    return index;
   }
 
   mapToArray<T, U>(map: Map<T, U>): U[] {
@@ -343,55 +352,57 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     console.log(`EventForm State: ${this.eventForm.valid}`);
 
     if (this.eventForm.invalid) {
-      return null;
+      return;
     }
     if (!this.currentStudy || this.TableState() !== "loaded"
       || this.sensorForm.value == null) {
-      return null;
+      return;
     }
 
     const studyId = this.currentStudy.id;
     const localIdentifiers = this.tableSource.taggedAndSelectedIndividuals() as NonEmptyArray<string>;
 
-    // NOTE: Validators should cover these conditions.
-    // if (localIdentifiers.length === 0 || this.currentLocationSensors().length === 0) {
-    //   return;
-    // }
-
     const sensor = this.sensorForm.value;
     const geometryType = "linestring";
+
+
     const eventOptions: EventOptions = {
-      maxEventsPerIndividual: this.MaxEvents.valid ? this.MaxEvents.value ?? undefined : undefined,
+      // maxEventsPerIndividual: this.MaxEvents.valid ? this.MaxEvents.value ?? undefined : undefined,
+      maxEventsPerIndividual: undefined,
       timestampStart: this.dateRange.valid ? this.timeStampHelper(this.dateRange.controls.start.value) : undefined,
       timestampEnd: this.dateRange.valid ? this.timeStampHelper(this.dateRange.controls.end.value) : undefined,
       attributes: undefined,
-      eventProfiles: this.eventProfiles.valid ? this.eventProfiles.value : undefined,
+      eventProfile: this.eventProfiles.valid ? this.eventProfiles.value : undefined,
     };
 
-    console.log(
-      `studyId = ${studyId} localIdentifiers = ${localIdentifiers}
-      sensor = ${sensor} geomtryType = ${geometryType}
-      matEventsPerIndividuals = ${eventOptions.maxEventsPerIndividual}
-      timestampStart = ${eventOptions.timestampStart}
-      timestampEnd = ${eventOptions.timestampEnd}
-      eventProfiles = ${eventOptions.eventProfiles}`);
+    const eventRequest: EventRequest = {
+      studyId: studyId,
+      localIdentifiers: localIdentifiers,
+      sensorType: sensor,
+      geometryType: geometryType,
+      options: eventOptions,
+    };
 
-    console.log(eventOptions);
+    console.log(JSON.stringify(eventRequest));
 
     const request = this.studyService.
       getGeoJsonEventData<GeoJSON.LineString, LineStringProperties, LineStringMetaData>
-      (studyId, localIdentifiers, sensor, geometryType, eventOptions) as
-      Observable<LineStringFeatureCollection | null>;
+      (eventRequest);
+    const fetchRequest = this.studyService.getGeoJsonFetchRequest(eventRequest);
 
+    this.sendEventMessage(request);
+    this.sendFetchRequest(fetchRequest);
     // TODO: Consider if an observable or the actual data should be sent to the current
     // map component.
-
-    console.log(request);
-    return request;
   }
 
-  sendEventRequest(request: Observable<LineStringFeatureCollection[] | null>): void {
+  sendEventMessage(request: Observable<HttpResponse<LineStringFeatureCollection[] | null>>): void {
+    console.log("Sending event message in events component");
     this.lineDataEmitter.emit(request);
+  }
+
+  sendFetchRequest(request: Request): void {
+    this.fetchRequestEmitter.emit(request);
   }
 
   timeStampHelper(date: Date | null): bigint | undefined {

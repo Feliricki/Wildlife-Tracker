@@ -20,7 +20,9 @@
     <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="over"
       [fixedInViewport]="true">
 
-      <app-events #eventComponent (lineDataEmitter)="updateLineStringData($event)" (closeRightNavEmitter)="closeRightNav()" [currentStudy]="currentStudy"></app-events>
+      <app-events #eventComponent (fetchRequestEmitter)="updateLineStringDataRequest($event)"
+        (lineDataEmitter)="updateLineStringData($event)" (closeRightNavEmitter)="closeRightNav()"
+        [currentStudy]="currentStudy"></app-events>
 
     </mat-sidenav>
 
@@ -31,10 +33,16 @@
         class="toggle-button"><mat-icon>chevron_right</mat-icon></button>
       }
 
+      <!-- @if(!mapLoaded()){ -->
+      <!-- <div class="button-container"> -->
+      <!--   <button mat-raised-button (click)="loadMap()">Load Map</button> -->
+      <!-- </div> -->
+      <!-- } -->
       <!-- TODO: Move the toggle button belongs the search component -->
       @if (activeMap === "google"){
-      <app-google-map [pathEventData$]="currentEventLineData$" (mapStateEmitter)="updateMapState($event)" (studiesEmitter)="studiesMessage($event)" (studyEmitter)="studyMessage($event)"
-        [focusedMarker]="currentMarker"></app-google-map>
+      <app-google-map [pathEventData$]="currentEventLineData$" (mapStateEmitter)="updateMapState($event)"
+        (studiesEmitter)="studiesMessage($event)" (studyEmitter)="studyMessage($event)" [focusedMarker]="currentMarker"
+        [lineStringRequest]="currentLineDataRequest"></app-google-map>
       }
 
       @if (rightButtonFlag() === true && mapLoaded()){

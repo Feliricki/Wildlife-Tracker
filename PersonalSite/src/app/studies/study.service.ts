@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse, HttpParams, HttpStatusCode } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams, HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, of, catchError, tap, map } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -9,9 +9,7 @@ import { EventOptions } from './EventOptions';
 import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
 import { JsonResponseData } from './JsonResults/JsonDataResponse';
 import * as GeoJSON from 'geojson';
-// import { IndividualJsonDTO } from './JsonResults/IndividualJsonDTO';
-// import { TagJsonDTO } from './JsonResults/TagJsonDTO';
-// import { StudyJsonDTO } from './JsonResults/StudyJsonDTO';
+import { EventRequest } from './EventRequest';
 
 @Injectable({
   providedIn: 'root'
@@ -93,7 +91,6 @@ export class StudyService {
     )
   }
 
-  // TODO: Refactor to accept geojson formatted data.
   getEventData(
     studyId: bigint,
     localIdentifiers: NonEmptyArray<string>,
@@ -108,59 +105,67 @@ export class StudyService {
     return this.httpClient.get<EventJsonDTO>(url, { params: parameters });
   }
 
-  // NOTE: Type paramters are in order:
-  // 1) The geometry type (a subset of the official geojson specs tentatively including points and linestring)
-  // 2) The properties includes extra information about each feature
-  // 3) TMeta is metadata about the entire collection at the top level.(this is always included)
-  getGeoJsonEventData<TGeo extends GeoJSON.Geometry, TProp, TMeta>(
-    studyId: bigint,
-    localIdentifiers: NonEmptyArray<string>,
-    sensorType: string,
-    geometryType: "point" | "linestring",
-    options: EventOptions)
-    : Observable<Array<TMeta & GeoJSON.FeatureCollection<TGeo, TProp>> | null> {
-
+  getGeoJsonEventData<TGeo extends GeoJSON.Geometry, TProp, TMeta>(request: EventRequest) {
     const url = environment.baseUrl + "api/MoveBank/GetEventData";
-    let parameters = this.eventHelper(studyId, localIdentifiers, sensorType, options);
-    parameters = parameters.set("geoJsonFormat", geometryType);
 
-    const opts = { params: parameters, observe: 'response' as const, responseType: 'json' as const };
+    const opts = {
+      observe: 'response' as const,
+      responseType: 'json' as const,
+      headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
+    };
+
+    const body = {
+      studyId: request.studyId,
+      localIdentifiers: request.localIdentifiers,
+      sensorType: request.sensorType,
+      geometryType: request.geometryType,
+      options: request.options,
+    };
 
     // NOTE: Error responses should be handled by the caller.
     return this.httpClient
-      .get<Array<TMeta & GeoJSON.FeatureCollection<TGeo, TProp>> | null>
-      (url, opts).pipe(
-        map(res => {
-
-          console.log(res);
-          switch(res.status){
-
-            case HttpStatusCode.Ok:
-              return res.body;
-
-            case HttpStatusCode.Forbidden:
-              return null;
-
-            default:
-              return null;
-          }
-
-        })
+      .post<Array<{ metadata: TMeta } & GeoJSON.FeatureCollection<TGeo, TProp>> | null>
+      (url, JSON.stringify(body), opts).pipe(
+        tap(res => console.log(res.url))
       );
+  }
+
+  // NOTE: Validation should occur on the form and on the backend.
+  // TODO: Consider sending the request using the given load function
+  // to pass the parameters to the body instead of the url (to avoid URL too long responses)
+  // and in an attempt to implement batched responses from the backend.
+  getGeoJsonFetchRequest(request: EventRequest): Request {
+
+    const url = environment.baseUrl + "api/MoveBank/GetEventData";
+    console.log(url);
+
+    const fetchRequest = new Request(url, {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+
+    return fetchRequest;
   }
 
   eventHelper(
     studyId: bigint,
     localIdentifiers: NonEmptyArray<string>,
-    sensorType: string,
-    options: EventOptions): HttpParams {
+    sensorType?: string,
+    options?: EventOptions): HttpParams {
 
     let parameters = new HttpParams()
-      .set("studyId", studyId.toString())
-      .set("sensorType", sensorType);
+      .set("studyId", studyId.toString());
 
     for (const localIdentifier of localIdentifiers) {
       parameters = parameters.append("individualLocalIdentifiers", localIdentifier);
+    }
+
+    if (sensorType !== undefined) {
+      parameters = parameters.set("sensorType", sensorType);
+    }
+
+    if (options === undefined) {
+      return parameters;
     }
 
     const keys = Object.keys(options);
@@ -172,7 +177,7 @@ export class StudyService {
         })
       }
       else if (value !== undefined && value !== null) {
-        parameters.set(key, value.toString());
+        parameters = parameters.set(key, value.toString());
       }
     }
 

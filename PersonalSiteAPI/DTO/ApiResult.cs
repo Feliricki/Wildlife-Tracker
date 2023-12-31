@@ -70,6 +70,9 @@ namespace PersonalSiteAPI.DTO
                     string.Format("{0}.StartsWith(@0, @1)", filterColumn), filterQuery, StringComparison.InvariantCultureIgnoreCase);
             }
 
+            // NOTE: This change is untested.
+            var count = queryable.Count();
+
             if (!string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(sortOrder) && IsValidProperty(sortColumn))
             {
                 Console.WriteLine($"Sorting: Column={sortColumn} Order={sortOrder}");
@@ -92,7 +95,8 @@ namespace PersonalSiteAPI.DTO
             var data = queryable.ToList();
             return new ApiResult<T>(
                 data,
-                list.Count,
+                // list.Count,
+                count,
                 pageIndex,
                 pageSize,
                 sortColumn,
@@ -127,19 +131,31 @@ namespace PersonalSiteAPI.DTO
             string? filterQuery = null
             )
         {            
-            // TODO - Test the runtime of the creation method with pulling the entire table vs. sorting, filtering and paginating on the database.
+            Console.WriteLine("Creating apiResult asynchronously.");
+            // TODO - Upgrade this method to search for case-insensitive substrings
+            Console.WriteLine($"filtercolumn = {filterColumn} filterquery = {filterQuery} isValidProperty({filterColumn ?? "N/A"}) = {IsValidProperty(filterColumn ?? "")}");
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery)
                 && IsValidProperty(filterColumn))
             {                
-                Console.WriteLine($"Prefix search: Checking if {filterColumn} start with {filterQuery} (Case insensitive)");
+                Console.WriteLine($"Async Prefix search: Checking if {filterColumn} start with {filterQuery} (Case insensitive)");
+                Console.WriteLine(source.GetType().ToString());
                 Expression<Func<string, bool>> stringExpression = (a) => a.StartsWith(filterQuery, StringComparison.InvariantCultureIgnoreCase);
                 source = source.Where(stringExpression);
+                // if (typeof(IQueryable<string>) == source.GetType())
+                // {
+                //     // Console.WriteLine("Source is of type string in ApiResult");
+                //     // Expression<Func<string, bool>> stringExpression = (a) => a.StartsWith(filterQuery, StringComparison.InvariantCultureIgnoreCase);
+                //     // source = source.Where(stringExpression);
+                //     // source = source.Where(
+                //     //     string.Format("{0}.StartsWith(@0, @1)", filterColumn), filterQuery, StringComparison.InvariantCultureIgnoreCase);
+                // }
             }
-            Console.WriteLine("Count the number of records in the database.");
-            var count = await source.CountAsync();
 
+            var count = await source.CountAsync();
+            Console.WriteLine($"The number of records is {count}");
+            
             if (!string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(sortOrder)
-                && IsValidProperty(sortColumn))
+                                                  && IsValidProperty(sortColumn))
             {
                 Console.WriteLine($"Sorting: Column={sortColumn} Order={sortOrder}");
                 sortOrder = !string.IsNullOrEmpty(sortOrder)
@@ -178,7 +194,7 @@ namespace PersonalSiteAPI.DTO
         /// </summary>
         public static bool IsValidProperty(
             string propertyName,
-            bool throwExceptionIfNotFound = true)
+            bool throwExceptionIfNotFound = false)
         {
             var prop = typeof(T).GetProperty(
                 propertyName,

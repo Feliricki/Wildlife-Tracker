@@ -10,6 +10,12 @@ public record LineStringProperties()
     [JsonPropertyName(name: "to")]
     public DateTime To { get; set; }
     [JsonPropertyName(name: "color")] public List<double> Color { get; set; } = new();
+
+    [JsonPropertyName(name: "sourceColor")]
+    public List<double> FromColor { get; set; } = new();
+    
+    [JsonPropertyName(name: "targetColor")]
+    public List<double> TargetColor { get; set; } = new();
     
     // NOTE: The following properties are unused.
     [JsonPropertyName(name: "content")]

@@ -50,6 +50,7 @@ builder.Services.AddTransient<IMoveBankService, MoveBankService>();
 builder.Services.AddHttpClient<IMoveBankService, MoveBankService>(client =>
 {
     client.BaseAddress = new Uri("https://www.movebank.org/movebank/service/");
+    client.Timeout = TimeSpan.FromSeconds(20);
 });
 
 builder.Services.AddHttpContextAccessor();

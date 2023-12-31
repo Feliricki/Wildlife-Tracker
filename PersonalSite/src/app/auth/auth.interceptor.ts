@@ -16,6 +16,7 @@ export class AuthInterceptor implements HttpInterceptor {
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     const cloned = request.clone();
+
     if (request.method === "JSONP") {
       // TODO : finish implementing CSP here.
       // let cloned = request.clone({
@@ -27,10 +28,19 @@ export class AuthInterceptor implements HttpInterceptor {
       //       "font - src https://fonts.gstatic.com; style - src 'self' 'unsafe-inline' https://fonts.googleapis.com;" + "worker - src blob: ; "
       //   },
       // });
-      console.log("Sending jsonp request with uri: " + cloned.url);
       return next.handle(cloned);
     }
-    //let cloned = request.clone();
-    return next.handle(request);
+    // INFO: Chunked encoding is better for larger requests.
+    // if (request.method === "GET" && request.url.includes("GetEventData")){
+    //   cloned = request.clone({
+    //     setHeaders: {
+    //       "Transfer-Encoding": "chunked"
+    //     }
+    //   });
+    //
+    //   return next.handle(cloned);
+    // }
+
+    return next.handle(cloned);
   }
 }

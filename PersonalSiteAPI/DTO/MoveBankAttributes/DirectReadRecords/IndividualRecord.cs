@@ -38,7 +38,7 @@ namespace PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadDTOs
         public string? LocalIdentifier { get; set; }
         [Optional]
         [Name("marker_id")]
-        public long? MarkerId { get; set; }
+        public string? MarkerId { get; set; }
         [Optional]
         [Name("mates")]
         public string? Mates { get; set; }

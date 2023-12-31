@@ -11,6 +11,7 @@ import { animate, style, transition, trigger } from '@angular/animations';
 import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/layout';
 import { Observable, firstValueFrom, map } from 'rxjs';
 import { LineStringFeatureCollection } from '../deckGL/GoogleOverlay';
+import { HttpResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-tracker-view',
@@ -53,7 +54,8 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   searchOpened: WritableSignal<boolean> = signal(false);
 
-  currentEventLineData$?: Observable<LineStringFeatureCollection[] | null>;
+  currentEventLineData$?: Observable<HttpResponse<LineStringFeatureCollection[] | null>>;
+  currentLineDataRequest?: Request;
 
   currentMarker?: bigint;
   currentStudies?: Map<bigint, StudyDTO>;
@@ -69,9 +71,6 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   leftButtonFlag: WritableSignal<boolean> = signal(false);
   rightButtonFlag: WritableSignal<boolean> = signal(true);
-
-  // breakpointSubcription?: Subscription;
-  // breakpointMatches: WritableSignal<boolean> = signal(false);
 
   constructor(private breakpointObserver: BreakpointObserver) { }
 
@@ -96,6 +95,20 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     return;
   }
 
+
+  loadMap(): void {
+    if (this.mapLoaded()) {
+      return;
+    }
+    switch (this.activeMap) {
+      case "google":
+        break;
+
+      default:
+        return;
+    }
+  }
+
   updateMapState(state: boolean): void {
     this.mapLoaded.set(state);
   }
@@ -109,8 +122,13 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
 
   updateLineStringData(
-    event: Observable<LineStringFeatureCollection[] | null>): void {
+    event: Observable<HttpResponse<LineStringFeatureCollection[] | null>>): void {
     this.currentEventLineData$ = event;
+  }
+
+  updateLineStringDataRequest(request: Request): void {
+    console.log("Updating the fetch request in tracker view");
+    this.currentLineDataRequest = request;
   }
 
   // NOTE: This message is received on the event component
@@ -130,6 +148,9 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
 
   panToMarker(studyId: bigint): void {
+    if (!this.mapLoaded()) {
+      return;
+    }
     this.currentMarker = studyId;
   }
 
@@ -139,7 +160,6 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
 
   openRightNav(): void {
-    console.log("Opening the event component.");
     if (this.rightNav.opened) {
       return;
     }

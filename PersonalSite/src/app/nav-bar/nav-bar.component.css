@@ -14,14 +14,7 @@
 }
 
 .mat-toolbar.mat-primary {
-  /* position: absolute; */
   position: fixed;
   z-index: 2;
   background-color: rgb(4, 131, 114);
-  /* display: flexbox; */
-    /* position:fixed; */
-    /* height: 100%; */
 }
-/* .login-button { */
-/*   z-index: 1000; */
-/* } */

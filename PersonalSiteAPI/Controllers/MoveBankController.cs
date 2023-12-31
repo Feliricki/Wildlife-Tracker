@@ -21,8 +21,13 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using PersonalSiteAPI.DTO.GeoJSON;
 using JsonSerializer = System.Text.Json.JsonSerializer;
+using PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadRecords;
+using System.Diagnostics;
+using Amazon.SecretsManager.Model;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -428,113 +433,121 @@ namespace PersonalSiteAPI.Controllers
         }
         // TODO: This method needs more validation. 
         // 1) Check model state for validation state
-        // 2) Sort data by timestamp.
-        // 3) Include DateTime objects
-        [HttpGet(Name = "GetEventData")]
-        [ResponseCache(CacheProfileName = "Any-60")]
+    
+        // public async Task<ActionResult<EventJsonDTO>> GetEventData(
+        //     [Required][FromQuery] List<string> individualLocalIdentifiers,
+        //     [Required] long studyId,
+        //     string? sensorType,
+        //     int? maxEventsPerIndividual = null,
+        //     long? timestampStart = null,
+        //     long? timestampEnd = null,
+        //     string? attributes = null,
+        //     string? eventProfiles = null,
+        //     string? geoJsonFormat = null)
+        // [HttpGet(Name = "GetEventData")]
+        [HttpPost(Name = "GetEventData")]
+        [ResponseCache(CacheProfileName = "NoCache")]
         public async Task<ActionResult<EventJsonDTO>> GetEventData(
-            [Required][FromQuery] List<string> individualLocalIdentifiers,
-            [Required] long studyId,
-            [Required] string sensorType,
-            int? maxEventsPerIndividual = null,
-            long? timestampStart = null,
-            long? timestampEnd = null,
-            string? attributes = null,
-            string? eventProfiles = null,
-            string? geoJsonFormat = null)
+            [FromBody] EventRequest request)
         {
             try
             {
+                Console.WriteLine(JsonConvert.SerializeObject(request));
+                var eventOptions = request.Options;
                 var parameters = new Dictionary<string, string?>();
 
-                if (maxEventsPerIndividual is not null)
+                if (eventOptions.MaxEventsPerIndividual is not null)
                 {
-                    parameters.Add("max_events_per_individual", maxEventsPerIndividual.ToString());
+                    parameters.Add("max_events_per_individual", eventOptions.MaxEventsPerIndividual.ToString());
                 }
+                
                 // TODO: JsonRequest has support for additional attributes if they're provided.
-                if (attributes is not null)
+                if (eventOptions.Attributes is not null)
                 {
-                    parameters.Add("attributes", attributes);
-                }
-                // These timestamp as given in Unix Epoch time
-                if (timestampStart is not null && timestampEnd is not null && timestampEnd >= timestampStart)
-                {
-                    parameters.Add("timestamp_start", timestampStart.ToString());
-                    parameters.Add("timestamp_end", timestampEnd.ToString());
+                    parameters.Add("attributes", eventOptions.Attributes);
                 }
 
-                var response = await _moveBankService.JsonEventData(
-                    studyId: studyId,
-                    sensorType: sensorType,
-                    individualLocalIdentifiers: individualLocalIdentifiers.ToImmutableArray(),
+                if (eventOptions.EventProfile is not null)
+                {
+                    parameters.Add("event_reduction_profile", eventOptions.EventProfile);
+                }
+                
+                // These timestamp as given in Unix Epoch time
+                if (eventOptions.TimestampStart >= eventOptions.TimestampEnd)
+                {
+                    parameters.Add("timestamp_start", eventOptions.TimestampStart.ToString());
+                    parameters.Add("timestamp_end", eventOptions.TimestampEnd.ToString());
+                }
+                
+                Console.WriteLine("Sending csv request for event data point.");
+                const string additionalAttributes = "individual_local_identifier,tag_local_identifier,timestamp,location_long,location_lat,individual_taxon_canonical_name";
+                parameters.Add("attributes", additionalAttributes);                    
+                
+                Console.WriteLine(JsonConvert.SerializeObject(parameters));
+                var response = await _moveBankService.DirectRequestEvents(
+                    studyId: request.StudyId,
+                    individualLocalIdentifiers: request.LocalIdentifiers.ToArray(),
+                    sensorType: request.SensorType ?? throw new InvalidRequestException("Invalid sensor type."),
                     parameters: parameters,
-                    eventProfile: eventProfiles,
                     headers: null,
                     authorizedUser: User.IsInRole(RoleNames.Administrator));
 
-                var responseContentArray = await response.Content.ReadAsByteArrayAsync();
-                var responseType = "json";
-                if (responseContentArray.Length == 0)
-                {
-                    Console.WriteLine("Sending csv request for event data point.");
-                    response = await _moveBankService.DirectRequest(
-                        entityType: "event",
-                        studyId: studyId,
-                        parameters: parameters,
-                        headers: null,
-                        authorizedUser: User.IsInRole(RoleNames.Administrator)
-                        );
-                    responseType = "csv";
-                }
-
-                Console.WriteLine($"Response type = {responseType} for event data endpoint.");
                 if (response is null)
                 {
                     throw new InvalidOperationException("Null response from movebank service");
                 }
-                var responseString = Encoding.UTF8.GetString(responseContentArray);
-                // TODO: This pattern is incomplete for the "csv" case
-                // If a CSV request was sent then deserialize using csvHelper. 
-                // Consider sending more fields to the frontend. (if I ever switch to only using CSV requests)
-                EventJsonDTO? data;
-                if (responseType == "json")
+                
+                var responseContentArray = await response.Content.ReadAsByteArrayAsync();
+                // NOTE: This conversion to to an json Dto requires additional attributes.                 
+                var memStream = new MemoryStream(responseContentArray);
+                using var stream = new StreamReader(memStream, Encoding.UTF8);
+                using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
+
+                var records = new List<EventRecord>();
+                while (await csvReader.ReadAsync())
                 {
-                    data = JsonSerializer.Deserialize<EventJsonDTO>(responseString);
-                }
-                else
-                {
-                    Console.WriteLine("No Content Available For Public Viewing.");
-                    return StatusCode(StatusCodes.Status403Forbidden);
-                    // If User is authorized, then considering sending another request with more permissions
-                    // and return a GeoJSON response.
-                    
-                    // var memStream = new MemoryStream(responseContentArray);
-                    // using var stream = new StreamReader(memStream, Encoding.UTF8);
-                    // using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
-                    // data = null;
-                }
+                    var record = csvReader.GetRecord<EventRecord>();
+                    if (record?.Timestamp is null || record.LocationLat is null || record.LocationLong is null)
+                    {
+                        continue;
+                    }
+                    records.Add(record);
+                }                    
+
+                var data = LineStringFeatureCollection<LineStringProperties>.CreateFromRecord(records, request.StudyId);
+                Console.WriteLine($"Converted {records.Count} records to data with {data.IndividualEvents.Count} individuals.");
                 
                 if (data is null)
                 {
                     throw new Exception("Data was null");
                 }
-                if (geoJsonFormat is null)
+                if (request.GeometryType is null)
                 {
-
                     Console.WriteLine("Returning unprocessed json data");
                     return new JsonResult(data);
                 }
 
+                Stopwatch stopwatch = new Stopwatch();
+                stopwatch.Start();
+
                 data.IndividualEvents.ForEach(l => l.Locations.Sort((x, y) => x.Timestamp.CompareTo(y.Timestamp)));
-                Console.WriteLine($"Response has {data.IndividualEvents.Aggregate(0, (prev, val) => prev + val.Locations.Count)} events.");
+                stopwatch.Stop();
+
+                Console.WriteLine($"Response has {data.IndividualEvents.Aggregate(0, (prev, val) => prev + val.Locations.Count)} events. Sorted all events in {stopwatch.Elapsed / 1000} seconds");
 
                 object collection;
-                switch (geoJsonFormat.ToLower())
+                switch (request.GeometryType.ToLower())
                 {
                     case "linestring":
+                        stopwatch = new Stopwatch();
+                        stopwatch.Start();
+
                         var lineCollections = LineStringFeatureCollection<LineStringProperties>
                             .CombineLineStringFeatures(data);
                         
+                        stopwatch.Stop();
+                        Console.WriteLine($"Time elapsed: {stopwatch.Elapsed / 1000} seconds to create line collection");
+
                         collection = lineCollections;
                         break;
 
@@ -549,7 +562,13 @@ namespace PersonalSiteAPI.Controllers
                         throw new ArgumentException("GeoJSON parameter was passed an invalid value.");
                 }
                 
-                return new JsonResult(collection);
+                var jsonString = JsonSerializer.Serialize(collection, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = null,
+                    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+                });
+                
+                return Ok(jsonString);
                 
 
                 PointProperties PropertyFunc(LocationJsonDTO location) => new()
@@ -559,10 +578,13 @@ namespace PersonalSiteAPI.Controllers
                     Timestamp = location.Timestamp
                 };
             }
+            catch(TimeoutException timeoutError)
+            {
+                return StatusCode(StatusCodes.Status408RequestTimeout, timeoutError);
+            }            
             catch (Exception error)
             {
-                Console.WriteLine(error.Message);
-                return StatusCode(StatusCodes.Status500InternalServerError);
+                return StatusCode(StatusCodes.Status500InternalServerError, error);
             }
         }
 

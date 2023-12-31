@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,11 +19,13 @@ import { StudyDTO } from 'src/app/studies/study';
     `,
   styleUrl: './info-window.component.css'
 })
-export class InfoWindowComponent {
+export class InfoWindowComponent implements OnDestroy {
   @Input()
   currentStudy?: StudyDTO;
   @Input()
   eventRequest?: EventEmitter<StudyDTO>;
+  @Input()
+  infoWindowInstance?: google.maps.InfoWindow;
 
   constructor() {
     return;
@@ -31,6 +33,16 @@ export class InfoWindowComponent {
 
   emitEventRequest(studyDTO: StudyDTO): void {
     this.eventRequest?.emit(studyDTO);
+  }
+
+  ngOnDestroy(): void {
+    // this.closeInfoWindow();
+    return;
+  }
+
+  closeInfoWindow(): void {
+    this.infoWindowInstance?.set("toggle", false);
+    this.infoWindowInstance?.close();
   }
 
 }

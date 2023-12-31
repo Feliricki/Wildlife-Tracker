@@ -13,6 +13,7 @@ import { NgElement, WithProperties } from '@angular/elements';
 import { InfoWindowComponent } from './info-window/info-window.component';
 import { GoogleMapOverlayController, LineStringFeatureCollection } from '../deckGL/GoogleOverlay';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { HttpResponse, HttpStatusCode, HttpErrorResponse } from '@angular/common/http';
 
 type MapState =
   'initial' |
@@ -20,6 +21,15 @@ type MapState =
   'loaded' |
   'error' |
   'rate-limited';
+
+type EventState =
+  "initial" |
+  "loaded" |
+  "loading" |
+  "time out" |
+  "error";
+
+export type EventResponse = Observable<HttpResponse<LineStringFeatureCollection[] | null>>;
 
 @Component({
   selector: 'app-google-map',
@@ -33,9 +43,11 @@ type MapState =
 export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   mainSubscription$?: Subscription;
   mapState: WritableSignal<MapState> = signal('initial');
+  eventState: WritableSignal<EventState> = signal("initial");
 
   @Input() focusedMarker?: bigint;
-  @Input() pathEventData$?: Observable<LineStringFeatureCollection[] | null>;
+  @Input() pathEventData$?: EventResponse;
+  @Input() lineStringRequest?: Request;
 
   @Output() JsonDataEmitter = new EventEmitter<Observable<JsonResponseData[]>>();
   @Output() componentInitialized = new EventEmitter<true>;
@@ -109,9 +121,16 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   // NOTE: This method listens to values received from tracker view component
   //  Only new values (actual changes) make it to this method.
+  //  Subscribe to the event data message here to handle the map controller
+  //  and forbiden responses correctly.
   ngOnChanges(changes: SimpleChanges): void {
     for (const propertyName in changes) {
       const currentValue = changes[propertyName].currentValue;
+
+      if (currentValue === undefined) {
+        continue;
+      }
+
       switch (propertyName) {
         // This case sends a message that is received in the event component
         case "focusedMarker":
@@ -119,17 +138,76 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           this.panToMarker(currentValue);
           break;
 
+        // TODO: The backend needs to be changed to use CSV responses.
         // Event data to be returned here in LineFeatureCollection format
-        case "eventObservable":
+        case "pathEventData$":
           console.log(`Received event observable in google maps component.`);
-          console.log(currentValue);
-          this.pathEventData$ = currentValue as Observable<LineStringFeatureCollection[]>;
+          this.pathEventData$ = currentValue as EventResponse;
+          // this.handleEventData(this.pathEventData$);
+
+          break;
+        case "lineStringRequest":
+          console.log("Recieved event fetch request in google maps component.");
+          this.lineStringRequest = currentValue as Request;
+          this.handleEventRequest(currentValue as Request);
           break;
 
         default:
           break;
       }
     }
+  }
+
+  handleEventRequest(request: Request){
+    // this.eventState.set("loading");
+    this.deckOverlay?.addArcLayerUrl(request);
+  }
+
+  // TODO: Consider handling the raw httpResponse or a flag to indicate.
+  handleEventData(event$: EventResponse) {
+
+    // this.deckOverlay?.addArcLayerUrl();
+    this.eventState.set("loading");
+    event$.pipe(
+    ).subscribe({
+
+      next: response => {
+        const collection = response.body;
+        switch (response.status) {
+          // Error responses need to be handle in the catch error function.
+          case HttpStatusCode.InternalServerError:
+            console.log("Server error while retrieving events.");
+            break;
+
+          case HttpStatusCode.Forbidden:
+            console.log("Access is forbidden for event data.");
+            break;
+
+          case HttpStatusCode.Ok:
+            if (collection === null || collection.length === 0) {
+              console.log(`No events found. collection === null = ${collection === null}`);
+              return;
+            }
+            this.deckOverlay?.setLineData(collection);
+            this.eventState.set("loaded");
+            break;
+
+          default:
+            console.log("Reached default case in response handler.");
+            console.log(collection);
+            break;
+        }
+      }, error: (err: HttpErrorResponse | Error) => {
+        // TODO: This response handling needs to be tested with timeout and httpresponse errors.
+        console.log(typeof err);
+        console.error(err);
+        this.eventState.set("error");
+      },
+    });
+  }
+
+  coordinateToLatLng(coordinates: GeoJSON.Position): google.maps.LatLng {
+    return new google.maps.LatLng(coordinates[0], coordinates[1]);
   }
 
   ngOnDestroy(): void {
@@ -160,12 +238,41 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
     }).subscribe({
 
-      next: async (objRes) => {
+      next: (objRes) => {
+
+        console.log("Successfully loaded google maps markers and map.")
         const mapEl = document.getElementById("map");
-        console.log(objRes);
+
+        // NOTE: Set control positions.
+        this.defaultMapOptions.mapTypeControl = true;
+        this.defaultMapOptions.mapTypeControlOptions = {
+          style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+          position: google.maps.ControlPosition.BLOCK_START_INLINE_CENTER,
+        };
+
+        this.defaultMapOptions.fullscreenControl = true;
+        this.defaultMapOptions.fullscreenControlOptions = {
+          position: google.maps.ControlPosition.BLOCK_START_INLINE_CENTER,
+        };
+
+        this.defaultMapOptions.zoomControl = true;
+        this.defaultMapOptions.zoomControlOptions = {
+          // position: google.maps.ControlPosition.BLOCK_END_INLINE_CENTER,
+          position: google.maps.ControlPosition.BLOCK_START_INLINE_CENTER
+        }
+
+
+        this.defaultMapOptions.streetViewControl = true;
+        this.defaultMapOptions.streetViewControlOptions = {
+          position: google.maps.ControlPosition.INLINE_START_BLOCK_CENTER,
+        };
+
         this.map = new google.maps.Map(mapEl as HTMLElement, this.defaultMapOptions);
 
-        this.infoWindow = new google.maps.InfoWindow();
+        this.infoWindow = new google.maps.InfoWindow({
+          disableAutoPan: true,
+        });
+
         this.infoWindow.set("toggle", false);
         this.infoWindow.set("studyId", -1n);
 
@@ -205,6 +312,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
             if (this.infoWindow === undefined) {
               return;
             }
+            // NOTE: If a marker is clicked then close another instance of the info window component
             if (this.infoWindow.get("studyId") !== undefined
               && this.infoWindow.get("studyId") === studyDTO.id
               && this.infoWindow.get("toggle") === true) {
@@ -212,6 +320,9 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
               this.infoWindow.set("toggle", false);
               return;
             }
+
+            // If the same marker is clicked again then toggle the current state of the
+            // info window component.
             this.infoWindow.close();
 
             this.infoWindow.setContent(this.buildInfoWindowContent(studyDTO));
@@ -220,29 +331,31 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
             this.infoWindow.set("studyId", studyDTO.id);
             this.infoWindow.open(this.map, marker);
           });
+
           markers.set(studyDTO.id, marker);
         }
 
         this.markers = markers;
         this.mapCluster = new MarkerClusterer({
+
           map: this.map,
           markers: Array.from(markers.values()),
           renderer: new CustomRenderer1(),
           algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
-          onClusterClick: (_, cluster, map) => {
-            // If any cluster is clicked, then the info window is restored to its initial state more or less
-            if (this.infoWindow && this.infoWindow.get("toggle") === true) {
-              this.infoWindow.close();
-              this.infoWindow.set("toggle", false);
-              this.infoWindow.set("studyId", -1n);
-            }
-            map.fitBounds(cluster.bounds as google.maps.LatLngBounds);
-          }
+
+          // onClusterClick: (_, cluster, map) => {
+          //   // If any cluster is clicked, then the info window is restored to its initial state more or less
+          //   // if (this.infoWindow && this.infoWindow.get("toggle") === true) {
+          //   //   // console.log("Closing any active info windows.");
+          //   //   this.infoWindow.close();
+          //   //   this.infoWindow.set("toggle", false);
+          //   //   this.infoWindow.set("studyId", -1n);
+          //   // }
+          //   map.fitBounds(cluster.bounds as google.maps.LatLngBounds);
+          // }
         });
+
         this.deckOverlay = new GoogleMapOverlayController(this.map);
-        // In Order,
-        // The mapLoaded flag is changed for templating purposes.
-        // The event emitter is fired and a message is sent to the TrackeView component.
         this.mapState.set('loaded');
         this.sendMapState(true);
       },
@@ -250,29 +363,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     });
     return true;
   }
-
-  // initializeDeckOverlay(): GoogleMapsOverlay {
-  //
-  //   const EARTHQUAKES = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson";
-  //   const earthquakeLayer = new GeoJsonLayer({
-  //     id: "earthquakes",
-  //     data: EARTHQUAKES,
-  //     filled: true,
-  //     pointRadiusMinPixels: 2,
-  //     pointRadiusMaxPixels: 200,
-  //     opacity: 0.4,
-  //     pointRadiusScale: 0.3,
-  //     getPointRadius: (f) => Math.pow(10, f.properties!['mag']),
-  //     getFillColor: [255, 70, 30, 180],
-  //     autoHighlight: true,
-  //   })
-  //
-  //   const overlay = new GoogleMapsOverlay({
-  //     layers: [earthquakeLayer],
-  //   });
-  //   console.log("Returning overlay.");
-  //   return overlay;
-  // }
 
   // NOTE: This function serves to create a dynamic button element every time the info window is opened
   // On button click an event is emitted that makes send jsonData to the event component
@@ -288,21 +378,18 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     return this.studyService.jsonRequest(entityType, studyId);
   }
 
-  // getGeoJsonData(studyId: bigint, ) {
-  //   return this.studyService.getGeoJsonEventData(studyId, )
-  // }
-
   // NOTE: This function only affects the map component
   panToMarker(studyId: bigint): void {
+    // console.log("Calling panToMarker in google maps component.");
     const curMarker = this.markers?.get(studyId);
-    if (curMarker === undefined) {
+    if (curMarker === undefined || this.infoWindow === undefined) {
       return;
     }
     const markerPos = curMarker.position;
+
     if (!markerPos) {
       return;
     }
-    console.log(`Panning to marker ${studyId}`);
     this.map?.panTo(markerPos);
     this.map?.setZoom(10);
     google.maps.event.trigger(curMarker, "click");

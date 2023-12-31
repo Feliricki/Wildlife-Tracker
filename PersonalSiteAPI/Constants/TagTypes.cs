@@ -3,18 +3,17 @@
 namespace PersonalSiteAPI.Constants
 {
     
-    public class TagInfo
+    public record TagInfo
     {
         public string? Description { get; set; }
-        public string? ExternalId { get; set; }
-        public long? Id { get; set; }
-        public bool? IsLocationSensor { get; set; }
-        public string? Name { get; set; }
+        public string ExternalId { get; set; } = string.Empty;
+        public long Id { get; set; }
+        public bool IsLocationSensor { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
     public class TagTypes
     {
-        
-        public List<TagInfo> SensorInformation = new List<TagInfo>()
+        private static List<TagInfo> SensorInformation = new List<TagInfo>()
         {
             new TagInfo()
             {
@@ -229,15 +228,29 @@ namespace PersonalSiteAPI.Constants
             var splitList = location_sensor_ids.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
             foreach (var sensor in  splitList)
             {
-                if (!string.IsNullOrEmpty(sensor) && locationSensors.Contains(sensor.Trim()))
-                {
-                    Console.WriteLine("Found sensor: " + sensor.Trim());
-                    return true;
-                }
+                if (string.IsNullOrEmpty(sensor) || !locationSensors.Contains(sensor.Trim())) continue;
+                Console.WriteLine("Found sensor: " + sensor.Trim());
+                return true;
             }
             return false;
         }
+        
+        public static long? SensorNameToId(string? sensor)
+        {   
+            if (sensor is null)
+            {
+                return null;
+            }
+            sensor = sensor.ToLower();
+            var tagType = SensorInformation.Where(t =>
+                t.ExternalId.ToLower() == sensor || t.Name.ToLower() == sensor).ToList();
+            if (tagType.Count == 0)
+            {
+                return null;
+            }
 
+            return tagType.First().Id;
+        }
         
     }
 }

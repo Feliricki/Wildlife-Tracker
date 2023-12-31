@@ -15,7 +15,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
   public dataState$: BehaviorSubject<SourceState> = new BehaviorSubject<SourceState>("initial");
 
   private formArray: WritableSignal<FormArray<FormControl<boolean>>>;
-  private currentSource: WritableSignal<TagJsonDTO[]> = signal([]);
+  private currentSource: WritableSignal<Array<IndividualJsonDTO | TagJsonDTO>> = signal([]);
 
   private currentAnimals = signal(new Map<string, IndividualJsonDTO>());
   private currentTaggedAnimals = signal(new Map<string, TagJsonDTO>());
@@ -88,7 +88,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
         const newTagged = new Map<string, TagJsonDTO>();
 
         // this.currentIndividuals.set(tuple[0]);
-        this.currentSource.set(tuple[1]);
+        // this.currentSource.set(tuple[1]);
 
         tuple[0].forEach((individual) => {
           newAnimals.set(individual.LocalIdentifier, individual);
@@ -109,9 +109,39 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
         return of([[], []]) as Observable<[IndividualJsonDTO[], TagJsonDTO[]]>;
       }),
       map(tuple => {
-        return tuple[1].map(() => {
-          return new FormControl<boolean>(false, { nonNullable: true });
+        // The current source has been updated to include tagged and untagged individuals
+        // BUG: New changes are untested.
+        this.currentSource.set([]);
+        const formControls: FormControl<boolean>[] = [];
+
+        tuple[1].forEach((tagged) => {
+
+          const control = new FormControl<boolean>(false, { nonNullable: true });
+          formControls.push(control);
+          this.currentSource.update(val => {
+            val.push(tagged);
+            return val;
+          });
+
         });
+
+        tuple[0].forEach((individual) => {
+          if (this.currentTaggedAnimals().has(individual.LocalIdentifier) === false){
+
+            const control = new FormControl<boolean>(false, { nonNullable: true });
+            formControls.push(control);
+
+            this.currentSource.update(val => {
+              val.push(individual);
+              return val;
+            })
+          }
+        });
+
+        // return tuple[1].map(() => {
+        //   return new FormControl<boolean>(false, { nonNullable: true });
+        // });
+        return formControls;
       }),
 
       finalize(() => {
@@ -239,7 +269,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     })
   }
 
-  getIndividual(index: number): Signal<TagJsonDTO | null> {
+  getIndividual(index: number): Signal<TagJsonDTO | IndividualJsonDTO | null> {
     return computed(() => {
       if (index < 0 || index >= this.currentSource().length) {
         // console.log(this.currentIndividuals());
