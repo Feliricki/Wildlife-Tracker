@@ -12,11 +12,11 @@ using Microsoft.IdentityModel.Tokens;
 using PersonalSiteAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using Mapster;
-using MapsterMapper;
 using Microsoft.Extensions.Primitives;
-using Newtonsoft.Json;
-using PersonalSiteAPI.Constants;
 using JsonSerializer = System.Text.Json.JsonSerializer;
+using EventRequest = PersonalSiteAPI.DTO.MoveBankAttributes.EventRequest;
+using PersonalSiteAPI.DTO.MoveBankAttributes;
+using Newtonsoft.Json;
 
 namespace PersonalSiteAPI.Services
 {
@@ -24,23 +24,25 @@ namespace PersonalSiteAPI.Services
     {
         Task<ApiTokenResultDTO?> GetApiToken();
         Task<List<string>> GetWordsWithPrefix(string prefix, long? maxCount = null, bool allowRestricted= false);
-        DateTime? GetDateTime(string dateString, string timeZone = "CET");
+        DateTime? GetDateTime(string? dateString);
         // Direct and Json request must specify an entity_type
         // Some entities are "individual, tag_type ,study"
 
-        Task<HttpResponseMessage?> DirectRequestEvents(
-            long studyId,
-            string[] individualLocalIdentifiers,
-            string? sensorType = null,
-            Dictionary<string, string?>? parameters = null,
-            (string, string)[]? headers = null,
-            bool authorizedUser = false);
+        //Task<HttpResponseMessage?> DirectRequestEvents(
+        //    long studyId,
+        //    string[] individualLocalIdentifiers,
+        //    string? sensorType = null,
+        //    Dictionary<string, string?>? parameters = null,
+        //    (string, string)[]? headers = null,
+        //    bool authorizedUser = false);
+
+        Task<HttpResponseMessage?> DirectRequestEvents(EventRequest request);
+        Task<HttpResponseMessage?> DirectRequestEvents(gRPC.EventRequest request);
 
         Task<HttpResponseMessage?> DirectRequest(
             string entityType,
             long? studyId = null,
             Dictionary<string, string?>? parameters = null,
-            IEnumerable<KeyValuePair<string, StringValues>>? listParameters = null,
             (string, string)[]? headers = null,
             bool authorizedUser = false);
 
@@ -122,8 +124,9 @@ namespace PersonalSiteAPI.Services
             SecretCacheItem? secretCache = _secretsCache.GetCachedSecret(_configuration["ConnectionStrings:AWSKeyVault2ARN"]);
             GetSecretValueResponse? secretValue = await secretCache.GetSecretValue(new CancellationToken());
 
-            var secretObj = System.Text.Json.JsonSerializer.Deserialize<ApiTokenResultDTO>(secretValue.SecretString)!;
-            DateTime? expirationDate = GetDateTime(secretObj.ExpirationDate!);
+            var secretObj = JsonSerializer.Deserialize<ApiTokenResultDTO>(secretValue.SecretString);
+            DateTime? expirationDate = GetDateTime(secretObj?.ExpirationDate!);
+
             if (expirationDate != null && expirationDate > DateTime.Now)
             {
                 return secretObj;
@@ -144,15 +147,28 @@ namespace PersonalSiteAPI.Services
 
             return secretObj;
         }
-        
-        // Helper method
-        public DateTime? GetDateTime(string dateString, string timeZone = "CET")
+                
+        // TODO: Current timezone being returned is CEST
+        public DateTime? GetDateTime(string? dateString)
         {
-            // Hardcoded data - +1 is CET
-            var newDataString = dateString.Replace(timeZone, "+1");
-            const string formatString = $"ddd MMM dd HH:mm:ss z yyyy";
+            if (dateString is null)
+            {
+                return null;
+            }
+            // This method is still hardcoded.
+            // The default timezone is CET.
+            var tokens = dateString.Split(' ');
+            var timeZone = tokens[4];
+            var offset = "+1";
+            if (timeZone == "CEST")
+            {
+                offset = "+2";
+            }
 
-            if (DateTime.TryParseExact(newDataString, formatString, null, DateTimeStyles.None, out var result))
+            //var newDataString = dateString.Replace(timeZone, "+1");
+            var newDateString = dateString.Replace(timeZone, offset);
+            const string formatString = $"ddd MMM dd HH:mm:ss z yyyy";
+            if (DateTime.TryParseExact(newDateString, formatString, null, DateTimeStyles.None, out var result))
             {
                 return result;
             }
@@ -161,36 +177,68 @@ namespace PersonalSiteAPI.Services
                 return null;
             }
         }
-
-        public async Task<HttpResponseMessage?> DirectRequestEvents(
-            long studyId,
-            string[] individualLocalIdentifiers,
-            string? sensorType = null, // If no sensor type is specified then all sensors are used.
-            Dictionary<string, string?>? parameters = null,
-            (string, string)[]? headers = null,
-            bool authorizedUser = false)
+        
+        public async Task<HttpResponseMessage?> DirectRequestEvents(gRPC.EventRequest request)
         {
-            if (individualLocalIdentifiers.Length == 0)
+            Console.WriteLine(JsonConvert.SerializeObject(request));
+            var eventOptions = request.Options;
+
+            EventRequest newRequest = new()
             {
-                return null;
+                StudyId = request.StudyId,
+                LocalIdentifiers = request.LocalIdentifiers.ToList(),
+                SensorType = request.HasSensorType ? request.SensorType : null,
+                GeometryType = request.HasGeometryType ? request.GeometryType : null,
+                Options = new EventOptions()
+                {
+                    MaxEventsPerIndividual = eventOptions.HasMaxEventsPerIndividual ? eventOptions.MaxEventsPerIndividual : null,
+                    TimestampStart = eventOptions.HasTimestampStart ? eventOptions.TimestampStart : null,
+                    TimestampEnd = eventOptions.HasTimestampEnd ? eventOptions.TimestampEnd : null,
+                    Attributes = eventOptions.HasAttributes ? eventOptions.Attributes : null,
+                    EventProfile = eventOptions.HasEventProfile ? eventOptions.EventProfile : null,
+                }
+            };
+
+            return await DirectRequestEvents(newRequest);
+        }
+
+        public async Task<HttpResponseMessage?> DirectRequestEvents(EventRequest request)
+        {
+            var parameters = new Dictionary<string, string?>();
+            var eventOptions = request.Options;
+
+            if (eventOptions.MaxEventsPerIndividual is not null)
+            {
+                parameters.Add("max_events_per_individual", eventOptions.MaxEventsPerIndividual.ToString());
             }
 
-            parameters ??= new();
-            parameters.Add("study_id", studyId.ToString());
-            // NOTE: This is necessary for direct requests to limit the results to one sensor type.
-            if (sensorType is not null)
+            const string additionalAttributes = "individual_local_identifier,tag_local_identifier,timestamp,location_long,location_lat,individual_taxon_canonical_name";
+            parameters.Add("attributes", additionalAttributes);
+
+            if (!string.IsNullOrEmpty(eventOptions.EventProfile))
             {
-                parameters.Add("sensor_type_id", TagTypes.SensorNameToId(sensorType).ToString());
+                parameters.Add("event_reduction_profile", eventOptions.EventProfile);
             }
-            parameters.Add("individual_local_identifier", string.Join(",", individualLocalIdentifiers));
+
+            // These timestamp as given in Unix Epoch time
+            if (eventOptions.TimestampStart >= eventOptions.TimestampEnd)
+            {
+                parameters.Add("timestamp_start", eventOptions.TimestampStart.ToString());
+                parameters.Add("timestamp_end", eventOptions.TimestampEnd.ToString());
+            }
+
+            // If this request has no parameters then movebank will return all publiclly available event data.
+            if (request.LocalIdentifiers is not null && request.LocalIdentifiers.Count > 0)
+            {
+                parameters.Add("individual_local_identifier", string.Join(",", request.LocalIdentifiers));
+            }
             
             var response = await DirectRequest(
                 entityType: "event",
-                studyId: studyId,
+                studyId: request.StudyId,
                 parameters: parameters,
-                listParameters: null,
-                headers: headers,
-                authorizedUser: authorizedUser);
+                headers: null,
+                authorizedUser: false);
 
             return response;
         }
@@ -201,7 +249,6 @@ namespace PersonalSiteAPI.Services
             string entityType,
             long? studyId = null,
             Dictionary<string, string?>? parameters = null,
-            IEnumerable<KeyValuePair<string, StringValues>>? listParameters = null,
             (string, string)[]? headers = null,
             bool authorizedUser = false)
         {
@@ -223,10 +270,6 @@ namespace PersonalSiteAPI.Services
             if (secretObj != null && !string.IsNullOrEmpty(secretObj.ApiToken))
             {
                 uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
-            }
-            if (listParameters is not null)
-            {
-                uri = QueryHelpers.AddQueryString(uri, listParameters);                
             }
 
             Console.WriteLine($"Request uri = {uri}");
@@ -395,50 +438,6 @@ namespace PersonalSiteAPI.Services
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
             return response;
-        }
-
-        // Entity type is one of the following: "study", "individual" or "tag".
-        // The return type is the new response message and whether the license terms were accepted
-        private async Task<Tuple<HttpResponseMessage, bool>> GetPermission(
-            //long studyId,
-            //string entityType,
-            HttpResponseMessage oldResponse,
-            HttpRequestMessage oldRequest)
-        {
-            var uri = _httpClient.BaseAddress!.AbsoluteUri;
-            uri += "direct-read";
-            // TODO: Refactor to be more explicit about which parameters are to remain
-            // If json data is not available then use the record data from the direct request response casted to a dto class
-            var requestParameters = QueryHelpers.ParseQuery(oldRequest.RequestUri!.Query);
-            uri = QueryHelpers.AddQueryString(uri, requestParameters);
-
-            var request = new HttpRequestMessage()
-            {
-                RequestUri = new Uri(uri),
-                Method = HttpMethod.Get,
-            };
-
-            var response = await _httpClient.SendAsync(request);
-            var responseContent = await response.Content.ReadAsByteArrayAsync();
-            var hasLicenseTerms = HasLicenseTerms(responseContent);
-
-            if (!hasLicenseTerms || (!response.Headers.TryGetValues("Accept-License", out var acceptedLicense))
-                || acceptedLicense.IsNullOrEmpty() || acceptedLicense.FirstOrDefault() == "false")
-            {
-                Console.WriteLine($"Response did not ask for license terms. hasLicenseTerms={hasLicenseTerms}");
-                return Tuple.Create(response, false);
-            }
-
-            var md5String = StringToMD5(await response.Content.ReadAsByteArrayAsync());
-            uri = QueryHelpers.AddQueryString(uri, "license-md5", md5String);
-
-            var newRequest = new HttpRequestMessage()
-            {
-                RequestUri = new Uri(uri),
-                Method = HttpMethod.Get
-            };
-            var newResponse = await _httpClient.SendAsync(newRequest);
-            return Tuple.Create(newResponse, true);
         }
 
         private async Task<bool> SaveStudy(Studies? study)

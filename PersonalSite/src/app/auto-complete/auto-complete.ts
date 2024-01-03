@@ -4,7 +4,6 @@ type char = string;
 class CaseInsensitiveMap<T, U> extends Map<T, U> {
   override set(key: T, value: U): this {
     if (typeof key === 'string') {
-      // key = this.normalizeAccents(key);
       key = this.normalizeAccents(key).toLocaleLowerCase() as T;
     }
     return super.set(key, value);
@@ -12,8 +11,6 @@ class CaseInsensitiveMap<T, U> extends Map<T, U> {
 
   override get(key: T): U | undefined {
     if (typeof key === 'string') {
-      // key = key.toLocaleLowerCase() as T;
-      // key = this.normalizeAccents(key) as T;
       key = this.normalizeAccents(key).toLocaleLowerCase() as T;
     }
     return super.get(key);

@@ -8,10 +8,10 @@ using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
 using Mapster;
 using PersonalSiteAPI.Mappings;
+using GRPC = PersonalSiteAPI.gRPC;
 
 
 var builder = WebApplication.CreateBuilder(args);
-// Add services to the container.
 
 builder.Services.AddCors(options =>
 {
@@ -21,6 +21,7 @@ builder.Services.AddCors(options =>
         cfg.AllowAnyHeader();
         cfg.AllowAnyMethod();
     });
+
     options.AddPolicy(name: "AnyOrigin",
         cfg =>
         {
@@ -45,6 +46,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddHealthChecks();
+
 // Custom Services 
 builder.Services.AddTransient<IMoveBankService, MoveBankService>();
 builder.Services.AddHttpClient<IMoveBankService, MoveBankService>(client =>
@@ -117,6 +119,10 @@ builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
 
 builder.Services.AddAWSService<IAmazonSecretsManager>();
 
+// TODO: Add mappings and service.
+builder.Services.AddGrpc();
+//builder.Services.AddG
+
 builder.Services.AddResponseCaching(options =>
 {
     options.MaximumBodySize = 64 * 1024 * 1024; // 64 MB
@@ -157,12 +163,12 @@ else
 }
 
 app.UseHttpsRedirection();
-
 app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapGrpcService<GRPC.GRPCMoveBankService>();
 // When it comes to mapping controllers its first come first serve  
 //app.UseHealthChecks(new PathString("/api/health"));
 app.MapControllers().RequireCors("AnyOrigin");

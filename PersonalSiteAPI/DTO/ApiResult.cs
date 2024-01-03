@@ -27,7 +27,7 @@ namespace PersonalSiteAPI.DTO
         public string? FilterQuery { get; private set; }
 
         private readonly string _cacheKey = "GetStudies";
-        
+
 
         private ApiResult(
             List<T> data,
@@ -63,7 +63,7 @@ namespace PersonalSiteAPI.DTO
             var queryable = list.AsQueryable();
             Console.WriteLine("Creating apiResult synchronously");
             // var filters = new List<Func<T, bool>>();
-            
+
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery) && IsValidProperty(filterColumn))
             {
                 queryable = queryable.Where(
@@ -130,13 +130,13 @@ namespace PersonalSiteAPI.DTO
             string? filterColumn = null,
             string? filterQuery = null
             )
-        {            
+        {
             Console.WriteLine("Creating apiResult asynchronously.");
             // TODO - Upgrade this method to search for case-insensitive substrings
             Console.WriteLine($"filtercolumn = {filterColumn} filterquery = {filterQuery} isValidProperty({filterColumn ?? "N/A"}) = {IsValidProperty(filterColumn ?? "")}");
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery)
                 && IsValidProperty(filterColumn))
-            {                
+            {
                 Console.WriteLine($"Async Prefix search: Checking if {filterColumn} start with {filterQuery} (Case insensitive)");
                 Console.WriteLine(source.GetType().ToString());
                 Expression<Func<string, bool>> stringExpression = (a) => a.StartsWith(filterQuery, StringComparison.InvariantCultureIgnoreCase);
@@ -153,7 +153,7 @@ namespace PersonalSiteAPI.DTO
 
             var count = await source.CountAsync();
             Console.WriteLine($"The number of records is {count}");
-            
+
             if (!string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(sortOrder)
                                                   && IsValidProperty(sortColumn))
             {

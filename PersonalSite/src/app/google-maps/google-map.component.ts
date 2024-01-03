@@ -144,12 +144,13 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           console.log(`Received event observable in google maps component.`);
           this.pathEventData$ = currentValue as EventResponse;
           // this.handleEventData(this.pathEventData$);
-
           break;
+
         case "lineStringRequest":
           console.log("Recieved event fetch request in google maps component.");
           this.lineStringRequest = currentValue as Request;
           this.handleEventRequest(currentValue as Request);
+
           break;
 
         default:
@@ -159,14 +160,14 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   }
 
   handleEventRequest(request: Request){
-    // this.eventState.set("loading");
-    this.deckOverlay?.addArcLayerUrl(request);
+    console.log("Handling request.");
+    console.log(request);
+    this.deckOverlay?.loadData(request);
   }
 
   // TODO: Consider handling the raw httpResponse or a flag to indicate.
   handleEventData(event$: EventResponse) {
 
-    // this.deckOverlay?.addArcLayerUrl();
     this.eventState.set("loading");
     event$.pipe(
     ).subscribe({
@@ -237,8 +238,8 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
       studies: studies$,
 
     }).subscribe({
-
       next: (objRes) => {
+        this.mapState.set('loading');
 
         console.log("Successfully loaded google maps markers and map.")
         const mapEl = document.getElementById("map");

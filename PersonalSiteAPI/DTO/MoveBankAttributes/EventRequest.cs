@@ -10,15 +10,12 @@ public class EventRequest
     [Required]
     [JsonPropertyName(name: "studyId")]
     public long StudyId { get; set; }
-
-    [Required]
     [JsonPropertyName(name: "localIdentifiers")]
-    public List<string> LocalIdentifiers { get; set; } = new();
+    public List<string>? LocalIdentifiers { get; set; } = null;
     [JsonPropertyName(name: "sensorType")] public string? SensorType { get; set; } = null;
 
     [JsonPropertyName(name: "geometryType")]
     public string? GeometryType { get; set; } = null;
-
     [JsonPropertyName(name: "options")] public EventOptions Options { get; set; } = default!;
 }
 

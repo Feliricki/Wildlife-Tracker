@@ -21,10 +21,23 @@ public class Point : Geometry<float>
 {
     public Point(List<float> newCoordinate): base("Point", newCoordinate) {}
 }
-
-// NOTE: This type requires pairs which necessitates duplicate points to form a path.
 public class LineString : Geometry<List<float>>
 {
     public LineString(List<List<float>> newPath) : base("LineString", newPath) {}
+}
+
+// NOTE: The following collections are to be used in protobuf messages and services.
+public record Position
+{
+    List<float> position { get; set; } = new();
+    public Position(List<float> coordinates)
+    {
+        position = coordinates;
+    }
+}
+public record LineStringGeometry
+{
+    public string type { get; set; } = "LineString";
+    public List<Position> coordinates { get; set; } = new();
 }
 

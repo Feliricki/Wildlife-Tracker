@@ -1,4 +1,6 @@
 ﻿using PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs;
+using static Google.Protobuf.Reflection.SourceCodeInfo.Types;
+using GRPC = PersonalSiteAPI.gRPC;
 
 namespace PersonalSiteAPI.DTO.GeoJSON;
 
@@ -46,6 +48,45 @@ public static class ColorGradientGenerator
             feature.Properties.TargetColor = new List<double> { targetRed, targetGreen, targetBlue };
         }
     }
+    public static IEnumerable<Tuple<List<double>, List<double>>> ColorGradientIterable(double totalDistance, IndividualEventDTO individuals)
+    {
+        if (individuals.Locations.Count == 0)
+        {
+            yield break;
+        }
+
+        var rand = new Random();
+
+        var startColor = GetRandomColor(rand);
+        var endColor = GetRandomColor(rand);
+
+        double runningDistance = 0;
+        double prevDistance = 0;
+
+        var prevLocation = individuals.Locations.First();
+        foreach (var location in individuals.Locations)
+        {            
+            var distance = double.IsNaN(EuclideanDistance(prevLocation, location)) ? 0 : EuclideanDistance(prevLocation, location);
+            runningDistance += distance;
+
+            var prevRatio = double.IsNaN(prevDistance / totalDistance) ? 0 : prevDistance;
+            var ratio = runningDistance / totalDistance;
+
+            prevDistance = runningDistance;
+            var sourceRed = Lerp(startColor[0], endColor[0], prevRatio);
+            var sourceGreen = Lerp(startColor[1], endColor[1], prevRatio);
+            var sourceBlue = Lerp(startColor[2], endColor[2], prevRatio);
+
+            var targetRed = Lerp(startColor[0], endColor[0], ratio);
+            var targetGreen = Lerp(startColor[1], endColor[1], ratio);
+            var targetBlue = Lerp(startColor[2], endColor[2], ratio);
+
+            var fromColor = new List<double> { sourceRed, sourceGreen, sourceBlue }; 
+            var toColor = new List<double> { targetRed, targetGreen, targetBlue };
+
+            yield return Tuple.Create(fromColor, toColor);
+        }
+    }
     
     public static List<List<double>> GenerateColorsGradientByDistance<T>(
         double totalDistance,
@@ -76,7 +117,18 @@ public static class ColorGradientGenerator
         }
         return colors;
     }
-    
+
+    private static double EuclideanDistance(LocationJsonDTO point1, LocationJsonDTO point2)
+    {
+        var list1 = new List<double> { point1.LocationLong, point1.LocationLat };
+        var list2 = new List<double> { point2.LocationLong, point2.LocationLat };
+        return EuclideanDistance(list1, list2);
+    }
+    private static double EuclideanDistance(IReadOnlyList<double> point1, IReadOnlyList<double> point2)
+    {
+        return Math.Sqrt(Math.Pow(point1[0] - point2[0], 2) + Math.Pow(point1[1] - point2[1], 2));
+    }
+
     // NOTE: Not to be used tentatively.
     public static List<List<double>> GenerateColorGradientUniform(int totalIndices)
     {

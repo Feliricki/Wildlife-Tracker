@@ -144,7 +144,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     this.tableState$ = this.tableSource.DataStateAsObservable.pipe(
       distinctUntilChanged(),
       tap(value => {
-        console.log(`Current tableState is ${value}`);
         switch (value) {
           case "loading":
             this.eventForm.disable();
@@ -367,7 +366,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
 
 
     const eventOptions: EventOptions = {
-      // maxEventsPerIndividual: this.MaxEvents.valid ? this.MaxEvents.value ?? undefined : undefined,
       maxEventsPerIndividual: undefined,
       timestampStart: this.dateRange.valid ? this.timeStampHelper(this.dateRange.controls.start.value) : undefined,
       timestampEnd: this.dateRange.valid ? this.timeStampHelper(this.dateRange.controls.end.value) : undefined,

@@ -431,20 +431,9 @@ namespace PersonalSiteAPI.Controllers
                 _ => null,
             };
         }
-        // TODO: This method needs more validation. 
-        // 1) Check model state for validation state
-    
-        // public async Task<ActionResult<EventJsonDTO>> GetEventData(
-        //     [Required][FromQuery] List<string> individualLocalIdentifiers,
-        //     [Required] long studyId,
-        //     string? sensorType,
-        //     int? maxEventsPerIndividual = null,
-        //     long? timestampStart = null,
-        //     long? timestampEnd = null,
-        //     string? attributes = null,
-        //     string? eventProfiles = null,
-        //     string? geoJsonFormat = null)
-        // [HttpGet(Name = "GetEventData")]
+
+
+        // TODO: This method is in need of validation.
         [HttpPost(Name = "GetEventData")]
         [ResponseCache(CacheProfileName = "NoCache")]
         public async Task<ActionResult<EventJsonDTO>> GetEventData(
@@ -453,52 +442,26 @@ namespace PersonalSiteAPI.Controllers
             try
             {
                 Console.WriteLine(JsonConvert.SerializeObject(request));
-                var eventOptions = request.Options;
-                var parameters = new Dictionary<string, string?>();
 
-                if (eventOptions.MaxEventsPerIndividual is not null)
-                {
-                    parameters.Add("max_events_per_individual", eventOptions.MaxEventsPerIndividual.ToString());
-                }
-                
-                // TODO: JsonRequest has support for additional attributes if they're provided.
-                if (eventOptions.Attributes is not null)
-                {
-                    parameters.Add("attributes", eventOptions.Attributes);
-                }
+                Stopwatch stopwatch = new();
+                stopwatch.Start();
 
-                if (eventOptions.EventProfile is not null)
-                {
-                    parameters.Add("event_reduction_profile", eventOptions.EventProfile);
-                }
-                
-                // These timestamp as given in Unix Epoch time
-                if (eventOptions.TimestampStart >= eventOptions.TimestampEnd)
-                {
-                    parameters.Add("timestamp_start", eventOptions.TimestampStart.ToString());
-                    parameters.Add("timestamp_end", eventOptions.TimestampEnd.ToString());
-                }
-                
-                Console.WriteLine("Sending csv request for event data point.");
-                const string additionalAttributes = "individual_local_identifier,tag_local_identifier,timestamp,location_long,location_lat,individual_taxon_canonical_name";
-                parameters.Add("attributes", additionalAttributes);                    
-                
-                Console.WriteLine(JsonConvert.SerializeObject(parameters));
-                var response = await _moveBankService.DirectRequestEvents(
-                    studyId: request.StudyId,
-                    individualLocalIdentifiers: request.LocalIdentifiers.ToArray(),
-                    sensorType: request.SensorType ?? throw new InvalidRequestException("Invalid sensor type."),
-                    parameters: parameters,
-                    headers: null,
-                    authorizedUser: User.IsInRole(RoleNames.Administrator));
+                var response = await _moveBankService.DirectRequestEvents(request);
+
+                stopwatch.Stop();
+                Console.WriteLine($"Took {stopwatch.Elapsed / 1000} seconds to recieve a response.");
 
                 if (response is null)
                 {
                     throw new InvalidOperationException("Null response from movebank service");
                 }
                 
+                // TODO: Time this operations.                
                 var responseContentArray = await response.Content.ReadAsByteArrayAsync();
-                // NOTE: This conversion to to an json Dto requires additional attributes.                 
+
+                stopwatch = new Stopwatch();
+                stopwatch.Start();
+
                 var memStream = new MemoryStream(responseContentArray);
                 using var stream = new StreamReader(memStream, Encoding.UTF8);
                 using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
@@ -512,10 +475,19 @@ namespace PersonalSiteAPI.Controllers
                         continue;
                     }
                     records.Add(record);
-                }                    
+                }  
 
-                var data = LineStringFeatureCollection<LineStringProperties>.CreateFromRecord(records, request.StudyId);
-                Console.WriteLine($"Converted {records.Count} records to data with {data.IndividualEvents.Count} individuals.");
+                stopwatch.Stop();
+                Console.WriteLine($"It took {stopwatch.Elapsed / 1000} seconds to process all records");
+
+
+                stopwatch = new Stopwatch();
+                stopwatch.Start();
+
+                var data = LineStringFeatureCollection<LineStringProperties, LineString>.RecordToEventJsonDTO(records, request.StudyId);
+                stopwatch.Stop();
+
+                Console.WriteLine($"Converted {records.Count} records to data with {data.IndividualEvents.Count} individuals and processed records to linestrings collections in {stopwatch.Elapsed / 1000} seconds.");
                 
                 if (data is null)
                 {
@@ -527,7 +499,7 @@ namespace PersonalSiteAPI.Controllers
                     return new JsonResult(data);
                 }
 
-                Stopwatch stopwatch = new Stopwatch();
+                stopwatch = new Stopwatch();
                 stopwatch.Start();
 
                 data.IndividualEvents.ForEach(l => l.Locations.Sort((x, y) => x.Timestamp.CompareTo(y.Timestamp)));
@@ -542,7 +514,7 @@ namespace PersonalSiteAPI.Controllers
                         stopwatch = new Stopwatch();
                         stopwatch.Start();
 
-                        var lineCollections = LineStringFeatureCollection<LineStringProperties>
+                        var lineCollections = LineStringFeatureCollection<LineStringProperties, LineString>
                             .CombineLineStringFeatures(data);
                         
                         stopwatch.Stop();
@@ -569,9 +541,8 @@ namespace PersonalSiteAPI.Controllers
                 });
                 
                 return Ok(jsonString);
-                
 
-                PointProperties PropertyFunc(LocationJsonDTO location) => new()
+                static PointProperties PropertyFunc(LocationJsonDTO location) => new()
                 {
                     Date = TimestampToDateTime(location.Timestamp), 
                     DateString = FormatTimestamp(location.Timestamp),

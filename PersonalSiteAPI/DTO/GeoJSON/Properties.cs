@@ -9,7 +9,7 @@ public record LineStringProperties()
     
     [JsonPropertyName(name: "to")]
     public DateTime To { get; set; }
-    [JsonPropertyName(name: "color")] public List<double> Color { get; set; } = new();
+    //[JsonPropertyName(name: "color")] public List<double> Color { get; set; } = new();
 
     [JsonPropertyName(name: "sourceColor")]
     public List<double> FromColor { get; set; } = new();

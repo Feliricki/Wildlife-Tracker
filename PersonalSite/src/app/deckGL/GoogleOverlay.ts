@@ -8,7 +8,8 @@ import { PathLayer } from '@deck.gl/layers/typed';
 import { ArcLayer } from '@deck.gl/layers/typed';
 // import type * as LayerProps from '@deck.gl/core/typed';
 import * as GeoJSON from "geojson";
-import { loadInBatches, JSONLoader, LoaderOptions } from '@loaders.gl/core';
+import { setData } from './deck-gl.worker';
+// import { loadInBatches, JSONLoader, LoaderOptions } from '@loaders.gl/core';
 // import { JSONLoader } from '@loaders.gl/json'
 // import { JSONLoader } from '@loaders.gl/core';
 // import { Observable } from 'rxjs';
@@ -38,6 +39,14 @@ export interface LineStringProperties {
   distanceTravelled: number;
 }
 
+// TODO: This interface will need an update once another map component is created.
+export interface WorkerFetchRequest {
+  readonly type: "FetchRequest";
+  overlay: DeckOverlay;
+  map: google.maps.Map;
+  request: Request;
+}
+
 
 // TODO: Reevalutate what type to return from the backend for lineString geoJson Data.
 // Observable is being sent to the googles maps component.
@@ -63,6 +72,8 @@ export class GoogleMapOverlayController {
     scatterPlot: false,
   };
 
+  webWorker?: Worker;
+
   // TODO: Refactor this to use a suitable data source that be updated without clearing all of the layers.
   // NOTE:  Switching to a new event source will require a complete reload of all entities but
   // fetching more data from a specific individual should not. (the data source can be updated with more entities to
@@ -71,8 +82,33 @@ export class GoogleMapOverlayController {
 
   constructor(map: google.maps.Map) {
     this.map = map;
-    // this.deckOverlay = new DeckOverlay({});
-    // this.deckOverlay.setMap(this.map);
+    if (typeof Worker !== 'undefined') {
+      if (!this.webWorker) {
+        this.webWorker = new Worker(new URL('./deck-gl.worker', import.meta.url));
+      }
+    } else {
+      console.error("Web worker api not supported.");
+    }
+  }
+
+  loadData(request: Request) {
+    // NOTE: This function simply decides which thread the loader get run on.
+    if (this.deckOverlay == undefined || this.map === undefined) {
+      console.error("Overlay or map not set");
+      return;
+    }
+    const workerRequest: WorkerFetchRequest = {
+      type: "FetchRequest",
+      overlay: this.deckOverlay,
+      map: this.map,
+      request: request,
+    };
+    if (this.webWorker !== undefined) {
+      this.webWorker.postMessage({ data: workerRequest });
+    } else {
+      setData(workerRequest);
+    }
+
   }
 
   // NOTE: This method will clear all of the lineString layers.
@@ -82,7 +118,6 @@ export class GoogleMapOverlayController {
   // in order to differentiate between forbiden and error responnses.
   setLineData(collections: LineStringFeatureCollection[] | null) {
     console.log("Adding layers to google maps.");
-    // this.geoJsonLineLayers.clear();
     this.arcLineLayers.clear();
     if (this.deckOverlay) {
       this.deckOverlay.finalize();
@@ -92,8 +127,9 @@ export class GoogleMapOverlayController {
       return;
     }
 
+    // this.webWorker?.postMessage({ data: "deck.gl message" });
+
     // Consider moving this function to a web worker.
-    console.log(collections.at(0));
     const layers = [];
     for (const lineCollection of collections) {
 
@@ -125,6 +161,7 @@ export class GoogleMapOverlayController {
     if (!layer) {
       return;
     }
+
     layer.props.data = lineData;
   }
 
@@ -144,7 +181,6 @@ export class GoogleMapOverlayController {
   }
 
   addArcLayer(lineStringFeatureCollection: LineStringFeatureCollection, layerId: string) {
-    // const url = this.environment
     const arcLayer = new ArcLayer({
       id: layerId,
       data: lineStringFeatureCollection.features,
@@ -158,65 +194,7 @@ export class GoogleMapOverlayController {
     return arcLayer;
   }
 
-  async addArcLayerUrl(request: Request) {
-    try {
-      // const url: string = 'https://localhost:40443/api/MoveBank/GetEventData?studyId=312057662&sensorType=GPS&individualLocalIdentifiers=02&individualLocalIdentifiers=11&individualLocalIdentifiers=20&individualLocalIdentifiers=23&individualLocalIdentifiers=27&individualLocalIdentifiers=41&individualLocalIdentifiers=48&individualLocalIdentifiers=Bat1_3D6001852B958&individualLocalIdentifiers=Bat2_3D6001852B95D&individualLocalIdentifiers=Bat3_3D6001852B978&individualLocalIdentifiers=Bat4_3D6001852B980&individualLocalIdentifiers=Bat5_3D6001852B98C&individualLocalIdentifiers=Bat6_3D6001852B98E&individualLocalIdentifiers=Bat7_3D6001852B9A3&individualLocalIdentifiers=Bat8_3D6001852B9A7&geoJsonFormat=linestring';
-      // TODO: Set the options for batch loading manually.
-      // Implement a custom filter if an element is selected.
-      console.log(request);
-      const loaderOptions: LoaderOptions = {
-        fetch: {
-          method: "POST",
-        }
-      };
-
-      const loader = JSONLoader;
-      loader.options = {
-        json: { jsonpaths: ['$.features']}
-      };
-
-      const batches = await loadInBatches(request.url, loader);
-
-      const layers = [] as Array<ArcLayer>;
-      console.log(batches);
-
-      for await (const batch of batches) {
-
-        console.log(batch);
-        let i = 0;
-
-        for (const featureCollection of batch.data) {
-          console.log(featureCollection);
-          const arcLayer = new ArcLayer({
-            data: featureCollection.features, // Missing parameters
-            id: `${i}`,
-            pickable: true,
-            getSourcePosition: feature => feature.geometry.coordinates[0],
-            getTargetPosition: feature => feature.geometry.coordinates[1],
-            getWidth: 5,
-            getSourceColor: feature => feature.properties.sourceColor,
-            getTargetColor: feature => feature.properties.targetColor,
-          });
-
-          i++;
-          layers.push(arcLayer);
-        }
-        console.log(layers);
-        this.deckOverlay = new DeckOverlay({
-          layers: layers,
-        });
-
-        this.deckOverlay.setMap(this.map);
-      }
-
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
-  // This method is fired when a pickable object is hovered over.
   handlePickEvent(object: LineFeature, layer: Layer<object>): TooltipContent | null {
-
     if (layer.id.startsWith("ArcLayer")) {
       return {
         html: object.properties.content,
@@ -225,37 +203,64 @@ export class GoogleMapOverlayController {
     return null;
   }
 
-// TODO: Ideally, we want clear the map when a new source is added and replace the source with the new information.
-// TODO: The backend should preprocess this data into the following format.
-// An implicit assumption is that the events are sorted by date (using their timestamp).
-// Better to use RBGA format to highlight a specific line or point (other point can have their opacity lowered)
-// addGeoJsonLineLayer(lineStringCollection: LineStringFeatureCollection, layerId: string): GeoJsonLayer<GeoJsonLayerProps> {
+// async addArcLayerUrl(request: Request) {
+//   try {
+//     // const url: string = 'https://localhost:40443/api/MoveBank/GetEventData?studyId=312057662&sensorType=GPS&individualLocalIdentifiers=02&individualLocalIdentifiers=11&individualLocalIdentifiers=20&individualLocalIdentifiers=23&individualLocalIdentifiers=27&individualLocalIdentifiers=41&individualLocalIdentifiers=48&individualLocalIdentifiers=Bat1_3D6001852B958&individualLocalIdentifiers=Bat2_3D6001852B95D&individualLocalIdentifiers=Bat3_3D6001852B978&individualLocalIdentifiers=Bat4_3D6001852B980&individualLocalIdentifiers=Bat5_3D6001852B98C&individualLocalIdentifiers=Bat6_3D6001852B98E&individualLocalIdentifiers=Bat7_3D6001852B9A3&individualLocalIdentifiers=Bat8_3D6001852B9A7&geoJsonFormat=linestring';
+//     // TODO: Set the options for batch loading manually.
+//     // Implement a custom filter if an element is selected.
+//     console.log(request);
+//     const loaderOptions: LoaderOptions = {
+//       fetch: {
+//         method: "POST",
+//       }
+//     };
 //
-//   // console.log(JSON.stringify(lineStringCollection));
-//   const lineLayer = new GeoJsonLayer({
-//     id: layerId,
-//     data: lineStringCollection,
-//     colorFormat: "RGB",
-//     pickable: true,
-//     stroked: false,
-//     filled: true,
-//     extruded: true,
-//     pointType: "circle",
-//     lineWidthScale: 20,
-//     lineWidthMinPixels: 2,
-//     getFillColor: [160, 160, 180, 200],
-//     // getLineColor: [0, 255, 0, 1],
-//     // getLineColor: feature => feature.properties.color,
-//     // getLineColor: [120, 120, 120, 1],
-//     getPointRadius: 100,
-//     getLineWidth: 1,
-//     getElevation: 30,
-//     onError: error => {
-//       console.error(error);
-//       return true;
-//     },
-//   });
+//     console.log(loaderOptions);
 //
-//   return lineLayer;
+//     const loader = JSONLoader;
+//     loader.options = {
+//       json: { jsonpaths: ['$.features']}
+//     };
+//
+//     const batches = await loadInBatches(request.url, loader);
+//
+//     const layers = [] as Array<ArcLayer>;
+//     console.log(batches);
+//
+//     for await (const batch of batches) {
+//
+//       console.log(batch);
+//       let i = 0;
+//
+//       for (const featureCollection of batch.data) {
+//         console.log(featureCollection);
+//         const arcLayer = new ArcLayer({
+//           data: featureCollection.features, // Missing parameters
+//           id: `${i}`,
+//           pickable: true,
+//           getSourcePosition: feature => feature.geometry.coordinates[0],
+//           getTargetPosition: feature => feature.geometry.coordinates[1],
+//           getWidth: 5,
+//           getSourceColor: feature => feature.properties.sourceColor,
+//           getTargetColor: feature => feature.properties.targetColor,
+//         });
+//
+//         i++;
+//         layers.push(arcLayer);
+//       }
+//       console.log(layers);
+//       this.deckOverlay = new DeckOverlay({
+//         layers: layers,
+//       });
+//
+//       this.deckOverlay.setMap(this.map);
+//     }
+//
+//   } catch (error) {
+//     console.error(error);
+//   }
 // }
+
+// This method is fired when a pickable object is hovered over.
+
 }

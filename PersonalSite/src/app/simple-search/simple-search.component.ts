@@ -231,7 +231,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
   getTaxa(taxaStr: string): Observable<string> {
     const taxaList = taxaStr.trim().split(",");
     if (!taxaStr || taxaList.length === 0) {
-      console.log("empty observable in getTaxa");
       return EMPTY;
     }
 
@@ -289,8 +288,8 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
           return ret;
         }),
 
-        catchError(() => {
-          console.error("Error searching for wikipedia article.")
+        catchError((err) => {
+          console.error(err)
           return of([]);
         }),
       );
@@ -325,7 +324,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
   }
 
   loadData(query?: string) {
-    console.log("Calling loadData with query: " + query);
     if (query) {
       this.filterQuery.setValue(query);
     }
@@ -349,7 +347,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
     // filterColumn should alwawys be 'name'
     const filterColumn = this.defaultFilterColumn;
     const filterQuery = this.filterQuery.value;
-    console.log("loading data in search component");
 
     // TODO: Test loading speed with local database.
     this.studyService.getStudies(
@@ -367,7 +364,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
           this.paginator.pageIndex = apiResult.pageIndex;
           this.paginator.pageSize = apiResult.pageSize;
 
-          console.log(apiResult);
 
           this.studies = new MatTableDataSource(apiResult.data);
           this.commonNames$ = [];

@@ -1,0 +1,11 @@
+{
+  "settings": [
+    {
+      "options": {
+        "grpc": {
+          "endpoint": "https://localhost:40443"
+        }
+      }
+    }
+  ]
+}

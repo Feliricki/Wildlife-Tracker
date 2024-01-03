@@ -19,6 +19,10 @@
   <ItemGroup>
     <None Remove="Models\Data\Studies.csv" />
   </ItemGroup>
+
+	<ItemGroup>
+		<Protobuf Include="gRPC/eventRequest.proto"/>
+	</ItemGroup>
 	
 
   <ItemGroup>
@@ -28,6 +32,12 @@
     <PackageReference Include="AWSSDK.SecretsManager.Caching" Version="1.0.6" />
     <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.202.5" />
     <PackageReference Include="CsvHelper" Version="30.0.1" />
+    <PackageReference Include="Google.Protobuf" Version="3.25.1" />
+    <PackageReference Include="Grpc.AspNetCore.Server" Version="2.59.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.60.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Mapster" Version="7.4.0" />
     <PackageReference Include="Mapster.DependencyInjection" Version="1.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="7.0.12" /> <!-- prev version = 7.0.0 -->

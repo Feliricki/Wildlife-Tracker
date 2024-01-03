@@ -1,8 +1,8 @@
-﻿using System.Net;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs;
 using PersonalSiteAPI.Constants;
 using PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadRecords;
+using GRPC = PersonalSiteAPI.gRPC;
 
 namespace PersonalSiteAPI.DTO.GeoJSON;
 
@@ -13,13 +13,11 @@ public record EventRecordGroup
     public IEnumerable<EventRecord>? Records { get; set; }
 }
 
-public record MetaDataRecord
+public record MetadataRecord
 {
     [JsonPropertyName(name: "count")]
     public int Count { get; set; }
-    public List<int> BufferSizes { get; set; } = new();
-
-    
+    public List<int> BufferSizes { get; set; } = new();    
     public List<double> TotalDistanceTravelled { get; set; } = new();
     public int? Pairs { get; set; } // To be used for LineStrings
     
@@ -34,7 +32,7 @@ public record MetaDataRecord
 }
 
 // MetaData for a lineStringFeatureCollection.
-public record LineStringMetaData
+public record LineStringMetadata
 {
     public int Count { get; set; }
 
@@ -54,10 +52,10 @@ public class PointFeatureCollection<TProp>
 {
     [JsonInclude]
     [JsonPropertyName(name:"type")]
-    public readonly string Type = "FeatureCollection";
+    public readonly string Type = "FeatureCollection";  
     
     [JsonPropertyName(name: "metadata")]
-    public MetaDataRecord? MetaData { get; set; }
+    public MetadataRecord? Metadata { get; set; }
 
     [JsonPropertyName(name: "features")]
     public List<Feature<TProp, Point>> Features { get; set; } = new();
@@ -79,7 +77,7 @@ public class PointFeatureCollection<TProp>
             Features.Add(feature);
         }
 
-        MetaData = new MetaDataRecord()
+        Metadata = new MetadataRecord()
         {
             Count = events.Locations.Count,
         };
@@ -94,7 +92,7 @@ public class PointFeatureCollection<TProp>
     {
         var pointCollection = new PointFeatureCollection<TProp>(null, propertyFunc)
         {
-            MetaData = new MetaDataRecord
+            Metadata = new MetadataRecord
             {
                 Count = 0,
                 BufferSizes = new List<int>(),
@@ -109,13 +107,13 @@ public class PointFeatureCollection<TProp>
             var newCount = collection.Features.Count;
             
             pointCollection.Features.AddRange(collection.Features);
-            pointCollection.MetaData.Count += newCount;
-            pointCollection.MetaData.BufferSizes.Add(newCount);
-            pointCollection.MetaData.Taxon.Add(individuals.IndividualTaxonCanonicalName);
+            pointCollection.Metadata.Count += newCount;
+            pointCollection.Metadata.BufferSizes.Add(newCount);
+            pointCollection.Metadata.Taxon.Add(individuals.IndividualTaxonCanonicalName);
             
             if (TagTypes.SensorIdToName(individuals.SensorTypeId) is not null)
             {
-                pointCollection.MetaData.SensorsUsed.Add(TagTypes.SensorIdToName(individuals.SensorTypeId)!);
+                pointCollection.Metadata.SensorsUsed.Add(TagTypes.SensorIdToName(individuals.SensorTypeId)!);
             }
             
         }
@@ -124,41 +122,36 @@ public class PointFeatureCollection<TProp>
     }
 }
 
-public class LineStringFeatureCollection<TProp>
+public class LineStringFeatureCollection<TProp, TGeometry>
 {
     [JsonPropertyName(name:"type")]
     public string Type { get; set; } = "FeatureCollection";
 
     [JsonPropertyName(name: "metadata")]
-    public LineStringMetaData? MetaData { get; set; }
+    public LineStringMetadata? Metadata { get; set; }
 
-    [JsonPropertyName(name: "features")] 
-    public List<Feature<LineStringProperties, LineString>> Features { get; set; }
+    [JsonPropertyName(name: "features")]
+    public List<Feature<LineStringProperties, TGeometry>> Features { get; set; } = default!;
     
     [JsonPropertyName(name: "id")]
     public long? Id { get; set; }
 
     
-    private LineStringFeatureCollection(IndividualEventDTO events)
+    public static LineStringFeatureCollection<LineStringProperties, LineString> CreateCollection(IndividualEventDTO events)
     {
+        var collection = new LineStringFeatureCollection<LineStringProperties, LineString>();
         var totalCount = events.Locations.Count;
-        
+
         var totalDistance = events.Locations.Aggregate(Tuple.Create<double, LocationJsonDTO>
             (0, events.Locations[0]), (prev, location) =>
-        {
-            var distance = double.IsNaN(EuclideanDistance(prev.Item2, location)) ? 0 : EuclideanDistance(prev.Item2, location);
-            return Tuple.Create(prev.Item1 + distance, location);
-        }).Item1;
+            {
+                var distance = double.IsNaN(EuclideanDistance(prev.Item2, location)) ? 0 : EuclideanDistance(prev.Item2, location);
+                return Tuple.Create(prev.Item1 + distance, location);
+            }).Item1;
 
-        MetaData = new LineStringMetaData
-        {
-            LocalIdentifier = events.IndividualLocalIdentifier,
-            SensorUsed = TagTypes.SensorIdToName(events.SensorTypeId) ?? "N/A",
-            Taxa = events.IndividualTaxonCanonicalName,
-            TotalDistanceTravelled = totalDistance,
-        };
-        
-        Features = new List<Feature<LineStringProperties, LineString>>();
+        collection.Metadata = CreateLineStringMetadataHelper(events, totalDistance);
+
+        collection.Features = new List<Feature<LineStringProperties, LineString>>();
         double runningDistance = 0;
         double runningDistanceKilometers = 0;
         double initialTimestamp = events.Locations.First().Timestamp;
@@ -178,12 +171,11 @@ public class LineStringFeatureCollection<TProp>
 
             var distanceKilometers = DistanceHelper.Haversine(location.LocationLong, location.LocationLat, nextLocation.LocationLong, nextLocation.LocationLat);
             var distanceDelta = EuclideanDistance(location, nextLocation);
-            
+
             runningDistance += distanceDelta;
             runningDistanceKilometers += distanceKilometers;
 
             var timestampDelta = TimeDelta(nextLocation.Timestamp, location.Timestamp);
-            // var totalTimestampDelta = TimeDelta()
 
             var lineString = new Feature<LineStringProperties, LineString>(
                 geometry: new LineString(new List<List<float>> { from, to }),
@@ -191,44 +183,183 @@ public class LineStringFeatureCollection<TProp>
                 {
                     From = TimestampToDateTime(location.Timestamp),
                     To = TimestampToDateTime(nextLocation.Timestamp),
-                    Content = $"<h5>Animal: {events.IndividualLocalIdentifier}</h5>"
-                            + $"<h5>From:</h5>"
-                            + $"<span>latitude: {location.LocationLat}</span><br>"
-                            + $"<span>longitude: {location.LocationLong}</span><br><br>"
-                            + $"<h5>To:</h5>"
-                            + $"<span>latitude: {nextLocation.LocationLat}</span><br>"
-                            + $"<span>longitude: {nextLocation.LocationLong}</span><br><br>"
-                            + $"<span>Distance This Event: {Math.Round(distanceKilometers, 4)} kilometers.</span><br>"
-                            + $"<span>Cumulative Distance: {Math.Round(runningDistanceKilometers, 4)} kilometers.</span><br><br>"
-                            + $"<span>Start {FormatTimestamp(location.Timestamp)}</span><br>" 
-                            + $"<span>End {FormatTimestamp(nextLocation.Timestamp)}</span><br><br>"
-                            + $"<span>Speed: {Math.Round(distanceKilometers / timestampDelta.TotalHours, 4)} kilometers per hour</span><br>",
+                    Content = CreateContentHelper(events.IndividualLocalIdentifier, location, nextLocation, distanceKilometers, runningDistanceKilometers, timestampDelta),
                     Distance = distanceDelta,
                     DistanceTravelled = runningDistance,
                     Timestamp = location.Timestamp,
                 });
-                
-            Features.Add(lineString);
+
+            collection.Features.Add(lineString);
             i++;
         }
-        
-        MetaData.Count = Features.Count;
-        
-        // This static method will generate a color gradient and embed the result in the properties of each feature.
-        ColorGradientGenerator.ColorGradientForLineString(totalDistance: totalDistance, Features);
+
+        collection.Metadata.Count = collection.Features.Count;
+        ColorGradientGenerator.ColorGradientForLineString(totalDistance: totalDistance, collection.Features);
+
+        return collection;
     }
 
-    // TODO: Work needs to be done on converting an EventRecord directly into a FeatureCollection.
-    public static EventJsonDTO CreateFromRecord(IEnumerable<EventRecord> records, long studyId)
-    {        
-        var eventDto = new EventJsonDTO();
+    public static GRPC.LineStringFeatureCollection CreategRPCCollection(IndividualEventDTO events)
+    {
+        var collection = new GRPC.LineStringFeatureCollection
+        {
+            Type = "FeatureCollection"
+        };
 
-        var groups = records.GroupBy(record => record.IndividualLocalIdentifier, 
+        var totalCount = events.Locations.Count;
+
+        var totalDistance = events.Locations.Aggregate(Tuple.Create<double, LocationJsonDTO>
+            (0, events.Locations[0]), (prev, location) =>
+            {
+                var distance = double.IsNaN(EuclideanDistance(prev.Item2, location)) ? 0 : EuclideanDistance(prev.Item2, location);
+                return Tuple.Create(prev.Item1 + distance, location);
+            }).Item1;
+
+        collection.Metadata = CreateLineStringMetadata(events, totalDistance, totalCount);        
+
+        double runningDistance = 0;
+        double runningDistanceKilometers = 0;
+        double initialTimestamp = events.Locations.First().Timestamp;
+
+        var i = 0;      
+        var colorEnumerable = ColorGradientGenerator.ColorGradientIterable(totalDistance, events).GetEnumerator();                
+        foreach (var location in events.Locations.TakeWhile(location => i < totalCount - 1))
+        {
+            if (i == totalCount - 1)
+            {
+                i++;
+                continue;
+            }     
+
+            var nextLocation = events.Locations[i + 1];
+            // Format: [Longitude, Latitude, Altitude]
+            var from = new List<float> { location.LocationLong, location.LocationLat, 10 };
+            var to = new List<float> { nextLocation.LocationLong, nextLocation.LocationLat, 10 };
+
+            var distanceKilometers = DistanceHelper.Haversine(location.LocationLong, location.LocationLat, nextLocation.LocationLong, nextLocation.LocationLat);
+            var distanceDelta = EuclideanDistance(location, nextLocation);
+
+            runningDistance += distanceDelta;
+            runningDistanceKilometers += distanceKilometers;
+
+            var timestampDelta = TimeDelta(nextLocation.Timestamp, location.Timestamp);
+          
+            // NOTE: Setting values of for the positions, linestringfeatures, metadata and properties
+            var fromPosition = new GRPC.Position();
+            fromPosition.Position_.AddRange(from);
+
+            var toPosition = new GRPC.Position();
+            toPosition.Position_.AddRange(to);
+
+            var lineStringFeature = new GRPC.LineStringGeometry
+            {
+                Type = "LineString"
+            };
+            lineStringFeature.Coordinates.AddRange(new[] { fromPosition, toPosition });
+
+            var metadata = CreateLineStringMetadata(events, runningDistanceKilometers, totalCount);
+
+            var properties = new GRPC.LineStringProperties
+            {
+                From = TimestampToDateTime(location.Timestamp).ToString(),
+                To = TimestampToDateTime(nextLocation.Timestamp).ToString(),
+                Content = CreateContentHelper(events.IndividualLocalIdentifier, location, nextLocation, distanceKilometers, runningDistanceKilometers, timestampDelta),
+                Distance = distanceKilometers,
+                DistanceTravelled = runningDistanceKilometers,
+                Timestamp = location.Timestamp // Consider sending the timestamps instead of the date objects serialized to strings
+            };
+
+            if (colorEnumerable.MoveNext())
+            {
+                var (sourceColor, targetColor) = colorEnumerable.Current;
+                properties.FromColor.AddRange(sourceColor);
+                properties.ToColor.AddRange(targetColor);
+            }
+
+            var linestring = new GRPC.LineStringFeature
+            {
+                Type = "Feature",
+                Properties = properties,
+                Geometry = lineStringFeature
+            };
+
+            collection.Features.Add(linestring);
+
+            i++;
+        }
+
+        return collection;
+    }
+
+    // TODO: The following called after preprocessing involving the sorting of LocationJsonDTOs by timestamp.
+    // TODO: Consider a complete redesign involving the direct processing of event records.
+    public static IEnumerable<GRPC.LineStringFeatureCollection> StreamLineStringFeatureCollection(EventJsonDTO allEvents)
+    {
+        foreach (var individualEvents in allEvents.IndividualEvents)
+        {
+            var collection = CreategRPCCollection(individualEvents);
+            yield return collection;
+        }
+    }
+
+    public static LineStringMetadata CreateLineStringMetadataHelper(IndividualEventDTO events, double distanceTravelled)
+    {
+        return new LineStringMetadata
+        {
+            LocalIdentifier = events.IndividualLocalIdentifier,
+            SensorUsed = TagTypes.SensorIdToName(events.SensorTypeId) ?? "N/A",
+            Taxa = events.IndividualTaxonCanonicalName,
+            TotalDistanceTravelled = distanceTravelled,
+        };
+    } 
+
+    public static GRPC.LineStringMetadata CreateLineStringMetadata(IndividualEventDTO events, double distanceTravelled, int count)
+    {
+        var metadata = new GRPC.LineStringMetadata
+        {
+            Count = count,
+            LocalIdentifier = events.IndividualLocalIdentifier,
+            SensorUsed = TagTypes.SensorIdToName(events.SensorTypeId) ?? "N/A",
+            Taxa = events.IndividualTaxonCanonicalName,
+            TotalDistanceTravelled = distanceTravelled
+        };
+
+        return metadata;
+     }
+         
+    public static string CreateContentHelper(string localIdentifier, LocationJsonDTO curLocation, LocationJsonDTO nextLocation, double curDistance, double cumulativeDistance, TimeSpan timeDelta)
+    {
+        var content = $"<h5>Animal: {localIdentifier}</h5>"
+                    + $"<h5>From:</h5>"
+                    + $"<span>latitude: {curLocation.LocationLat}</span><br>"
+                    + $"<span>longitude: {nextLocation.LocationLong}</span><br><br>"
+                    + $"<h5>To:</h5>"
+                    + $"<span>latitude: {nextLocation.LocationLat}</span><br>"
+                    + $"<span>longitude: {nextLocation.LocationLong}</span><br><br>"
+                    + $"<span>Distance This Event: {Math.Round(curDistance, 4)} kilometers.</span><br>"
+                    + $"<span>Cumulative Distance: {Math.Round(cumulativeDistance, 4)} kilometers.</span><br><br>"
+                    + $"<span>Start {FormatTimestamp(curLocation.Timestamp)}</span><br>"
+                    + $"<span>End {FormatTimestamp(nextLocation.Timestamp)}</span><br><br>"
+                    + $"<span>Speed: {Math.Round(cumulativeDistance / timeDelta.TotalHours, 4)} kilometers per hour</span><br>";
+        return content;
+    }
+
+    public static IEnumerable<EventRecordGroup> GroupRecordsByIndividual(IEnumerable<EventRecord> records)
+    {
+        var eventDto = new EventJsonDTO();
+        var groups = records.GroupBy(record => record.IndividualLocalIdentifier,
             (localIdentifier, groupedRecords) => new EventRecordGroup
-            { 
+            {
                 IndividualLocalIdentifier = localIdentifier,
                 Records = groupedRecords
             });
+        return groups;
+    }
+
+    public static EventJsonDTO RecordToEventJsonDTO(IEnumerable<EventRecord> records, long studyId)
+    {
+        var eventDto = new EventJsonDTO();
+        var groups = GroupRecordsByIndividual(records);
 
         foreach (var group in groups)
         {
@@ -243,7 +374,6 @@ public class LineStringFeatureCollection<TProp>
         return eventDto;
     }
 
-    // Consider if more fields should be used by the recordGroup.
     public static IndividualEventDTO? ToIndividualJsonDTO(EventRecordGroup? recordGroup, long studyId)
     {
         var events = new IndividualEventDTO();        
@@ -278,9 +408,9 @@ public class LineStringFeatureCollection<TProp>
     }
 
     // Combine a eventJsonDTO into a list of events.
-    public static List<LineStringFeatureCollection<TProp>> CombineLineStringFeatures(EventJsonDTO events)
-    {
-        return events.IndividualEvents.Select(individual => new LineStringFeatureCollection<TProp>(individual)).ToList();
+    public static List<LineStringFeatureCollection<LineStringProperties, LineString>> CombineLineStringFeatures(EventJsonDTO events)
+    {        
+        return events.IndividualEvents.Select(CreateCollection).ToList();
     }
 
     private static Tuple<List<double>, double> GetDistancesHelper(IndividualEventDTO events)
