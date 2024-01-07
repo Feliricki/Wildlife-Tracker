@@ -11,9 +11,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NgElement, WithProperties } from '@angular/elements';
 import { InfoWindowComponent } from './info-window/info-window.component';
-import { GoogleMapOverlayController, LineStringFeatureCollection } from '../deckGL/GoogleOverlay';
+import { GoogleMapOverlayController } from '../deckGL/GoogleOverlay';
+// import { LineStringFeatureCollection } from ''
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { HttpResponse, HttpStatusCode, HttpErrorResponse } from '@angular/common/http';
+import { HttpResponse } from '@angular/common/http';
+import {LineStringFeatureCollection} from "../deckGL/GeoJsonTypes";
+import {EventRequest} from "../studies/EventRequest";
 
 type MapState =
   'initial' |
@@ -47,7 +50,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   @Input() focusedMarker?: bigint;
   @Input() pathEventData$?: EventResponse;
-  @Input() lineStringRequest?: Request;
+  @Input() eventRequest?: EventRequest;
 
   @Output() JsonDataEmitter = new EventEmitter<Observable<JsonResponseData[]>>();
   @Output() componentInitialized = new EventEmitter<true>;
@@ -109,6 +112,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   constructor(
     private studyService: StudyService) {
+    console.log("Constructing deckOverlayController.");
   }
 
   ngOnInit(): void {
@@ -122,7 +126,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   // NOTE: This method listens to values received from tracker view component
   //  Only new values (actual changes) make it to this method.
   //  Subscribe to the event data message here to handle the map controller
-  //  and forbiden responses correctly.
+  //  and forbidden responses correctly.
   ngOnChanges(changes: SimpleChanges): void {
     for (const propertyName in changes) {
       const currentValue = changes[propertyName].currentValue;
@@ -146,10 +150,10 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           // this.handleEventData(this.pathEventData$);
           break;
 
-        case "lineStringRequest":
-          console.log("Recieved event fetch request in google maps component.");
-          this.lineStringRequest = currentValue as Request;
-          this.handleEventRequest(currentValue as Request);
+        case "eventRequest":
+          console.log("Received event fetch request in google maps component.");
+          this.eventRequest = currentValue as EventRequest;
+          this.handleEventRequest(currentValue as EventRequest);
 
           break;
 
@@ -159,52 +163,12 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     }
   }
 
-  handleEventRequest(request: Request){
-    console.log("Handling request.");
-    console.log(request);
+  handleEventRequest(request: EventRequest){
+    if (!this.map){
+      console.log("Map not set before setting overlay");
+      return;
+    }
     this.deckOverlay?.loadData(request);
-  }
-
-  // TODO: Consider handling the raw httpResponse or a flag to indicate.
-  handleEventData(event$: EventResponse) {
-
-    this.eventState.set("loading");
-    event$.pipe(
-    ).subscribe({
-
-      next: response => {
-        const collection = response.body;
-        switch (response.status) {
-          // Error responses need to be handle in the catch error function.
-          case HttpStatusCode.InternalServerError:
-            console.log("Server error while retrieving events.");
-            break;
-
-          case HttpStatusCode.Forbidden:
-            console.log("Access is forbidden for event data.");
-            break;
-
-          case HttpStatusCode.Ok:
-            if (collection === null || collection.length === 0) {
-              console.log(`No events found. collection === null = ${collection === null}`);
-              return;
-            }
-            this.deckOverlay?.setLineData(collection);
-            this.eventState.set("loaded");
-            break;
-
-          default:
-            console.log("Reached default case in response handler.");
-            console.log(collection);
-            break;
-        }
-      }, error: (err: HttpErrorResponse | Error) => {
-        // TODO: This response handling needs to be tested with timeout and httpresponse errors.
-        console.log(typeof err);
-        console.error(err);
-        this.eventState.set("error");
-      },
-    });
   }
 
   coordinateToLatLng(coordinates: GeoJSON.Position): google.maps.LatLng {
@@ -263,10 +227,10 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         }
 
 
-        this.defaultMapOptions.streetViewControl = true;
-        this.defaultMapOptions.streetViewControlOptions = {
-          position: google.maps.ControlPosition.INLINE_START_BLOCK_CENTER,
-        };
+        // this.defaultMapOptions.streetViewControl = true;
+        // this.defaultMapOptions.streetViewControlOptions = {
+        //   position: google.maps.ControlPosition.INLINE_START_BLOCK_CENTER,
+        // };
 
         this.map = new google.maps.Map(mapEl as HTMLElement, this.defaultMapOptions);
 

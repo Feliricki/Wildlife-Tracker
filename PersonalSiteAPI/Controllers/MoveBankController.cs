@@ -533,13 +533,14 @@ namespace PersonalSiteAPI.Controllers
                     default:
                         throw new ArgumentException("GeoJSON parameter was passed an invalid value.");
                 }
+
+                // return new JsonResult(collection);
                 
                 var jsonString = JsonSerializer.Serialize(collection, new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = null,
                     NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
                 });
-                
                 return Ok(jsonString);
 
                 static PointProperties PropertyFunc(LocationJsonDTO location) => new()

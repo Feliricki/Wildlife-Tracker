@@ -175,7 +175,7 @@ public class LineStringFeatureCollection<TProp, TGeometry>
             runningDistance += distanceDelta;
             runningDistanceKilometers += distanceKilometers;
 
-            var timestampDelta = TimeDelta(nextLocation.Timestamp, location.Timestamp);
+            var timestampDelta = TimeDelta(currentTime: location.Timestamp, nextTime: nextLocation.Timestamp);
 
             var lineString = new Feature<LineStringProperties, LineString>(
                 geometry: new LineString(new List<List<float>> { from, to }),
@@ -452,12 +452,12 @@ public class LineStringFeatureCollection<TProp, TGeometry>
         return EuclideanDistance(list1, list2);
     }
 
-    private static TimeSpan TimeDelta(long latest, long earliest)
+    private static TimeSpan TimeDelta(long currentTime, long nextTime)
     {
-        var timestamp1 = DateTimeOffset.FromUnixTimeMilliseconds(earliest);
-        var timestamp2 = DateTimeOffset.FromUnixTimeMilliseconds(latest);
+        var currentDate = DateTimeOffset.FromUnixTimeMilliseconds(currentTime);
+        var nextDate = DateTimeOffset.FromUnixTimeMilliseconds(nextTime);
 
-        return timestamp2 - timestamp1;
+        return nextDate - currentDate;
     }
     
     private static DateTime TimestampToDateTime(long timestamp)

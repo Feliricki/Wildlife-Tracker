@@ -10,8 +10,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/layout';
 import { Observable, firstValueFrom, map } from 'rxjs';
-import { LineStringFeatureCollection } from '../deckGL/GoogleOverlay';
+// import { LineStringFeatureCollection } from '../deckGL/GoogleOverlay';
 import { HttpResponse } from '@angular/common/http';
+import {LineStringFeatureCollection} from "../deckGL/GeoJsonTypes";
+import {EventRequest} from "../studies/EventRequest";
 
 @Component({
   selector: 'app-tracker-view',
@@ -49,13 +51,14 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     bottom: 0,
     top: 0
   };
+
   activeMap: 'google' | 'mapbox' = 'google';
   mapLoaded: WritableSignal<boolean> = signal(false);
 
   searchOpened: WritableSignal<boolean> = signal(false);
 
   currentEventLineData$?: Observable<HttpResponse<LineStringFeatureCollection[] | null>>;
-  currentLineDataRequest?: Request;
+  currentEventRequest?: EventRequest;
 
   currentMarker?: bigint;
   currentStudies?: Map<bigint, StudyDTO>;
@@ -109,16 +112,12 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  updateMapState(state: boolean): void {
-    this.mapLoaded.set(state);
-  }
-
   initializeSearchNav(): void {
     this.searchOpened.set(true);
   }
 
-  switchSearchMode(): void {
-    return;
+  updateMapState(state: boolean): void {
+    this.mapLoaded.set(state);
   }
 
   updateLineStringData(
@@ -126,14 +125,14 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     this.currentEventLineData$ = event;
   }
 
-  updateLineStringDataRequest(request: Request): void {
+  updateCurrentEventRequest(request: EventRequest): void {
     console.log("Updating the fetch request in tracker view");
-    this.currentLineDataRequest = request;
+    this.currentEventRequest = request;
   }
 
   // NOTE: This message is received on the event component
   // On mobile this should close the left sidenav if it's open.
-  studyMessage(study: StudyDTO): void {
+  updateCurrentStudy(study: StudyDTO): void {
     if (study === undefined) {
       return;
     }
@@ -143,11 +142,11 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   // NOTE: This message comes from the google maps component and is received in the search component
   // for it's autocomplete feature.
-  studiesMessage(studies: Map<bigint, StudyDTO>): void {
+  updateCurrentStudies(studies: Map<bigint, StudyDTO>): void {
     this.currentStudies = studies;
   }
 
-  panToMarker(studyId: bigint): void {
+  updateCurrentMarkers(studyId: bigint): void {
     if (!this.mapLoaded()) {
       return;
     }

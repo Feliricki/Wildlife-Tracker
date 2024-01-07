@@ -168,7 +168,8 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGrpcService<GRPC.GRPCMoveBankService>();
+//app.MapGrpcService<GRPC.GRPCMoveBankService>();
+
 // When it comes to mapping controllers its first come first serve  
 //app.UseHealthChecks(new PathString("/api/health"));
 app.MapControllers().RequireCors("AnyOrigin");

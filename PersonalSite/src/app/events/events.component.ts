@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, Signal, SimpleChanges, ViewChild, WritableSignal, computed, signal } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, Signal, SimpleChanges, ViewChild, WritableSignal, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { StudyDTO } from '../studies/study';
 import { StudyService } from '../studies/study.service';
@@ -36,7 +36,7 @@ import { EventOptions, EventProfiles } from '../studies/EventOptions';
 import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
 import { MAX_EVENTS } from './Validators/maxEventsValidator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { LineStringFeatureCollection, LineStringMetaData, LineStringProperties } from '../deckGL/GoogleOverlay';
+import  { LineStringFeatureCollection, LineStringMetaData, LineStringProperties} from "../deckGL/GeoJsonTypes";
 import { HttpResponse } from '@angular/common/http';
 import { EventRequest } from '../studies/EventRequest';
 
@@ -53,6 +53,7 @@ import { EventRequest } from '../studies/EventRequest';
     MatSelectModule, MatDividerModule, MatDatepickerModule,
     MatSlideToggleModule, MatSliderModule, MatProgressBarModule],
   templateUrl: './events.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './events.component.scss'
 })
 export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
@@ -71,7 +72,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
 
   @Output() closeRightNavEmitter = new EventEmitter<true>(true);
   @Output() lineDataEmitter = new EventEmitter<Observable<HttpResponse<LineStringFeatureCollection[] | null>>>;
-  @Output() fetchRequestEmitter = new EventEmitter<Request>();
+  @Output() eventRequestEmitter = new EventEmitter<EventRequest>();
 
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -321,7 +322,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   }
 
   trackById(index: number) {
-    // console.log(`Tracking index ${index}`);
     return index;
   }
 
@@ -386,12 +386,11 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     const request = this.studyService.
       getGeoJsonEventData<GeoJSON.LineString, LineStringProperties, LineStringMetaData>
       (eventRequest);
-    const fetchRequest = this.studyService.getGeoJsonFetchRequest(eventRequest);
+    // const fetchRequest = this.studyService.getGeoJsonFetchRequest(eventRequest);
 
     this.sendEventMessage(request);
-    this.sendFetchRequest(fetchRequest);
+    this.sendFetchRequest(eventRequest);
     // TODO: Consider if an observable or the actual data should be sent to the current
-    // map component.
   }
 
   sendEventMessage(request: Observable<HttpResponse<LineStringFeatureCollection[] | null>>): void {
@@ -399,8 +398,8 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     this.lineDataEmitter.emit(request);
   }
 
-  sendFetchRequest(request: Request): void {
-    this.fetchRequestEmitter.emit(request);
+  sendFetchRequest(request: EventRequest): void {
+    this.eventRequestEmitter.emit(request);
   }
 
   timeStampHelper(date: Date | null): bigint | undefined {

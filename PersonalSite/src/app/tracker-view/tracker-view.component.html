@@ -9,7 +9,7 @@
 
       @if(sidenav.opened || searchOpened()){
       <app-simple-search [hidden]="!searchOpened" [allStudies]="currentStudies" (closeComponent)="closeSearchNav()"
-        (componentInitialized)="initializeSearchNav()" (panToMarkerEvent)="panToMarker($event)"></app-simple-search>
+        (componentInitialized)="initializeSearchNav()" (panToMarkerEvent)="updateCurrentMarkers($event)"></app-simple-search>
       }
 
     </div>
@@ -20,7 +20,7 @@
     <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="over"
       [fixedInViewport]="true">
 
-      <app-events #eventComponent (fetchRequestEmitter)="updateLineStringDataRequest($event)"
+      <app-events #eventComponent (eventRequestEmitter)="updateCurrentEventRequest($event)"
         (lineDataEmitter)="updateLineStringData($event)" (closeRightNavEmitter)="closeRightNav()"
         [currentStudy]="currentStudy"></app-events>
 
@@ -41,8 +41,8 @@
       <!-- TODO: Move the toggle button belongs the search component -->
       @if (activeMap === "google"){
       <app-google-map [pathEventData$]="currentEventLineData$" (mapStateEmitter)="updateMapState($event)"
-        (studiesEmitter)="studiesMessage($event)" (studyEmitter)="studyMessage($event)" [focusedMarker]="currentMarker"
-        [lineStringRequest]="currentLineDataRequest"></app-google-map>
+                      (studiesEmitter)="updateCurrentStudies($event)" (studyEmitter)="updateCurrentStudy($event)" [focusedMarker]="currentMarker"
+                      [eventRequest]="currentEventRequest"></app-google-map>
       }
 
       @if (rightButtonFlag() === true && mapLoaded()){
