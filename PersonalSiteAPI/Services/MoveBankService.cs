@@ -12,7 +12,6 @@ using Microsoft.IdentityModel.Tokens;
 using PersonalSiteAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using Mapster;
-using Microsoft.Extensions.Primitives;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using EventRequest = PersonalSiteAPI.DTO.MoveBankAttributes.EventRequest;
 using PersonalSiteAPI.DTO.MoveBankAttributes;
@@ -37,7 +36,6 @@ namespace PersonalSiteAPI.Services
         //    bool authorizedUser = false);
 
         Task<HttpResponseMessage?> DirectRequestEvents(EventRequest request);
-        Task<HttpResponseMessage?> DirectRequestEvents(gRPC.EventRequest request);
 
         Task<HttpResponseMessage?> DirectRequest(
             string entityType,
@@ -177,30 +175,6 @@ namespace PersonalSiteAPI.Services
                 return null;
             }
         }
-        
-        public async Task<HttpResponseMessage?> DirectRequestEvents(gRPC.EventRequest request)
-        {
-            Console.WriteLine(JsonConvert.SerializeObject(request));
-            var eventOptions = request.Options;
-
-            EventRequest newRequest = new()
-            {
-                StudyId = request.StudyId,
-                LocalIdentifiers = request.LocalIdentifiers.ToList(),
-                SensorType = request.HasSensorType ? request.SensorType : null,
-                GeometryType = request.HasGeometryType ? request.GeometryType : null,
-                Options = new EventOptions()
-                {
-                    MaxEventsPerIndividual = eventOptions.HasMaxEventsPerIndividual ? eventOptions.MaxEventsPerIndividual : null,
-                    TimestampStart = eventOptions.HasTimestampStart ? eventOptions.TimestampStart : null,
-                    TimestampEnd = eventOptions.HasTimestampEnd ? eventOptions.TimestampEnd : null,
-                    Attributes = eventOptions.HasAttributes ? eventOptions.Attributes : null,
-                    EventProfile = eventOptions.HasEventProfile ? eventOptions.EventProfile : null,
-                }
-            };
-
-            return await DirectRequestEvents(newRequest);
-        }
 
         public async Task<HttpResponseMessage?> DirectRequestEvents(EventRequest request)
         {
@@ -297,20 +271,25 @@ namespace PersonalSiteAPI.Services
 
             response.EnsureSuccessStatusCode();
 
-            var responseContentBytes = await response.Content.ReadAsByteArrayAsync();
-            // TODO: Make sure the response is not being read more than once
-            var hasLicenseTerms = HasLicenseTerms(responseContentBytes);
-            if (!hasLicenseTerms || studyId is null)
+            //var responseContentBytes = await response.Content.ReadAsByteArrayAsync();
+            // The following method works by checking the headers of the response and thus avoids reading the stream unnecessarily.
+            if (!HasLicenseTerms(response) || studyId is null)
             {
+                Console.WriteLine("Returning the http response without sending another request asking for permissions.");
                 return response;
             } 
             Console.WriteLine("Requesting permission for direct read response");
-                
+
+            // INFO: In this case, the another request is sent asking for permission and the study is stored in my database to credit at another time.                
             response = await GetPermissionForDirectRead(request, response);
             var study = await _context.Studies.AsNoTracking().Where(s => s.Id == studyId).FirstOrDefaultAsync();
             if (await SaveStudy(study))
             {
                 Console.WriteLine("Successfully saved study to RequestPermission table");
+            }
+            else
+            {
+                Console.WriteLine("Did not save study to database.");
             }
                          
             return response;
@@ -463,17 +442,27 @@ namespace PersonalSiteAPI.Services
             }
         }
 
+        private static bool HasLicenseTerms(HttpResponseMessage? response)
+        {
+            if (response is null)
+            {
+                return false;
+            }
+            var headers = response.Headers;
+            if ((headers.TryGetValues("accept-license", out var result) && result.FirstOrDefault() is "true")
+                || (headers.TryGetValues("Accept-License", out var result2) && result2.FirstOrDefault() is "true"))
+            {
+                return true;
+            }
+            return false;
+        }
+
         private static bool HasLicenseTerms(byte[] content)
         {
             string responseStr = System.Text.Encoding.UTF8.GetString(content);
             return responseStr.Contains("License Terms:");
         }
 
-        private static string StringToMD5(byte[] byteArray)
-        {
-            var checkSum = MD5.HashData(byteArray);
-            return BitConverter.ToString(checkSum).Replace("-", string.Empty);
-        }
         // NOTE: This method is untested
         // This method assumes that the old response contains some license terms
         // Otherwise the same response be received

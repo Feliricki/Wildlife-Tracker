@@ -36,7 +36,7 @@ import { EventOptions, EventProfiles } from '../studies/EventOptions';
 import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
 import { MAX_EVENTS } from './Validators/maxEventsValidator';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import  { LineStringFeatureCollection, LineStringMetaData, LineStringProperties} from "../deckGL/GeoJsonTypes";
+import  { LineStringFeatureCollection, LineStringMetaData, LineStringPropertiesV1 } from "../deckGL/GeoJsonTypes";
 import { HttpResponse } from '@angular/common/http';
 import { EventRequest } from '../studies/EventRequest';
 
@@ -71,7 +71,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   currentLocationSensors: WritableSignal<string[]> = signal([]);
 
   @Output() closeRightNavEmitter = new EventEmitter<true>(true);
-  @Output() lineDataEmitter = new EventEmitter<Observable<HttpResponse<LineStringFeatureCollection[] | null>>>;
+  @Output() lineDataEmitter = new EventEmitter<Observable<HttpResponse<LineStringFeatureCollection<LineStringPropertiesV1>[] | null>>>;
   @Output() eventRequestEmitter = new EventEmitter<EventRequest>();
 
   @ViewChild(MatSort) sort!: MatSort;
@@ -384,7 +384,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     console.log(JSON.stringify(eventRequest));
 
     const request = this.studyService.
-      getGeoJsonEventData<GeoJSON.LineString, LineStringProperties, LineStringMetaData>
+      getGeoJsonEventData<GeoJSON.LineString, LineStringPropertiesV1, LineStringMetaData>
       (eventRequest);
     // const fetchRequest = this.studyService.getGeoJsonFetchRequest(eventRequest);
 
@@ -393,7 +393,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     // TODO: Consider if an observable or the actual data should be sent to the current
   }
 
-  sendEventMessage(request: Observable<HttpResponse<LineStringFeatureCollection[] | null>>): void {
+  sendEventMessage(request: Observable<HttpResponse<LineStringFeatureCollection<LineStringPropertiesV1>[] | null>>): void {
     console.log("Sending event message in events component");
     this.lineDataEmitter.emit(request);
   }

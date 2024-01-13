@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild, WritableSignal, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild, WritableSignal, signal } from '@angular/core';
 import { MapComponent } from '../google-maps/google-map.component';
 import { SimpleSearchComponent } from '../simple-search/simple-search.component';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
@@ -10,20 +10,16 @@ import { MatIconModule } from '@angular/material/icon';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/layout';
 import { Observable, firstValueFrom, map } from 'rxjs';
-// import { LineStringFeatureCollection } from '../deckGL/GoogleOverlay';
 import { HttpResponse } from '@angular/common/http';
-import {LineStringFeatureCollection} from "../deckGL/GeoJsonTypes";
-import {EventRequest} from "../studies/EventRequest";
+import { LineStringFeatureCollection, LineStringPropertiesV1 } from "../deckGL/GeoJsonTypes";
+import { EventRequest } from "../studies/EventRequest";
 
 @Component({
   selector: 'app-tracker-view',
   templateUrl: './tracker-view.component.html',
   styleUrls: ['./tracker-view.component.css'],
   standalone: true,
-  imports: [
-    EventsComponent, MatSidenavModule,
-    MatButtonModule, SimpleSearchComponent,
-    MapComponent, MatIconModule],
+  changeDetection: ChangeDetectionStrategy.OnPush, imports: [EventsComponent, MatSidenavModule, MatButtonModule, SimpleSearchComponent, MapComponent, MatIconModule],
   animations: [
 
     trigger('leftToggleClick', [
@@ -57,7 +53,8 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   searchOpened: WritableSignal<boolean> = signal(false);
 
-  currentEventLineData$?: Observable<HttpResponse<LineStringFeatureCollection[] | null>>;
+  currentEventLineData$?:
+    Observable<HttpResponse<LineStringFeatureCollection<LineStringPropertiesV1>[] | null>>;
   currentEventRequest?: EventRequest;
 
   currentMarker?: bigint;
@@ -121,7 +118,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
 
   updateLineStringData(
-    event: Observable<HttpResponse<LineStringFeatureCollection[] | null>>): void {
+    event: Observable<HttpResponse<LineStringFeatureCollection<LineStringPropertiesV1>[] | null>>): void {
     this.currentEventLineData$ = event;
   }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, WritableSignal, signal, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, WritableSignal, signal, AfterViewInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { forkJoin, from, Observable, Subscription } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
@@ -15,7 +15,7 @@ import { GoogleMapOverlayController } from '../deckGL/GoogleOverlay';
 // import { LineStringFeatureCollection } from ''
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpResponse } from '@angular/common/http';
-import {LineStringFeatureCollection} from "../deckGL/GeoJsonTypes";
+import {LineStringFeatureCollection, LineStringPropertiesV1 } from "../deckGL/GeoJsonTypes";
 import {EventRequest} from "../studies/EventRequest";
 
 type MapState =
@@ -32,13 +32,14 @@ type EventState =
   "time out" |
   "error";
 
-export type EventResponse = Observable<HttpResponse<LineStringFeatureCollection[] | null>>;
+export type EventResponse = Observable<HttpResponse<LineStringFeatureCollection<LineStringPropertiesV1>[] | null>>;
 
 @Component({
   selector: 'app-google-map',
   templateUrl: './google-map.component.html',
   styleUrls: ['./google-map.component.css'],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     NgIf, AsyncPipe, MatButtonModule,
     MatIconModule, MatProgressSpinnerModule]

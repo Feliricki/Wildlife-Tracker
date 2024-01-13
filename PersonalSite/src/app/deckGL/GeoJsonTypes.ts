@@ -1,12 +1,6 @@
 import { Color } from '@deck.gl/core/typed';
 import * as GeoJSON from "geojson";
 
-
-export type LineFeature = GeoJSON.Feature<GeoJSON.LineString, LineStringProperties>;
-export type LineStringFeatureCollection = GeoJSON.FeatureCollection<GeoJSON.LineString, LineStringProperties> & { metadata: LineStringMetaData };
-
-export type PointFeature = GeoJSON.Feature<GeoJSON.Point, PointProperties>;
-export type PointFeatureCollection = GeoJSON.FeatureCollection<GeoJSON.Point, PointProperties> & LineStringMetaData;
 export interface LineStringMetaData {
   count: number;
   LocalIdentifier: string;
@@ -19,7 +13,15 @@ export interface PointProperties {
   dateString: string;
 }
 
-export interface LineStringProperties {
+// TODO: Consider if metadata can be added to the following types.
+export type LineStringFeature<TProp> = GeoJSON.Feature<GeoJSON.LineString, TProp>;
+export type PointFeature<TProp> = GeoJSON.Feature<GeoJSON.Point, TProp>;
+
+export type LineStringFeatureCollection<TProp> = GeoJSON.FeatureCollection<GeoJSON.LineString, TProp>;
+export type PointFeatureCollection<TProp> = GeoJSON.FeatureCollection<GeoJSON.Point, TProp>;
+
+// TODO: V1 needs to be phased out.
+export interface LineStringPropertiesV1 {
   from: Date;
   to: Date;
   color: Color;
@@ -28,4 +30,19 @@ export interface LineStringProperties {
   content: string;
   distance: number;
   distanceTravelled: number;
+}
+
+export interface LineStringPropertiesV2 {
+  sourceTimestamp: bigint;
+  destinationTimestamp: bigint;
+  content: string;
+  distanceKm: number;
+  distanceTravelledKm: number;
+}
+
+export type LineStringFeatures<TProp> = {
+  features: LineStringFeature<TProp>[];
+  individualLocalIdentifier: string;
+  index: number;
+  count: number;
 }

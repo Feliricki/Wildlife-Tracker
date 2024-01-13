@@ -27,7 +27,6 @@ using PersonalSiteAPI.DTO.GeoJSON;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadRecords;
 using System.Diagnostics;
-using Amazon.SecretsManager.Model;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -432,7 +431,6 @@ namespace PersonalSiteAPI.Controllers
             };
         }
 
-
         // TODO: This method is in need of validation.
         [HttpPost(Name = "GetEventData")]
         [ResponseCache(CacheProfileName = "NoCache")]
@@ -441,7 +439,7 @@ namespace PersonalSiteAPI.Controllers
         {
             try
             {
-                Console.WriteLine(JsonConvert.SerializeObject(request));
+                Console.WriteLine(JsonConvert.SerializeObject(request, Formatting.Indented));
 
                 Stopwatch stopwatch = new();
                 stopwatch.Start();
@@ -475,7 +473,7 @@ namespace PersonalSiteAPI.Controllers
                         continue;
                     }
                     records.Add(record);
-                }  
+                }
 
                 stopwatch.Stop();
                 Console.WriteLine($"It took {stopwatch.Elapsed / 1000} seconds to process all records");
@@ -484,7 +482,7 @@ namespace PersonalSiteAPI.Controllers
                 stopwatch = new Stopwatch();
                 stopwatch.Start();
 
-                var data = LineStringFeatureCollection<LineStringProperties, LineString>.RecordToEventJsonDTO(records, request.StudyId);
+                var data = LineStringFeatureCollection<LineStringPropertiesV1>.RecordToEventJsonDTO(records, request.StudyId);
                 stopwatch.Stop();
 
                 Console.WriteLine($"Converted {records.Count} records to data with {data.IndividualEvents.Count} individuals and processed records to linestrings collections in {stopwatch.Elapsed / 1000} seconds.");
@@ -514,7 +512,7 @@ namespace PersonalSiteAPI.Controllers
                         stopwatch = new Stopwatch();
                         stopwatch.Start();
 
-                        var lineCollections = LineStringFeatureCollection<LineStringProperties, LineString>
+                        var lineCollections = LineStringFeatureCollection<LineStringPropertiesV1>
                             .CombineLineStringFeatures(data);
                         
                         stopwatch.Stop();

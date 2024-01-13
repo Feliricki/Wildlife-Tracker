@@ -8,18 +8,34 @@ using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
 using Mapster;
 using PersonalSiteAPI.Mappings;
-using GRPC = PersonalSiteAPI.gRPC;
+//using GRPC = PersonalSiteAPI.gRPC;
+using PersonalSiteAPI.Hubs;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
+var _allowedSpecificOrigins = "SpecificOrigins";
+
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(cfg =>
+    //options.AddDefaultPolicy(cfg =>
+    //{
+    //    // TODO: When deploying the origin should be set to the url of the frontend website.
+    //    //cfg.WithOrigins(builder.Configuration["AllowedOrigins"]!);
+    //    cfg.WithOrigins("http://localhost:4200/", "https://localhost:4200");
+    //    //cfg.WithOrigins(builder.C)
+    //    cfg.AllowAnyHeader();
+    //    cfg.AllowAnyMethod();
+    //    cfg.AllowCredentials();
+    //});
+
+    options.AddPolicy(name: _allowedSpecificOrigins, cfg =>
     {
-        cfg.WithOrigins(builder.Configuration["AllowedOrigins"]!);
+        cfg.WithOrigins("http://localhost:4200", "https://localhost:4200");
         cfg.AllowAnyHeader();
+        //cfg.WithMethods("GET", "POST");
         cfg.AllowAnyMethod();
+        cfg.AllowCredentials();
     });
 
     options.AddPolicy(name: "AnyOrigin",
@@ -28,6 +44,7 @@ builder.Services.AddCors(options =>
             cfg.AllowAnyOrigin();
             cfg.AllowAnyHeader();
             cfg.AllowAnyMethod();
+            //cfg.AllowCredentials();
         });
 });
 
@@ -119,9 +136,20 @@ builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
 
 builder.Services.AddAWSService<IAmazonSecretsManager>();
 
-// TODO: Add mappings and service.
-builder.Services.AddGrpc();
-//builder.Services.AddG
+// TODO: Use MessagePack protocol.
+// When serializing data, use indexed key as opposed to string keys.
+// Consider a custom formatter resolver for datetime objects.
+
+builder.Services.AddSignalR(options =>
+{
+    options.DisableImplicitFromServicesParameters = true;
+    //options.StatefulReconnectBufferSize = 4096;
+    // Set up the client to send pings every second.
+    options.KeepAliveInterval = TimeSpan.FromSeconds(10);
+    options.MaximumParallelInvocationsPerClient = 1;
+    options.HandshakeTimeout = TimeSpan.FromSeconds(15);
+    
+});
 
 builder.Services.AddResponseCaching(options =>
 {
@@ -135,6 +163,7 @@ builder.Services.AddMemoryCache(options =>
 });
 
 var app = builder.Build();
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -150,12 +179,12 @@ else
     app.Use(async (context, next) =>
     {
         // Prevent click hijacking
-        context.Response.Headers.Add("X-Frame-Options", "sameorigin");
-        context.Response.Headers.Add("X-XSS-Protection", "1; mode=block");
-        context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+        context.Response.Headers.Append("X-Frame-Options", "sameorigin");
+        context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+        context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
         // Prevents XSS attacks
-        context.Response.Headers.Add("Content-Security-Policy", "default-src 'self' ;");
-        context.Response.Headers.Add("Referrer-Policy", "strict-origin");
+        context.Response.Headers.Append("Content-Security-Policy", "default-src 'self' ;");
+        context.Response.Headers.Append("Referrer-Policy", "strict-origin");
 
 
         await next();
@@ -163,15 +192,33 @@ else
 }
 
 app.UseHttpsRedirection();
+app.UseRouting();
+
+//app.UseCors("AnyOrigin");
 app.UseCors();
+
+//var websocketOptions = new WebSocketOptions();
+app.UseWebSockets();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-//app.MapGrpcService<GRPC.GRPCMoveBankService>();
 
-// When it comes to mapping controllers its first come first serve  
-//app.UseHealthChecks(new PathString("/api/health"));
-app.MapControllers().RequireCors("AnyOrigin");
+//app.UseEndpoints(endpoints =>
+//{
+//    endpoints.MapControllers().RequireCors("SpecificOrigins");
+//    endpoints.MapHub<MoveBankHub>("/api/MoveBank-Hub");
+//});
+
+app.MapControllers().RequireCors(_allowedSpecificOrigins);
+app.MapHub<MoveBankHub>("/api/MoveBank-Hub", options =>
+{
+    options.AllowStatefulReconnects = true;
+    options.TransportMaxBufferSize = 1024 * 1024;
+}).RequireCors(_allowedSpecificOrigins);
+
+////app.UseHealthChecks(new PathString("/api/health"));
+////app.MapControllers().RequireCors("AnyOrigin");
+//app.MapControllers().RequireCors("SpecificOrigins");
 
 app.Run();

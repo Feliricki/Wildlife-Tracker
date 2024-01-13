@@ -3,13 +3,12 @@ import { MapboxOverlay } from '@deck.gl/mapbox/typed';
 // import { TripsLayer } from '@deck.gl/geo-layers/typed';
 // import type * as LayerProps from '@deck.gl/core/typed';
 import { ArcLayer, GeoJsonLayer, GeoJsonLayerProps } from '@deck.gl/layers/typed';
-import { PickingInfo, Layer } from '@deck.gl/core/typed';
-import { randomColor, setData } from './deck-gl.worker';
-import { PointProperties } from "./GeoJsonTypes";
-import { BinaryLineStringResponse, OptionalAttributes, WorkerFetchRequest } from "./MessageTypes";
+import { PickingInfo, Layer, Color } from '@deck.gl/core/typed';
+import { randomColor } from './deck-gl.worker';
+import { LineStringPropertiesV2, PointProperties } from "./GeoJsonTypes";
+import { BinaryLineStringResponse, NumericPropsResponse, OptionalAttributes, WorkerFetchRequest } from "./MessageTypes";
 import { EventRequest } from "../studies/EventRequest";
-import { BinaryLineFeatures, BinaryPointFeatures, BinaryPolygonFeatures } from '@loaders.gl/schema';
-// import { GL } from '@luma.gl/constants';
+import { BinaryLineFeatures, BinaryPointFeatures, BinaryPolygonFeatures, BinaryAttribute } from '@loaders.gl/schema';
 
 
 type LayerId = string;
@@ -37,39 +36,42 @@ export class GoogleMapOverlayController {
 
   dataChunks: Array<BinaryFeatureWithAttributes> = [];
   contentArray: ArrayBufferLike[][] = [];
-  // contentMap: Map<number, ArrayBufferLike[]> = new Map<number, ArrayBufferLike[]>;
 
   textDecoder = new TextDecoder();
+  textEncoder = new TextEncoder();
 
-  // TODO: Refactor this to use a suitable data source that be updated without clearing all of the layers.
-  // NOTE:  Switching to a new event source will require a complete reload of all entities but
-  // fetching more data from a specific individual should not. (the data source can be updated with more entities to
-  // avoid another api request and layer instantiation.)
-  // It may be better to request an array of features from the backend and then create geojsonlayers from each individual array response.
+  currentAnimals = new Map<string, [Color, Color]>();
 
   constructor(map: google.maps.Map) {
     this.map = map;
+    console.log("About to start connection to signalr hub");
+
     if (typeof Worker !== 'undefined') {
+      // this.webWorker = new Worker(new URL('./deck-gl.worker', import.meta.url), { type: "classic"});
       this.webWorker = new Worker(new URL('./deck-gl.worker', import.meta.url));
+      console.log(this.webWorker);
       this.webWorker.onmessage = (message) => {
         switch (message.data.type) {
           case "BinaryLineString":
-            this.handleBinaryResponse(message.data as BinaryLineStringResponse);
+            this.handleBinaryResponse(message.data as BinaryLineStringResponse<LineStringPropertiesV2>);
             break;
 
           default:
             return;
         }
       }
-
     } else {
+      // TODO: Handle the work on the main thread by calling the function from mainthread with the right flag.
       console.error("Web worker api not supported.");
     }
   }
 
   loadData(request: EventRequest) {
+    console.log("Begun loading event data.");
+
     this.dataChunks = [];
     this.contentArray = [];
+    this.currentAnimals.clear();
     this.deckOverlay?.finalize();
 
     this.deckOverlay = new DeckOverlay({
@@ -90,7 +92,9 @@ export class GoogleMapOverlayController {
       this.webWorker.postMessage({ data: workerRequest, type: "FetchRequest" as const });
     }
     else {
-      setData(workerRequest, true);
+      // TODO:There need to be a fallback mechanism if webworker are not supported.
+      console.log("Web worker not supported.");
+      // setData(workerRequest, true);
     }
   }
 
@@ -99,27 +103,23 @@ export class GoogleMapOverlayController {
     if (index === -1) {
       return null;
     }
-    console.log(info);
-    console.log(`Hovering over layer index = ${index}`);
-
+    // console.log(info);
     const text = this.getContentHelper(index, info);
     return text === undefined ? null : { html: text };
-
   }
 
   // TODO: 1) Look into flat buffer format.
   // 2) Work needs to be done on setting up grpc client.
   // 3) Looking into adding more layers.
-
   // INFO:Maybe the layer index should be stored in the optional attributes.
   getContentHelper(index: number, info: PickingInfo): string | undefined {
     const layerIndex = Number(info.layer?.id.split('-').at(1));
-    if (layerIndex === undefined){
+    if (layerIndex === undefined) {
       return;
     }
     const content = this.contentArray.at(layerIndex)?.at(index);
 
-    if (content === undefined){
+    if (content === undefined) {
       return;
     }
 
@@ -130,20 +130,20 @@ export class GoogleMapOverlayController {
   getCoordinateHelper(info: PickingInfo) {
     return `position: ${info.coordinate}`;
   }
-  // TODO: Send flatten numeric props such as color before sending the ddata to the mainthread.
 
   // NOTE: This method is called when the web worker finishes processing the requested event data.
-  // The expensive part is handle the loading and parsing of the event request.
-  handleBinaryResponse(data: BinaryLineStringResponse): void {
+  handleBinaryResponse(BinaryData: BinaryLineStringResponse<LineStringPropertiesV2>): void {
 
     const binaryLineFeatures: BinaryLineFeatures & OptionalAttributes = {
-      featureIds: { size: data.featureId.size, value: new Uint16Array(data.featureId.value) },
-      globalFeatureIds: { size: data.globalFeatureIds.size, value: new Uint16Array(data.globalFeatureIds.value) },
-      positions: { size: data.position.size, value: new Float32Array(data.position.value) },
-      pathIndices: { size: data.pathIndices.size, value: new Uint16Array(data.pathIndices.value) },
-      length: data.length,
-      content: data.content,
-      numericProps: {},
+      featureIds: { size: BinaryData.featureId.size, value: new Uint16Array(BinaryData.featureId.value) },
+      globalFeatureIds: { size: BinaryData.globalFeatureIds.size, value: new Uint16Array(BinaryData.globalFeatureIds.value) },
+      positions: { size: BinaryData.position.size, value: new Float32Array(BinaryData.position.value) },
+      pathIndices: { size: BinaryData.pathIndices.size, value: new Uint16Array(BinaryData.pathIndices.value) },
+      length: BinaryData.length,
+      content: BinaryData.content,
+      colors: { size: BinaryData.colors.size, value: new Uint8Array(BinaryData.colors.value)},
+      individualLocalIdentifier: BinaryData.individualLocalIdentifier,
+      numericProps: this.numericPropsHelper(BinaryData.numericProps), // TODO: Process this
       properties: [],
       type: "LineString"
     };
@@ -151,13 +151,39 @@ export class GoogleMapOverlayController {
 
     this.dataChunks.push({ points: pointsFeatures, lines: binaryLineFeatures, polygons: polygonFeatures });
     this.contentArray.push(binaryLineFeatures.content.contentArray);
+
     const layers: Layer[] = this.dataChunks.map((chunk, index) => this.createArcLayer(chunk.lines, index));
 
     console.log(
-      `contentArray has ${this.contentArray.length} elements with ${this.contentArray.reduce((acc, arr) => acc + arr.length, 0)}`+
+      `contentArray has ${this.contentArray.length} elements with ${this.contentArray.reduce((acc, arr) => acc + arr.length, 0)}` +
       ` total elements and ${layers.length} layers`);
     this.deckOverlay?.setProps({ layers: layers });
   }
+
+  numericPropsHelper(props: NumericPropsResponse<LineStringPropertiesV2>) {
+    return {
+      sourceTimestamp: {
+        size: props.sourceTimestamp.size,
+        value: new Float64Array(props.sourceTimestamp.value)
+      },
+      destinationTimestamp: {
+        size: props.destinationTimestamp.size,
+        value: new Float64Array(props.destinationTimestamp.value)
+      },
+      distanceKm: {
+        size: props.distanceKm.size,
+        value: new Float64Array(props.distanceKm.value)
+      },
+      distanceTravelledKm: {
+        size: props.distanceTravelledKm.size,
+        value: new Float64Array(props.distanceTravelledKm.value)
+      }
+    } as { [key: string]: BinaryAttribute };
+  }
+
+  // binaryAttributeHelper(val: BufferAttribute) {
+  //   return { size: val.size, value: } as BinaryAttribute;
+  // }
 
   // NOTE: This helper method builds an empty points and line binaryFeaturesObjects.
   BinaryResponseHelper(): [BinaryPointFeatures, BinaryPolygonFeatures] {
@@ -196,17 +222,17 @@ export class GoogleMapOverlayController {
       getLineColor: randomColor(),
       lineWidthMinPixels: 5,
       getLineWidth: 10,
-      // onHover: info => this.renderTooltip(info)
     });
   }
 
   createArcLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
+    const BYTE_SIZE = 4;
+
     const positions = binaryFeatures.positions;
     const positionSize = positions.size;
-    const entrySize = positionSize * 2 * 4;
+    const entrySize = positionSize * 2 * BYTE_SIZE;
     // Generate colors on demand.
-    const color1 = randomColor();
-    const color2 = randomColor();
+    const colors = this.getColorHelper(binaryFeatures.individualLocalIdentifier);
     return new ArcLayer({
       id: `arclayer-${layerId}`,
       data: {
@@ -224,17 +250,37 @@ export class GoogleMapOverlayController {
             stride: entrySize,
             offset: entrySize / 2,
           },
+          // getSourceColor: {
+          //   value: colors.value,
+          //   size: colors.size,
+          //   stride: colors.size * 2 // 2 is number of bytes in a uint8 array.
+          // },
+          // getTargetColor: {
+          //   value: colors.value,
+          //   size: colors.size,
+          //   stride: colors.size * 2, // 2 is number of bytes in a uint8 array.
+          //   offset: colors.size * 2
+          // },
+          individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier)
         }
       },
+      getSourceColor: colors[0], // This doesn't need to change after being set.
+      getTargetColor: colors[1],
       pickable: true,
       getWidth: 5,
       widthMinPixels: 5,
-      getSourceColor: color1,
-      getTargetColor: color2,
     });
   }
 
-
+  getColorHelper(animal: string): [Color, Color] {
+    const color = this.currentAnimals.get(animal);
+    if (color !== undefined){
+      return color;
+    }
+    const newColor = [randomColor(), randomColor()] as [Color, Color];
+    this.currentAnimals.set(animal, newColor);
+    return newColor;
+  }
 // renderTooltip(info: PickingInfo) {
 //   console.log("picking info for geojson hover event.");
 //   console.log(info);
@@ -247,4 +293,3 @@ export class GoogleMapOverlayController {
 //   el.style.top = `${info.y} px`;
 // }
 }
-// const positionArray = new Float32Array(lineFeatures.positions.value); const positionSize = lineFeatures.positions.size; const positionIndices = new Uint16Array(lineFeatures.pathIndices.value); NOTE: There is also a z-axis number with a +2 offset that is currently unused. const sourceLong = positionArray[index * positionSize * 2]; const sourceLat = positionArray[index * positionSize * 2 + 1]; const nextLong = positionArray.at(index * positionSize * 2 + positionSize)!; const nextLat = positionArray.at(index * positionSize * 2 + positionSize + 1)!; console.log(`sourcePosition: [${sourceLong}, ${sourceLat}]`); console.log(`nextPosition: [${nextLong}, ${nextLat}]`);
