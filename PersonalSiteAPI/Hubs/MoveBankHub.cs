@@ -1,4 +1,5 @@
-﻿using CsvHelper;    
+﻿using CsvHelper;
+using MessagePack;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 //using NetTopologySuite.Features;
@@ -15,21 +16,25 @@ using SystemJson = System.Text.Json;
 
 namespace PersonalSiteAPI.Hubs
 {
-
-    public record LineStringFeatures
+    [MessagePackObject]
+    public class LineStringFeatures
     {
+        [Key(0)]
         [JsonPropertyName(name: "features")]
-        public List<Feature<object, LineStringGeometry>> Feature { get; set; } = [];
+        public List<Feature<LineStringPropertiesV2, LineStringGeometry>> Feature { get; set; } = [];
+        [Key(1)]
         [JsonPropertyName(name: "individualLocalIdentifier")]
         public string IndividualLocalIdentifier { get; set; } = default!;
-        [JsonPropertyName(name: "count")] 
+        [Key(2)]
+        [JsonPropertyName(name: "count")]
         public int Count { get; set; }
+        [Key(3)]
         [JsonPropertyName(name: "index")]
         public int Index { get; set; } 
     }
     public interface IMoveBankHub
     {
-        IAsyncEnumerable<LineStringFeatures> StreamEvents(
+        IAsyncEnumerable<byte[]> StreamEvents(
             EventRequest request, 
             CancellationToken cancellationToken);        
     }
@@ -50,17 +55,44 @@ namespace PersonalSiteAPI.Hubs
         }
 
         
-        // TODO:
-        // 1) This request needs to be validated.
-        // 2) Caching of certain results should be considered (the size of the event being stored should be calculated)
-        // 3) Switch to MessagePack protocol once testing is complete.
-        public async IAsyncEnumerable<LineStringFeatures> StreamEvents(
+        // TODO: This method needs validation.
+        public async IAsyncEnumerable<byte[]> StreamEvents(
             EventRequest request,
             [FromServices] IMoveBankService moveBankService,
+            [FromServices] ICachingService cachingService,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-
             Console.WriteLine("Starting streaming events for request: " + JsonConvert.SerializeObject(request));
+
+            // TODO: Adjust the request to only ask for data for which there is no cache.
+            // Now test the caching service.
+            List<string> localIdentifiers = request.LocalIdentifiers?.ToList() ?? [];
+            if (localIdentifiers.Count == 0)
+            {
+                yield break;
+            }
+
+            //List<string> afterFiltering = [];
+            //Dictionary<string, List<LineStringFeatures>> foundEventPairs = [];
+            //foreach (string localIdentifier in localIdentifiers)
+            //{
+            //    if (!cachingService.TryGetIndividualEvents(request.StudyId, localIdentifier, request.Options.EventProfile, out List<LineStringFeatures> foundEvents))
+            //    {
+            //        afterFiltering.Add(localIdentifier);
+            //    }
+            //    else
+            //    {
+            //        foundEventPairs.Add(localIdentifier, foundEvents);
+            //    }
+            //}
+
+            //request.LocalIdentifiers = afterFiltering;
+
+            //Console.WriteLine($"New request after filtering is " + JsonConvert.SerializeObject(request));
+            //Console.WriteLine("Found events for individuals: [ " + string.Join(", ", foundEventPairs.Keys) + " ]");
+
+
+            // TODO: Decide if this http call still needs to be made if all requested individuals are cached.
             HttpResponseMessage? response = await moveBankService.DirectRequestEvents(request);
             if (response is null)
             {
@@ -86,51 +118,58 @@ namespace PersonalSiteAPI.Hubs
             
             foreach (var featureCollection in FeaturesByIndividuals)
             {
-                Console.WriteLine("Looping through collection.");
+                //Console.WriteLine("Looping through collection.");
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // For MessagePack serialization, consider using a custom formatter resolver to utilize flat buffers 
                 // A example of the above procedure should already be present in the SignalR github repo.
                 string curAnimal = featureCollection.IndividualLocalIdentifier;
-                List<Feature<object, LineStringGeometry>> curFeatures = [];
+
+                List<Feature<LineStringPropertiesV2, LineStringGeometry>> curFeatures = [];
+                List<LineStringFeatures> lineStringFeatures = [];
+
                 var index = 0;
+                var j = 0;
                 foreach (var feature in featureCollection.Features)
-                {                    
-                    cancellationToken.ThrowIfCancellationRequested();
+                {           
+                    cancellationToken.ThrowIfCancellationRequested();                    
                     curFeatures.Add(feature);
-                    if (curFeatures.Count >= 500)
+                    if (curFeatures.Count >= 1000)
                     {
-                        Console.WriteLine("Returning 500 features.");
-                        yield return new LineStringFeatures
+                        //Console.WriteLine("Returning 10000 features.");
+                        var features =  new LineStringFeatures
                         {
                             Feature = curFeatures,
                             IndividualLocalIdentifier = curAnimal,
                             Count = curFeatures.Count,
                             Index = index
                         };
-                        //if (index == 0)
-                        //{
-                        //    var jsonString = SystemJson.JsonSerializer.Serialize(curFeatures);
-                        //    Console.WriteLine($"Feature has size {jsonString.Length} in bytes.");
-                        //}
-                        curFeatures = [];
+                        lineStringFeatures.Add(features);
+                        byte[] serialized = MessagePackSerializer.Serialize(features, cancellationToken: cancellationToken);
                         
+                        yield return serialized;
+                        curFeatures = [];                        
                         index++;
-                    }                    
+                        j++;
+                    }
                 }
                 
                 if (curFeatures.Count >= 0)
                 {
-                    Console.WriteLine($"Returning {curFeatures.Count} features.");
-                    yield return new LineStringFeatures 
+                    //Console.WriteLine($"Returning {curFeatures.Count} features.");
+                    var features =  new LineStringFeatures 
                     {
                         Feature = curFeatures,
                         IndividualLocalIdentifier = curAnimal,
                         Count = curFeatures.Count,
                         Index = index
                     };
+                    lineStringFeatures.Add(features);
+                    byte[] serialized = MessagePackSerializer.Serialize(features, cancellationToken: cancellationToken);
+                    yield return serialized;
                     index++;
-                }
+                }                
+                cachingService.AddIndividual(studyId, curAnimal, request.Options.EventProfile, lineStringFeatures);
             }        
         }
     }

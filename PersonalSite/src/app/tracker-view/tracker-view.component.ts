@@ -13,13 +13,40 @@ import { Observable, firstValueFrom, map } from 'rxjs';
 import { HttpResponse } from '@angular/common/http';
 import { LineStringFeatureCollection, LineStringPropertiesV1 } from "../deckGL/GeoJsonTypes";
 import { EventRequest } from "../studies/EventRequest";
+import { NgStyle, AsyncPipe } from '@angular/common';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
+import { LayerTypes } from '../deckGL/GoogleOverlay';
+
+export type MapStyles =
+  "roadmap" | "terrain" | "hybrid" | "satellite";
 
 @Component({
   selector: 'app-tracker-view',
   templateUrl: './tracker-view.component.html',
-  styleUrls: ['./tracker-view.component.css'],
+  styleUrls: ['./tracker-view.component.scss'],
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush, imports: [EventsComponent, MatSidenavModule, MatButtonModule, SimpleSearchComponent, MapComponent, MatIconModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    EventsComponent,
+    MatSidenavModule,
+    MatButtonModule,
+    SimpleSearchComponent,
+    MapComponent,
+    MatIconModule,
+    NgStyle,
+    AsyncPipe,
+    MatToolbarModule,
+    MatButtonToggleModule,
+    MatMenuModule,
+    MatDividerModule,
+    MatChipsModule,
+    MatCheckboxModule
+  ],
   animations: [
 
     trigger('leftToggleClick', [
@@ -49,8 +76,8 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   };
 
   activeMap: 'google' | 'mapbox' = 'google';
-  mapLoaded: WritableSignal<boolean> = signal(false);
 
+  mapLoaded: WritableSignal<boolean> = signal(false);
   searchOpened: WritableSignal<boolean> = signal(false);
 
   currentEventLineData$?:
@@ -59,6 +86,9 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   currentMarker?: bigint;
   currentStudies?: Map<bigint, StudyDTO>;
+  currentMapType: MapStyles = "roadmap";
+
+  currentLayer: LayerTypes = LayerTypes.ArcLayer;
 
   displayedEvents?: EventJsonDTO[];
 
@@ -72,6 +102,27 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   leftButtonFlag: WritableSignal<boolean> = signal(false);
   rightButtonFlag: WritableSignal<boolean> = signal(true);
 
+  // INFO:The following are dynamic styling which
+  // changes depending on the current screen size.
+  leftNavSmallStyle = {
+    "min-width": "100px",
+    "max-width": "400px",
+    "width": "100%",
+  }
+
+  leftNavLargeStyle = {
+    "width": "400px",
+  }
+
+  XSmallScreen?: Observable<boolean>;
+  readonly layerMenuOptions = [
+    ["Arc Layer", LayerTypes.ArcLayer],
+    ["Line Layer", LayerTypes.LineLayer],
+    // ["Heatmap Layer", LayerTypes.HeatmapLayer],
+    ["Hexagon Layer", LayerTypes.HexagonLayer],
+    ["Scatterplot Layer", LayerTypes.ScatterplotLayer]
+  ] as [string, LayerTypes][];
+
   constructor(private breakpointObserver: BreakpointObserver) { }
 
   ngOnInit(): void {
@@ -82,19 +133,23 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
         }),
       );
 
-    // Close the search component on smaller screens.
+    // INFO:Close the search component on smaller screens.
     firstValueFrom(observer).then(value => {
       if (value) {
         this.closeSearchNav();
       }
     });
-    return;
+
+    this.XSmallScreen = this.breakpointObserver
+      .observe([Breakpoints.XSmall]).pipe(
+        map((state: BreakpointState) => state.matches),
+        // tap(val => console.log(`Trigger View: Small Screen = ${val}`))
+      );
   }
 
   ngOnDestroy(): void {
     return;
   }
-
 
   loadMap(): void {
     if (this.mapLoaded()) {
@@ -107,6 +162,10 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
       default:
         return;
     }
+  }
+
+  selectedLayer(layer: LayerTypes){
+    this.currentLayer = layer;
   }
 
   initializeSearchNav(): void {
@@ -148,6 +207,24 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
       return;
     }
     this.currentMarker = studyId;
+  }
+
+  // Change this to accept the checkbox event.
+  setMapType(mapStyle: MapStyles){
+    if ((mapStyle === "roadmap" || mapStyle == "terrain") && (this.currentMapType == "terrain" || this.currentMapType == "roadmap")){
+      return;
+    }
+    if((mapStyle === "satellite" || mapStyle === "hybrid") && (this.currentMapType === "hybrid" || this.currentMapType === "satellite")){
+      return;
+    }
+    this.currentMapType = mapStyle;
+  }
+  setMapTypeCheckbox(event: MatCheckboxChange){
+    if (event.source.value === "roadmap"){
+      this.currentMapType = event.checked ? "terrain" : "roadmap";
+      return;
+    }
+    this.currentMapType = event.checked ? "hybrid" : "satellite";
   }
 
   closeRightNav(): void {

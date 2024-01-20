@@ -2,14 +2,17 @@
 <mat-sidenav-container class="sidenav-container" [hasBackdrop]="false">
 
   <!-- NOTE: Change the opened state to false later. -->
-  <mat-sidenav #sidenav mode="over" [opened]="true" [fixedInViewport]="true" fixedTopGap="50" class="sidenav"
-    [disableClose]="true">
+  <!-- <mat-sidenav #sidenav mode="over" [opened]="true" [fixedInViewport]="true" class="sidenav" [disableClose]="true" -->
+  <!--   [ngStyle]="(XSmallScreen | async) ? leftNavSmallStyle : leftNavLargeStyle"> -->
+  <mat-sidenav #sidenav mode="over" [opened]="true" [fixedInViewport]="true" class="sidenav" [disableClose]="true"
+    [ngStyle]="(XSmallScreen | async) ? leftNavSmallStyle : leftNavLargeStyle">
 
     <div class="search-container">
 
       @if(sidenav.opened || searchOpened()){
       <app-simple-search [hidden]="!searchOpened" [allStudies]="currentStudies" (closeComponent)="closeSearchNav()"
-        (componentInitialized)="initializeSearchNav()" (panToMarkerEvent)="updateCurrentMarkers($event)"></app-simple-search>
+        (componentInitialized)="initializeSearchNav()"
+        (panToMarkerEvent)="updateCurrentMarkers($event)"></app-simple-search>
       }
 
     </div>
@@ -19,6 +22,8 @@
     <!-- NOTE: This is another sidenav within the outer sidenav -->
     <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="over"
       [fixedInViewport]="true">
+      <!-- <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="side" -->
+      <!--   [fixedInViewport]="true"> -->
 
       <app-events #eventComponent (eventRequestEmitter)="updateCurrentEventRequest($event)"
         (lineDataEmitter)="updateLineStringData($event)" (closeRightNavEmitter)="closeRightNav()"
@@ -26,23 +31,86 @@
 
     </mat-sidenav>
 
+    <!-- NOTE:This is where the actual content lies. -->
     <mat-sidenav-content class="sidenav-content-right">
+
+      @if(mapLoaded()){
+      <mat-toolbar class="dense-3" id="toolbar">
+        <!-- <button mat-mini-fab color="primary" class="home-button"><mat-icon>home</mat-icon></button> -->
+        <!-- <button mat-mini-fab><mat-icon>menu</mat-icon></button> -->
+
+        <!-- <button mat-raised-button class="rounded"> -->
+        <!--   <mat-icon>layers</mat-icon>Layers -->
+        <!-- </button> -->
+
+        <!-- TODO:Make a custom toggle group. -->
+        <!-- <button mat-fab extended> -->
+        <!--   <span style="border-right-style:groove;">Map</span> -->
+        <!--   <span>Satellite</span> -->
+        <!-- </button> -->
+        <!---->
+        <!-- <button mat-raised-button> -->
+        <!--   <span style="border-right-style:groove;">Map </span> -->
+        <!--   <span>Satellite</span> -->
+        <!-- </button> -->
+
+        <!-- <mat-button-toggle-group appearance="legacy" class="toggle-group"> -->
+        <!-- TODO:Include an options for the label being clicked. -->
+
+        <!-- <mat-chip-listbox class="chip-listbox" aria-label="Map Style"> -->
+        <!--   <mat-chip-option (click)="setMapType('roadmap')" color="primary" selected>Map</mat-chip-option> -->
+        <!--   <mat-chip-option (click)="setMapType('hybrid')" color="primary">Satellite</mat-chip-option> -->
+        <!--   <!-- <mat-chip-option color="accent">Satellite</mat-chip-option> -->
+        <!--   <!-- <mat-chip-option color="warn">Satellite</mat-chip-option> -->
+        <!-- </mat-chip-listbox> -->
+        <div class="trackbar-elements">
+          <button mat-fab extended class="extended-fab" [matMenuTriggerFor]="layerMenu">
+            <mat-icon>layers</mat-icon>Layers
+          </button>
+          <mat-menu #layerMenu="matMenu" xPosition="after" yPosition="below">
+            @for(layerOptions of layerMenuOptions; track layerOptions[0]){
+            <button mat-menu-item [value]="layerOptions[1]" #layerButton
+              (click)="selectedLayer(layerOptions[1])">{{layerOptions[0]}}</button>
+            }
+          </mat-menu>
+
+          <mat-button-toggle-group class="toggle-group">
+            <mat-button-toggle (click)="setMapType(checkboxMap.checked ? 'terrain' : 'roadmap')"
+              [matMenuTriggerFor]="roadMap">
+              <mat-icon>map</mat-icon>Map
+              <!-- Map -->
+            </mat-button-toggle>
+            <mat-button-toggle (click)="setMapType(checkboxSatellite.checked ? 'hybrid' : 'satellite')"
+              [matMenuTriggerFor]="Satellitemenu">
+              <mat-icon>satellite</mat-icon>Satellite
+            </mat-button-toggle>
+
+            <mat-menu #roadMap="matMenu" xPosition="after" yPosition="below">
+              <button mat-menu-item><mat-checkbox #checkboxMap color="primary" value="roadmap"
+                  (change)="setMapTypeCheckbox($event)">Terrain</mat-checkbox></button>
+            </mat-menu>
+
+            <mat-menu #Satellitemenu="matMenu" xPosition="after" yPosition="below">
+              <button mat-menu-item><mat-checkbox #checkboxSatellite color="primary" value="satellite"
+                  (change)="setMapTypeCheckbox($event)">Label</mat-checkbox></button>
+            </mat-menu>
+          </mat-button-toggle-group>
+        </div>
+      </mat-toolbar>
+
+      }
 
       @if (leftButtonFlag() === true){
       <button mat-fab [hidden]="!leftButtonFlag()" @leftToggleClick (click)="openSearchNav()"
         class="toggle-button"><mat-icon>chevron_right</mat-icon></button>
       }
-
-      <!-- @if(!mapLoaded()){ -->
-      <!-- <div class="button-container"> -->
-      <!--   <button mat-raised-button (click)="loadMap()">Load Map</button> -->
-      <!-- </div> -->
-      <!-- } -->
       <!-- TODO: Move the toggle button belongs the search component -->
+      <!-- Fix the search component's spinner element position. -->
       @if (activeMap === "google"){
       <app-google-map [pathEventData$]="currentEventLineData$" (mapStateEmitter)="updateMapState($event)"
-                      (studiesEmitter)="updateCurrentStudies($event)" (studyEmitter)="updateCurrentStudy($event)" [focusedMarker]="currentMarker"
-                      [eventRequest]="currentEventRequest"></app-google-map>
+        (studiesEmitter)="updateCurrentStudies($event)" (studyEmitter)="updateCurrentStudy($event)"
+        [focusedMarker]="currentMarker" [eventRequest]="currentEventRequest"
+        [mapType]="currentMapType" [selectedLayer]="currentLayer"></app-google-map>
       }
 
       @if (rightButtonFlag() === true && mapLoaded()){

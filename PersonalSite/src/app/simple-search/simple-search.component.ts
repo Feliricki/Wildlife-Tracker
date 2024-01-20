@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, signal, WritableSignal, Output, EventEmitter, Input, OnChanges, SimpleChanges, AfterViewInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
-import { Observable, Subject, reduce, distinctUntilChanged, debounceTime, map, catchError, of, concat, EMPTY } from 'rxjs';
+import { Observable, Subject, reduce, distinctUntilChanged, debounceTime, map, catchError, of, concat, EMPTY, tap } from 'rxjs';
 import { FormGroup, FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginator, PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { MatRadioModule } from '@angular/material/radio';
@@ -43,7 +43,8 @@ interface WikiLinks {
     MatExpansionModule, MatIconModule, NgStyle,
     NgFor, MatPaginatorModule, MatDividerModule,
     AsyncPipe, DatePipe, MatProgressSpinnerModule,
-    MatRadioModule, MatButtonModule, MatAutocompleteModule]
+    MatRadioModule, MatButtonModule, MatAutocompleteModule,
+    ]
 })
 export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
 
@@ -86,23 +87,24 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
   screenChange?: Observable<boolean>;
 
   smallHeaderStyle = {
-    'min-width': '180px',
-    'max-width': '500px',
+    'min-width': '80px',
+    'max-width': '350px',
     'word-break': 'break-word'
   }
 
   largeHeaderStyle = {
-    'width': '500px'
+    'width': '350px',
+    'word-break' : 'break-word'
   }
 
   smallContentStyle = {
-    'min-width': '180px',
-    'max-width': '450px',
+    'min-width': '80px',
+    'max-width': '310px',
     'word-break': 'break-word'
   }
 
   largeContentStyle = {
-    'width': '450px',
+    'width': '310px',
     'word-break': 'break-word'
   }
 
@@ -121,12 +123,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
       this.wikipediaLinks$.push(undefined);
     }
 
-    // TODO: When an location is panned to, toggle the sidenav off.
-    // On smaller screens, make sure the two sidenavs are not open at the same time.
-    // Refactor these changes to the right sidenav.
-    // The map cuts off at the bottom currently
-    // Finish the events forms and its validation.
-    // Get to work on displaying event data?
     this.loadData();
     this.screenChange = this.breakpointObserver
       .observe([Breakpoints.XSmall, Breakpoints.Small]).pipe(
@@ -134,6 +130,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
           this.breakpointMatches.set(state.matches)
           return state.matches;
         }),
+        tap(val => console.log(`Small screen size = ${val}`))
       );
   }
 
@@ -322,6 +319,13 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
     pageEvent.pageIndex = 0;
     pageEvent.pageSize = this.paginator?.pageSize ?? this.defaultPageSize;
     this.getData(pageEvent);
+  }
+
+  clearInput() {
+    if (this.filterQuery.value !== ""){
+      this.filterQuery.setValue("");
+      this.loadData();
+    }
   }
 
   loadData(query?: string) {

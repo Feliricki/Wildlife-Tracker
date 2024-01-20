@@ -1,6 +1,15 @@
-button {
-  background-color: white;
+/* button { */
+/*   background-color: white; */
+/* } */
+/* .mat-icon { */
+/*   color: black; */
+/* } */
+.container {
+  width: auto;
+  height: auto;
+  margin-bottom: .5em;
+  button {
+    margin-top: 1em;
+  }
 }
-.mat-icon {
-  color: black;
-}
+

@@ -5,6 +5,8 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Linq.Dynamic.Core;
 using System.Reflection;
 using System.Linq.Expressions;
+using PersonalSiteAPI.DTO.MoveBankAttributes;
+using System.Linq;
 
 //using System.Linq.
 //using EFCore.BulkExtensions;
@@ -61,18 +63,22 @@ namespace PersonalSiteAPI.DTO
         {
             var list = source.ToList();
             var queryable = list.AsQueryable();
-            Console.WriteLine("Creating apiResult synchronously");
-            // var filters = new List<Func<T, bool>>();
+            Console.WriteLine("Creating apiResult synchronously");            
 
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery) && IsValidProperty(filterColumn))
             {
+                //if (queryable is IEnumerable<StudyDTO> studyQueryable)
+                //{
+                //    queryable = (IQueryable<T>)studyQueryable.Where(s => s.Name.Contains(filterQuery, StringComparison.InvariantCultureIgnoreCase));
+                //}
+                //queryable = queryable.Where(
+                //    string.Format("{0}.StartsWith(@0, @1)", filterColumn), filterQuery, StringComparison.InvariantCultureIgnoreCase);
+
                 queryable = queryable.Where(
-                    string.Format("{0}.StartsWith(@0, @1)", filterColumn), filterQuery, StringComparison.InvariantCultureIgnoreCase);
+                    string.Format("{0}.Contains(@0, @1)", filterColumn), filterQuery, StringComparison.InvariantCultureIgnoreCase);
             }
 
-            // NOTE: This change is untested.
             var count = queryable.Count();
-
             if (!string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(sortOrder) && IsValidProperty(sortColumn))
             {
                 Console.WriteLine($"Sorting: Column={sortColumn} Order={sortOrder}");
@@ -95,7 +101,6 @@ namespace PersonalSiteAPI.DTO
             var data = queryable.ToList();
             return new ApiResult<T>(
                 data,
-                // list.Count,
                 count,
                 pageIndex,
                 pageSize,
@@ -104,21 +109,6 @@ namespace PersonalSiteAPI.DTO
                 filterColumn,
                 filterQuery
                 );
-        }
-
-        // TODO: Move caching strategy to this class. 
-        // Check cache for other endpoints aswell
-        private List<T>? CheckCache(IMemoryCache memoryCache, string key)
-        {
-            if (!memoryCache.TryGetValue<List<T>>(key, out var result))
-            {
-                return null;
-            }
-            if (!memoryCache.TryGetValue<List<T>>(_cacheKey, out var result2))
-            {
-                return null;
-            }
-            return result ?? result2;
         }
 
         public static async Task<ApiResult<T>> CreateAsync(
@@ -131,24 +121,34 @@ namespace PersonalSiteAPI.DTO
             string? filterQuery = null
             )
         {
-            Console.WriteLine("Creating apiResult asynchronously.");
-            // TODO - Upgrade this method to search for case-insensitive substrings
+            Console.WriteLine("Creating apiResult asynchronously.");            
             Console.WriteLine($"filtercolumn = {filterColumn} filterquery = {filterQuery} isValidProperty({filterColumn ?? "N/A"}) = {IsValidProperty(filterColumn ?? "")}");
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery)
                 && IsValidProperty(filterColumn))
-            {
+            {                
                 Console.WriteLine($"Async Prefix search: Checking if {filterColumn} start with {filterQuery} (Case insensitive)");
-                Console.WriteLine(source.GetType().ToString());
-                Expression<Func<string, bool>> stringExpression = (a) => a.StartsWith(filterQuery, StringComparison.InvariantCultureIgnoreCase);
-                source = source.Where(stringExpression);
-                // if (typeof(IQueryable<string>) == source.GetType())
-                // {
-                //     // Console.WriteLine("Source is of type string in ApiResult");
-                //     // Expression<Func<string, bool>> stringExpression = (a) => a.StartsWith(filterQuery, StringComparison.InvariantCultureIgnoreCase);
-                //     // source = source.Where(stringExpression);
-                //     // source = source.Where(
-                //     //     string.Format("{0}.StartsWith(@0, @1)", filterColumn), filterQuery, StringComparison.InvariantCultureIgnoreCase);
-                // }
+                //source = source.Where(      
+                //   string.Format("{0}.Contains(@0, @1)", filterColumn), filterQuery, StringComparison.OrdinalIgnoreCase);
+
+                source = source.Where(
+                    string.Format("{0}.Contains(@0)", filterColumn), filterQuery);
+
+                //Console.WriteLine(source.GetType().ToString());
+
+                //var filterQueryConstant = Expression.Constant(filterQuery);
+                //var filterQueryParameters = Expression.Parameter(typeof(string), filterQuery);
+
+                //Expression<Func<string, bool>> stringExpression = (a) => a.StartsWith(filterQuery, StringComparison.InvariantCultureIgnoreCase);
+                //source = source.Where(sourceVal => typeof(sourceVal) == typeof(string));
+
+                //if (typeof(IQueryable<StudyDTO>) == source.GetType())
+                //{
+                //     Console.WriteLine("Source is of type IQueryable<StudyDTO> in CreateAsync method in ApiResult.");
+                //    Expression<Func<StudyDTO, bool>> stringExpression = (a) => a.Name.StartsWith(filterQuery, StringComparison.InvariantCultureIgnoreCase);
+                //    source = source.Where(stringExpression);
+                //    source = source.Where(
+                //        string.Format("{0}.StartsWith(@0, @1)", filterColumn), filterQuery, StringComparison.InvariantCultureIgnoreCase);
+                //}
             }
 
             var count = await source.CountAsync();

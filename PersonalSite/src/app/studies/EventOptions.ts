@@ -6,12 +6,12 @@ export interface EventOptions {
   // localIdentifiers: string[];
   // sensorType: string;
   // milliBetweenEvents?: string;
-  maxEventsPerIndividual?: number;
+  MaxEventsPerIndividual?: number;
   // minKmBetweenEvents?: number;
   // maxDurationDays?: number;
   // coordinateTrailingDigits?: number;
-  timestampStart?: bigint;
-  timestampEnd?: bigint;
-  attributes?: string;
-  eventProfile?: EventProfiles;
+  TimestampStart?: bigint;
+  TimestampEnd?: bigint;
+  Attributes?: string;
+  EventProfile?: EventProfiles;
 }

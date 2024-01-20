@@ -12,10 +12,10 @@ public record EventRecordGroup
     public IEnumerable<EventRecord>? Records { get; set; }
 }
 
-public record LineStringGroup
+public record LineStringGroup<TProp>
 {
     public string IndividualLocalIdentifier { get; set; } = default!;
-    public IEnumerable<Feature<object, LineStringGeometry>> Features { get; set; } = [];
+    public IEnumerable<Feature<TProp, LineStringGeometry>> Features { get; set; } = [];
 }
 
 public record MetadataRecord
@@ -78,7 +78,11 @@ public record MetadataRecord
             foreach (var location in events.Locations)
             {
                 var point = new Point(new List<float> { location.LocationLong, location.LocationLat });
-                var feature = new Feature<TProp, Point>(point, propertyFunc(location));
+                var feature = new Feature<TProp, Point>
+                {
+                    Geometry = point,
+                    Properties = propertyFunc(location)
+                };
                 Features.Add(feature);
             }
 
@@ -142,16 +146,22 @@ public record MetadataRecord
         [JsonPropertyName(name: "id")]
         public long? Id { get; set; }
 
-        public static Feature<object, LineStringGeometry> CreateLineStringFeature(
+        public static Feature<LineStringPropertiesV2, LineStringGeometry> CreateLineStringFeature(
             LocationJsonDTO prevLocation,
             LocationJsonDTO location,
-            object properties)
+            LineStringPropertiesV2 properties)
         {
-            var geometry = new LineStringGeometry([
-                [prevLocation.LocationLong, prevLocation.LocationLat],
+            var geometry = new LineStringGeometry(
+                "LineString",
+                [[prevLocation.LocationLong, prevLocation.LocationLat],
                 [location.LocationLong, location.LocationLat]
             ]);
-            var feature = new Feature<object, LineStringGeometry>(geometry, properties);
+            var feature = new Feature<LineStringPropertiesV2, LineStringGeometry> 
+            {
+                Type = "Feature",
+                Geometry = geometry,
+                Properties = properties,
+            };
             return feature;
         }
 
@@ -179,8 +189,8 @@ public record MetadataRecord
 
                 var nextLocation = events.Locations[i + 1];
                 // Format: [Longitude, Latitude, Altitude]
-                var from = new List<float> { location.LocationLong, location.LocationLat, 10 };
-                var to = new List<float> { nextLocation.LocationLong, nextLocation.LocationLat, 10 };
+                var from = new List<float> { location.LocationLong, location.LocationLat, 1 };
+                var to = new List<float> { nextLocation.LocationLong, nextLocation.LocationLat, 1 };
 
                 var distanceKilometers = HelperFunctions.Haversine(location.LocationLong, location.LocationLat, nextLocation.LocationLong, nextLocation.LocationLat);
                 var distanceDelta = HelperFunctions.EuclideanDistance(location, nextLocation);
@@ -188,9 +198,10 @@ public record MetadataRecord
                 runningDistance += distanceDelta;
                 runningDistanceKilometers += distanceKilometers;
 
-                var lineString = new Feature<LineStringPropertiesV1, LineStringGeometry>(
-                    geometry: new LineStringGeometry([from, to]),
-                    properties: new LineStringPropertiesV1
+                var lineString = new Feature<LineStringPropertiesV1, LineStringGeometry>
+                {
+                    Geometry = new LineStringGeometry("LineString", [from, to]),
+                    Properties = new LineStringPropertiesV1
                     {
                         From = HelperFunctions.TimestampToDateTime(location.Timestamp),
                         To = HelperFunctions.TimestampToDateTime(nextLocation.Timestamp),
@@ -198,7 +209,8 @@ public record MetadataRecord
                         Distance = distanceDelta,
                         DistanceTravelled = runningDistance,
                         Timestamp = location.Timestamp,
-                    });
+                    }
+                };
 
                 collection.Features.Add(lineString);
                 i++;
@@ -285,17 +297,17 @@ public record MetadataRecord
             return events;
         }
 
-        public static LineStringGroup ToLineStringGroup(EventRecordGroup recordGroups)
+        public static LineStringGroup<LineStringPropertiesV2> ToLineStringGroup(EventRecordGroup recordGroups)
         {
-            IEnumerable<Feature<object, LineStringGeometry>> featureEnumerable = ToLineStringFeature(recordGroups);
-            return new LineStringGroup
+            IEnumerable<Feature<LineStringPropertiesV2, LineStringGeometry>> featureEnumerable = ToLineStringFeature(recordGroups);
+            return new LineStringGroup<LineStringPropertiesV2>
             {
                 Features = featureEnumerable,
                 IndividualLocalIdentifier = recordGroups.IndividualLocalIdentifier ?? "N/A"
             };
         }
 
-        public static IEnumerable<Feature<object, LineStringGeometry>> ToLineStringFeature(
+        public static IEnumerable<Feature<LineStringPropertiesV2, LineStringGeometry>> ToLineStringFeature(
             EventRecordGroup recordGroups)
         {
             if (recordGroups.IndividualLocalIdentifier is null || recordGroups.Records is null)

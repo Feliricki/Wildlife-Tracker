@@ -65,7 +65,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
 
 // Custom Services 
-builder.Services.AddTransient<IMoveBankService, MoveBankService>();
+//builder.Services.AddTransient<IMoveBankService, MoveBankService>();
 builder.Services.AddHttpClient<IMoveBankService, MoveBankService>(client =>
 {
     client.BaseAddress = new Uri("https://www.movebank.org/movebank/service/");
@@ -140,6 +140,7 @@ builder.Services.AddAWSService<IAmazonSecretsManager>();
 // When serializing data, use indexed key as opposed to string keys.
 // Consider a custom formatter resolver for datetime objects.
 
+
 builder.Services.AddSignalR(options =>
 {
     options.DisableImplicitFromServicesParameters = true;
@@ -148,7 +149,12 @@ builder.Services.AddSignalR(options =>
     options.KeepAliveInterval = TimeSpan.FromSeconds(10);
     options.MaximumParallelInvocationsPerClient = 1;
     options.HandshakeTimeout = TimeSpan.FromSeconds(15);
-    
+
+}).AddMessagePackProtocol(options =>
+{
+    options.SerializerOptions = MessagePack.MessagePackSerializerOptions.Standard
+        //.WithResolver(new CustomResolver)
+        .WithSecurity(MessagePack.MessagePackSecurity.UntrustedData);
 });
 
 builder.Services.AddResponseCaching(options =>
@@ -159,8 +165,11 @@ builder.Services.AddResponseCaching(options =>
 
 builder.Services.AddMemoryCache(options =>
 {
-    options.SizeLimit = 1024 * 1024 * 1024; // 1 GB
+    options.SizeLimit = (1024 * 1024); // 1 MB
+    options.TrackStatistics = true;
 });
+
+builder.Services.AddScoped<ICachingService, CachingService>();
 
 var app = builder.Build();
 

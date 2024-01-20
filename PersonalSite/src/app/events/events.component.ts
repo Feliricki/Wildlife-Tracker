@@ -25,9 +25,9 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
-import { dateRangeValidators } from './Validators/dateRangeValidator';
+// import { dateRangeValidators } from './Validators/dateRangeValidator';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { maxEventsValidator } from './Validators/maxEventsValidator';
+// import { maxEventsValidator } from './Validators/maxEventsValidator';
 import { sensorValidator } from './Validators/SensorValidator';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { Observable, Subscription, distinctUntilChanged, map, tap } from 'rxjs';
@@ -63,7 +63,8 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   readonly MAX_EVENTS_LIMIT = MAX_EVENTS;
 
   toggledStudies?: Map<bigint, StudyDTO>;
-  displayedColumns: string[] = ['name', 'select'];
+  // displayedColumns: string[] = ['name', 'select'];
+  displayedColumns: string[] = ['select', 'name'];
   displayedColumnsWithExpanded: string[] = [...this.displayedColumns, 'expanded'];
 
   @Input() currentStudy?: StudyDTO;
@@ -81,14 +82,14 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   eventForm = this.formBuilder.nonNullable.group({
 
     // This field will go unused.
-    maxEvents: new FormControl<number | null>(
-      0,
-      { nonNullable: false }),
-
-    dateRange: this.formBuilder.group({
-      start: this.formBuilder.control(null as null | Date),
-      end: this.formBuilder.control(null as null | Date),
-    }),
+    // maxEvents: new FormControl<number | null>(
+    //   0,
+    //   { nonNullable: false }),
+    //
+    // dateRange: this.formBuilder.group({
+    //   start: this.formBuilder.control(null as null | Date),
+    //   end: this.formBuilder.control(null as null | Date),
+    // }),
     eventProfiles: this.formBuilder.control(null as EventProfiles),
 
     sensorForm: this.formBuilder.control(null as null | string),
@@ -97,9 +98,10 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   }, {
     validators: [
       checkboxOptionSelectedValidator(),
-      dateRangeValidators(),
-      maxEventsValidator(),
-      sensorValidator()],
+      // dateRangeValidators(),
+      // maxEventsValidator(),
+      sensorValidator()
+      ],
     updateOn: "change"
   });
 
@@ -109,12 +111,12 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
 
   // TODO: Aria label needs to be for accessibility purposes.
   smallTabSize = {
-    'min-width': '150px',
-    'max-width': '500px',
+    // 'min-width': '150px',
+    // 'max-width': '290px',
   }
 
   largeTabSize = {
-    'width': '500px',
+    // 'width': '290px',
   }
 
   fourthRowSmall = {
@@ -233,9 +235,9 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     return Number(num);
   }
 
-  setMaxEventsValue(value: number) {
-    this.MaxEvents.setValue(value);
-  }
+  // setMaxEventsValue(value: number) {
+  //   this.MaxEvents.setValue(value);
+  // }
 
   get formEnabled(): Signal<boolean> {
     return computed(() => {
@@ -243,9 +245,9 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     })
   }
 
-  get dateRange() {
-    return this.eventForm.controls.dateRange;
-  }
+  // get dateRange() {
+  //   return this.eventForm.controls.dateRange;
+  // }
 
   get eventProfiles() {
     return this.eventForm.controls.eventProfiles;
@@ -255,9 +257,9 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     return this.eventForm.controls.checkboxes;
   }
 
-  get MaxEvents(): FormControl<number | null> {
-    return this.eventForm.controls.maxEvents;
-  }
+  // get MaxEvents(): FormControl<number | null> {
+  //   return this.eventForm.controls.maxEvents;
+  // }
 
   get sensorForm(): FormControl<string | null> {
     return this.eventForm.controls.sensorForm;
@@ -366,19 +368,19 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
 
 
     const eventOptions: EventOptions = {
-      maxEventsPerIndividual: undefined,
-      timestampStart: this.dateRange.valid ? this.timeStampHelper(this.dateRange.controls.start.value) : undefined,
-      timestampEnd: this.dateRange.valid ? this.timeStampHelper(this.dateRange.controls.end.value) : undefined,
-      attributes: undefined,
-      eventProfile: this.eventProfiles.valid ? this.eventProfiles.value : undefined,
+      MaxEventsPerIndividual: undefined,
+      // TimestampStart: this.dateRange.valid ? this.timeStampHelper(this.dateRange.controls.start.value) : undefined,
+      // TimestampEnd: this.dateRange.valid ? this.timeStampHelper(this.dateRange.controls.end.value) : undefined,
+      Attributes: undefined,
+      EventProfile: this.eventProfiles.valid ? this.eventProfiles.value : undefined,
     };
 
     const eventRequest: EventRequest = {
-      studyId: studyId,
-      localIdentifiers: localIdentifiers,
-      sensorType: sensor,
-      geometryType: geometryType,
-      options: eventOptions,
+      StudyId: studyId,
+      LocalIdentifiers: localIdentifiers,
+      SensorType: sensor,
+      GeometryType: geometryType,
+      Options: eventOptions,
     };
 
     console.log(JSON.stringify(eventRequest));

@@ -14,6 +14,8 @@ using System.Security.Cryptography;
 using System.Linq.Expressions;
 using System.Linq.Dynamic.Core;
 using System.Linq;
+using Amazon.Runtime.Internal.Transform;
+using Mapster;
 
 namespace PersonalSiteAPI.Controllers
 {
@@ -90,6 +92,7 @@ namespace PersonalSiteAPI.Controllers
                 Users = addedUserList
             });
         }
+
         [HttpGet(Name = "LongestName")]
         public async Task<IActionResult> LongestName()
         {
@@ -142,9 +145,166 @@ namespace PersonalSiteAPI.Controllers
         }
 
         private readonly Expression<Func<Studies, bool>> ValidLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
-        // Make sure this method requires proper authorization.
-        [HttpPost(Name = "UpdateStudies")]
+
+        [HttpPost(Name = "UpdateStudies")]        
         public async Task<IActionResult> UpdateStudies()
+        {
+            try
+            {
+                Console.WriteLine("Beginning update to studies database.");
+                using var response = await _moveBankService.DirectRequest(entityType: "study", parameters: null, headers: null, authorizedUser: true);
+                if (response == null)
+                {
+                    throw new Exception("Response error");
+                }
+                using var stream = new StreamReader(await response.Content.ReadAsStreamAsync(), Encoding.UTF8);
+                using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
+
+                IAsyncEnumerable<StudiesRecord> records = csvReader.GetRecordsAsync<StudiesRecord>();
+                Dictionary<long, Studies> existingStudies = _context.Studies.AsNoTracking().ToDictionary(o => o.Id);
+                Console.WriteLine($"There are {await _context.Studies.AsNoTracking().CountAsync()} studies in the database");
+
+                int rowsSkipped = 0;
+                int rowsAdded = 0;
+                int rowsRemoved = 0;
+                int rowsUpdated = 0;
+
+                var newStudies = new Dictionary<long, Studies>();
+                await foreach (var record in records)
+                {
+                    if (record is null || string.IsNullOrEmpty(record.Name))
+                    {
+                        rowsSkipped++;
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(record.SensorTypeIds) ||
+                        !TagTypes.IsLocationSensor(record.SensorTypeIds) ||
+                        !record.IHaveDownloadAccess ||
+                        !record.ICanSeeData)
+                    {
+                        rowsSkipped++;
+                        continue;
+                    }
+                    var study = new Studies()
+                    {
+                        Acknowledgements = record.Acknowledgements ?? "",
+                        Citation = record.Citation ?? "",
+                        GoPublicDate = record.GoPublicDate ?? null,
+                        GrantsUsed = record.GrantsUsed ?? "",
+                        IAmOwner = record.IAmOwner,
+                        Id = record.Id,
+                        IsTest = record.IsTest,
+                        LicenseTerms = record.LicenseTerms ?? "",
+                        LicenseType = record.LicenseType ?? "",
+                        MainLocationLat = record.MainLocationLat ?? "",
+                        MainLocationLon = record.MainLocationLon ?? "",
+                        Name = record.Name ?? "",
+                        NumberOfDeployments = record.NumberOfDeployments ?? 0,
+                        NumberOfIndividuals = record.NumberOfIndividuals ?? 0,
+                        NumberOfTags = record.NumberOfTags ?? 0,
+                        PrincipalInvestigatorAddress = record.PrincipalInvestigatorAddress ?? "",
+                        PrincipalInvestigatorEmail = record.PrincipalInvestigatorEmail ?? "",
+                        PrincipalInvestigatorName = record.PrincipalInvestigatorName ?? "",
+                        StudyObjective = record.StudyObjective ?? "",
+                        StudyType = record.StudyType ?? "",
+                        SuspendLicenseTerms = record.SuspendLicenseTerms,
+                        ICanSeeData = record.ICanSeeData,
+                        ThereAreDataWhichICannotSee = record.ThereAreDataWhichICannotSee,
+                        IHaveDownloadAccess = record.IHaveDownloadAccess,
+                        IAmCollaborator = record.IAmCollaborator,
+                        StudyPermission = record.StudyPermission ?? "",
+                        TimeStampFirstDeployedLocation = record.TimeStampFirstDeployedLocation,
+                        TimeStampLastDeployedLocation = record.TimeStampLastDeployedLocation,
+                        NumberOfDeployedLocations = record.NumberOfDeployedLocations ?? 0,
+                        TaxonIds = record.TaxonIds ?? "",
+                        SensorTypeIds = record.SensorTypeIds ?? "",
+                        ContactPersonName = record.ContactPersonName ?? "",
+                    };
+
+                    newStudies.Add(study.Id, study);
+                    if (existingStudies.ContainsKey(study.Id))
+                    {
+                        Studies existingStudy = existingStudies[study.Id];
+                        // TODO: Map the values from the new entity to the old one.
+                        existingStudy.Adapt(study);
+                        _context.Studies.Update(study);
+                        rowsUpdated++;
+                    }
+                }                
+
+                Console.WriteLine("Commiting updated rows to the database.");
+                using var transaction = _context.Database.BeginTransaction();
+                _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies ON");
+                var dbChanges = await _context.SaveChangesAsync();
+                Console.WriteLine($"{dbChanges} total database changes");
+                _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies OFF");
+                transaction.Commit();
+
+                //foreach(KeyValuePair<long,Studies> newStudy in newStudies)
+                //{
+                //    if (!existingStudies.ContainsKey(newStudy.Key))
+                //    {
+                //        _context.Add(newStudy);
+                //        rowsAdded++;
+                //    }
+                //}
+
+                //Console.WriteLine("Commiting new rows to the database.");
+                //using var transaction2 = _context.Database.BeginTransaction();
+                //_context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies ON");
+                //dbChanges = await _context.SaveChangesAsync();
+                //Console.WriteLine($"{dbChanges} total database changes");
+                //_context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies OFF");
+                //transaction2.Commit();
+
+                // The following studies are no longer publically available.
+                //IEnumerable<long> toRemove = existingStudies
+                //    .Where(s => !newStudies.ContainsKey(s.Key))
+                //    .Select(s => s.Key);
+
+                //foreach (long studyId in toRemove)
+                //{
+                //    if (existingStudies.TryGetValue(studyId, out var foundStudy))
+                //    {
+                //        Console.WriteLine($"Removing study with title: {foundStudy.Name}\n");
+                //        _context.Studies.Remove(foundStudy);
+                //        rowsRemoved++;
+                //    }
+                //    else
+                //    {
+                //        Console.WriteLine("Error while attempting to delete entry from the database.\n");
+                //        continue;
+                //    }
+                //}
+
+                var savedChanges = await _context.SaveChangesAsync();
+                Console.WriteLine($"savedChanges = {savedChanges}");
+
+                return new JsonResult(new
+                {
+                    RowSkipped = rowsSkipped,
+                    RowsAdded = rowsAdded,
+                    RowsUpdated = rowsUpdated,
+                    RowsRemoved = rowsRemoved,
+                });
+
+
+            } catch(Exception err)
+            {
+                var exceptionDetails = new ProblemDetails
+                {
+                    Detail = err.Message,
+                    Status = StatusCodes.Status500InternalServerError,
+                    Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"
+                };
+                return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
+            }
+        }
+
+        // Make sure this method requires proper authorization.
+        [HttpPost(Name = "InitializeDB")]
+        public async Task<IActionResult> InitializeDB()
         {
             try
             {
@@ -155,9 +315,6 @@ namespace PersonalSiteAPI.Controllers
                 }
                 using var stream = new StreamReader(await response.Content.ReadAsStreamAsync(), Encoding.UTF8);
                 using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
-                // csvReader.GetRecordsAsync(await stream.ReadToEndAsync());
-                // TODO: Change this method to save the CSV locally in Models/Data
-                // Then begin seeding the database
                 var records = csvReader.GetRecordsAsync<StudiesRecord>();
                 var existingStudies = _context.Studies.ToDictionary(o => o.Id);
                 Console.WriteLine($"There are {await _context.Studies.CountAsync()} studies in the database");

@@ -23,7 +23,8 @@ public static class HelperFunctions
         double curDistance, 
         double cumulativeDistance)
     {
-        var timeDelta = TimeDelta(curLocation.Timestamp, nextLocation.Timestamp);
+        var timeDelta = TimeDelta(curLocation.Timestamp, nextLocation.Timestamp);        
+
         var content = $"<h5>Animal: {localIdentifier}</h5>"
                     + $"<h5>From:</h5>"
                     + $"<span>latitude: {curLocation.LocationLat}</span><br>"
@@ -32,12 +33,23 @@ public static class HelperFunctions
                     + $"<span>latitude: {nextLocation.LocationLat}</span><br>"
                     + $"<span>longitude: {nextLocation.LocationLong}</span><br><br>"
                     + $"<span>Distance This Event: {Math.Round(curDistance, 4)} kilometers.</span><br>"
-                    + $"<span>Cumulative Distance: {Math.Round(cumulativeDistance, 4)} kilometers.</span><br><br>"
+                    + $"<span>Cumulative Distance: {Math.Round(cumulativeDistance, 4)} kilometers.</span><br><br>"                    
                     + $"<span>Start {FormatTimestamp(curLocation.Timestamp)}</span><br>"
                     + $"<span>End {FormatTimestamp(nextLocation.Timestamp)}</span><br><br>"
-                    + $"<span>Speed: {Math.Round(cumulativeDistance / timeDelta.TotalHours, 4)} kilometers per hour</span><br>";
+                    + $"<span>Time Elapsed: {TimeSpanFormatter(timeDelta)}</span><br><br>"
+                    + $"<span>Speed: {Math.Round(curDistance / timeDelta.TotalHours, 4)} kilometers per hour</span><br>";
         return content;
     }    
+
+    public static string TimeSpanFormatter(TimeSpan timeSpan)
+    {
+        List<string> ret = [];
+        if (timeSpan.Days > 0) ret.Add($"{timeSpan.Days} days");
+        if (timeSpan.Hours > 0) ret.Add($"{timeSpan.Hours} hours");
+        if (timeSpan.Minutes > 0) ret.Add($"{timeSpan.Minutes} minutes");
+        if (timeSpan.Seconds > 0) ret.Add($"{timeSpan.Seconds} seconds");
+        return string.Join(" ", ret);
+    }
 
     // These methods potentially return a NaN value.
     public static double EuclideanDistance(LocationJsonDTO point1, LocationJsonDTO point2)

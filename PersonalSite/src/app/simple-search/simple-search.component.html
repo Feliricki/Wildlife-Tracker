@@ -1,147 +1,198 @@
 <!-- INFO: Previous this table was only loaded when both the map component and this api was fully loaded. -->
-<table mat-table [dataSource]="studies" [trackBy]="trackStudy" class="study-table" *ngIf="studies">
 
-  <!-- Name -->
-  <ng-container matColumnDef="name" class="cell-container">
+<div class="table-container">
 
-    <th mat-header-cell *matHeaderCellDef class="cell-header">
+  @if (!studies){
+  <div class="spinner">
+    <mat-spinner></mat-spinner>
+  </div>
+  }
 
-      <div class="search-container" *ngIf="studies">
-        <form [formGroup]="searchForm">
+  <table mat-table [dataSource]="studies" [trackBy]="trackStudy" class="mat-elevation-z8" *ngIf="studies">
+    <!-- Name -->
+    <ng-container matColumnDef="name" class="cell-container">
 
-          <div class="first-row">
-            <mat-form-field class="search-form" appearance="outline">
-              <mat-label>Search Studies</mat-label>
+      <th mat-header-cell *matHeaderCellDef class="cell-header">
+        <div class="first-row">
+
+          <form [formGroup]="searchForm">
+
+            <mat-form-field class="dense-3" id="search-form" appearance="outline">
+
+              <button matPrefix mat-icon-button aria-label="Search" (click)="loadData(Filter.value)">
+                <mat-icon>search</mat-icon>
+              </button>
+
+              <mat-label>Search</mat-label>
 
               <!-- TODO: Have this form use a submit button instead of a keyup event -->
-              <input matInput type="text" #filter (keyup)="filterEvent(filter.value)" [matAutocomplete]="auto"
+              <input matInput type="text" #Filter (keyup)="filterEvent(Filter.value)" [matAutocomplete]="auto"
                 class="search-input" formControlName="filterQuery" />
 
               <mat-autocomplete class="auto-complete" (optionSelected)="selectOption($event)" #auto="matAutocomplete">
                 <!-- NOTE: currentOptions is a writable signal that contains the current options. -->
                 @for (option of currentOptions(); track option){
-                <mat-option [value]="option">{{option}}</mat-option>
                 <mat-divider></mat-divider>
+                <mat-option [value]="option">{{option}}</mat-option>
                 }
               </mat-autocomplete>
 
-              <button matSuffix mat-icon-button aria-label="Search" (click)="loadData(filter.value)">
-                <mat-icon>search</mat-icon>
-              </button>
+
+              @if(Filter.value.length > 0){
+              <button matSuffix mat-icon-button aria-label="clear search"
+                (click)="clearInput()"><mat-icon>clear</mat-icon></button>
+              }@else {
+              <button matSuffix mat-icon-button style="visibility: hidden;" aria-label="placeholder"></button>
+              }
 
             </mat-form-field>
+          </form>
 
-            <span class="spacer"></span>
-            <button mat-icon-button (click)="emitCloseComponentMessage()"><mat-icon>close</mat-icon></button>
+          <span class="spacer"></span>
+          <button class="close-button" mat-icon-button (click)="emitCloseComponentMessage()"
+            aria-label="Close Search Menu">
+            <mat-icon>close</mat-icon></button>
+        </div>
 
-          </div>
+        <!-- NOTE: Consider if the following input fields can be included. -->
+        <!-- <div class="search-container" *ngIf="studies"> -->
+        <!-- <div data-simplebar class="search-container"> -->
+        <!---->
+        <!--   <form [formGroup]="searchForm" class="dense-3"> -->
+        <!---->
+        <!--     <div class="first-row"> -->
+        <!---->
+        <!--       <button style="visibility: hidden;"></button> -->
+        <!---->
+        <!---->
+        <!--     </div> -->
+        <!---->
+        <!--     <div class="second-row" style="display: flex"> -->
+        <!---->
+        <!---->
+        <!--     </div> -->
+        <!---->
+        <!--   </form> -->
+        <!--   <mat-form-field class="dropList"> -->
+        <!--     <mat-label>Sort Order</mat-label> -->
+        <!--     <mat-select class="drop-selector" #mat_select value="asc" formControlName="dropDownList" -->
+        <!--       (selectionChange)="sortData(mat_select.value)"> -->
+        <!--       <mat-option value="asc">Ascending</mat-option> -->
+        <!--       <mat-option value="desc">Descending</mat-option> -->
+        <!--     </mat-select> -->
+        <!--   </mat-form-field> -->
+        <!-- </div> -->
+        <!---->
+        <!-- <div> -->
+        <!--   <b class="column-header">Studies</b> -->
+        <!-- </div> -->
+        <!-- <mat-divider></mat-divider> -->
 
-          <!-- Drop down list input -->
-          <mat-form-field class="dropList">
-            <mat-label>Sort Order</mat-label>
-            <mat-select class="drop-selector" #mat_select value="asc" formControlName="dropDownList"
-              (selectionChange)="sortData(mat_select.value)">
-              <mat-option value="asc">Ascending</mat-option>
-              <mat-option value="desc">Descending</mat-option>
-            </mat-select>
-          </mat-form-field>
-        </form>
-      </div>
+      </th>
 
-    </th>
-    <td mat-cell *matCellDef="let study; let j = index;" class="study-header-cell">
-      <mat-expansion-panel #ExpansionPanel [ngStyle]="!(screenChange | async) ? largeHeaderStyle : smallHeaderStyle"
-        id="expansion-panel" class="mat-elevation-z0">
+      <td mat-cell *matCellDef="let study; let j = index;" class="study-header-cell">
+        <mat-expansion-panel #ExpansionPanel [ngStyle]="(screenChange | async) ? smallHeaderStyle : largeHeaderStyle"
+          id="expansion-panel" class="mat-elevation-z0">
+          <mat-expansion-panel-header collapsedHeight="auto" expandedHeight="auto">
 
-        <mat-expansion-panel-header collapsedHeight="auto" expandedHeight="auto">
-
-          <span class="header-content">
-            {{study.name}}</span>
-
-        </mat-expansion-panel-header>
-
-        <ng-template matExpansionPanelContent class="expansion-panel-content">
-
-          <!-- TODO: Create a custom pipe to convert to local date format -->
-          <div class="expansion-content" [ngStyle]="!(screenChange | async) ? largeContentStyle : smallContentStyle">
-            @if(hasLocation(study)){
-            <button class="mini-button" matTooltip="Pan to study location." mat-mini-fab
-              (click)="panToMarker(study.id)">
-              <mat-icon aria-label="false" fontIcon="location_searching"></mat-icon>
-            </button>
-            } @else {
-            <button class="mini-button" matTooltop="Location not available." mat-mini-fab>
-              <mat-icon>location_disabled</mat-icon>
-            </button>
-            }
-
-            <br>
-            @if (study.timestampFirstDeployedLocation && study.timestampLastDeployedLocation){
-            <span>
-              <br>
-              First Deployment: {{ study.timestampFirstDeployedLocation | date:"short" }} <br>
-              Last Deployment: {{ study.timestampLastDeployedLocation | date:"short" }} <br><br>
-            </span>
-            }
-
-            @if (study.taxonIds && (commonNames$[j] | async); as commonName){
-            <span>Taxa: {{commonName}}</span><br>
-            }
-            @else if (study.taxonIds){
-            <span>Taxa: {{study.taxonIds}}</span>
-            }
-
-            @if (study.studyObjective){
-            <h4>Objective</h4>
-            <p>{{study.studyObjective}}</p>
-            }
-
-            <span>Deployments: {{study.numberOfDeployments}}</span><br>
-            <span>Individuals: {{study.numberOfIndividuals}}</span><br>
-            <span># Of Sensors: {{study.numberOfTags}}</span><br>
-            <span>Number of deployed locations: {{study.numberOfDeployedLocations}}</span><br>
-
-            @if (study.sensorTypeIds){
-            <span><br>Sensors Used: {{study.sensorTypeIds}}</span>
-            }
-
-            @if (study.acknowledgement){
-            <br>
-            <h4>Acknowledgements</h4>
-            <p>{{study.acknowledgements}}</p>
-            }
-
-            @if (study.grantsUsed){
-            <br>
-            <h4>Supported by</h4>
-            <p>{{study.grantsUsed}}</p>
-            }
-
-            @if (wikipediaLinks$[j] | async; as Links){
-            <br>
-            <h4>Links</h4>
-            @for(curLink of Links; track curLink.link){
-            <a [href]="curLink.link">{{curLink.link}}</a>
-            }
-            }
-            <br>
-            <div class="close-button-container">
-              <button mat-icon-button (click)="ExpansionPanel.close()"
-                aria-label="Close the expansion panel."><mat-icon>expand_less</mat-icon></button>
+            <div class="header-container">
+              <span class="header-content">
+                {{study.name}}</span>
             </div>
 
-          </div>
-        </ng-template>
-      </mat-expansion-panel>
-    </td>
-  </ng-container>
+          </mat-expansion-panel-header>
+
+          <ng-template matExpansionPanelContent class="expansion-panel-content">
+
+            <!-- TODO: Create a custom pipe to convert to local date format -->
+
+            <div class="expansion-content" [ngStyle]="(screenChange | async) ? smallContentStyle : largeContentStyle">
+
+              <!-- TODO:Remove the close button and make a fab button on the side of the navigation bar. -->
+              <div class="content-first-row">
+                @if (study.timestampFirstDeployedLocation && study.timestampLastDeployedLocation){
+                <span>
+                  <br>
+                  First Deployment: {{ study.timestampFirstDeployedLocation | date:"short" }} <br>
+                  Last Deployment: {{ study.timestampLastDeployedLocation | date:"short" }} <br><br>
+                </span>
+                <div class="spacer"></div>
+                <button class="mini-button" matTooltip="Pan to study location." mat-mini-fab
+                  (click)="panToMarker(study.id)">
+                  <mat-icon aria-label="Pan to study location." fontIcon="location_searching"></mat-icon>
+                </button>
+                } @else {
+                <div hidden></div>
+                <div class="spacer"></div>
+                <button class="mini-button" matTooltip="Pan to study location." mat-mini-fab
+                  (click)="panToMarker(study.id)">
+                  <mat-icon aria-label="Location not available." fontIcon="location_searching"></mat-icon>
+                </button>
+                }
+              </div>
+
+              @if (study.taxonIds && (commonNames$[j] | async); as commonName){
+              <span>Taxa: {{commonName}}</span><br>
+              }
+              @else if (study.taxonIds){
+              <span>Taxa: {{study.taxonIds}}</span>
+              }
+
+              @if (study.studyObjective){
+              <h4>Objective</h4>
+              <p>{{study.studyObjective}}</p>
+              }
+
+              <span>Deployments: {{study.numberOfDeployments}}</span><br>
+              <span>Individuals: {{study.numberOfIndividuals}}</span><br>
+              <span># Of Sensors: {{study.numberOfTags}}</span><br>
+              <span>Number of deployed locations: {{study.numberOfDeployedLocations}}</span><br>
+
+              @if (study.sensorTypeIds){
+              <span><br>Sensors Used: {{study.sensorTypeIds}}</span>
+              }
+
+              @if (study.acknowledgement){
+              <br>
+              <!-- <mat-divider></mat-divider> -->
+              <h4>Acknowledgements</h4>
+              <p>{{study.acknowledgements}}</p>
+              }
+
+              @if (study.grantsUsed){
+              <br>
+              <!-- <mat-divider></mat-divider> -->
+              <h4>Supported by</h4>
+              <p>{{study.grantsUsed}}</p>
+              }
+
+              @if (wikipediaLinks$[j] | async; as Links){
+              <br>
+              <h4>Links</h4>
+              @for(curLink of Links; track curLink.link){
+              <a [href]="curLink.link" class="link">{{curLink.link}}</a>
+              }
+              }
+              <br>
+              <div class="close-button-container">
+                <button mat-icon-button (click)="ExpansionPanel.close()"
+                  aria-label="Close the expansion panel."><mat-icon>expand_less</mat-icon></button>
+              </div>
+
+            </div>
+          </ng-template>
+        </mat-expansion-panel>
+      </td>
+    </ng-container>
 
 
-  <tr mat-header-row class="header-row" *matHeaderRowDef="displayedColumns; sticky:true"></tr>
-  <tr mat-row class="study-row" *matRowDef="let row; let i = index; columns: displayedColumns;">
-  </tr>
-</table>
+    <tr mat-header-row class="header-row" *matHeaderRowDef="displayedColumns; sticky:true"></tr>
+    <tr mat-row class="study-row" *matRowDef="let row; let i = index; columns: displayedColumns;"></tr>
+    <!-- <mat-footer-row *matFooterRowDef="displayedColumns; sticky:true"></mat-footer-row> -->
+  </table>
 
-<mat-paginator class="paginator" hidden (page)="getData($event)" [pageSize]="10" [pageSizeOptions]="[10,20,50]"
+</div>
+
+<mat-paginator class="paginator" (page)="getData($event)" [pageSize]="10" [pageSizeOptions]="[10,20,50]"
   showFirstLastButtons>
 </mat-paginator>

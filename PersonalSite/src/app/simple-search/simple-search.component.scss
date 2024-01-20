@@ -1,56 +1,74 @@
-@use "@angular/material";
+@use "@angular/material" as mat;
 
 .spacer{
     flex: 1 1 auto;
 }
 
 .first-row {
-  z-index:4;
   display: flex;
-  // flex-wrap: wrap;
 }
 
-.search-form {
-  flex: 1 1 auto;
-}
-
-
-.search-container {
-  margin-top: 1em;
+// NOTE:The width of the sidenav is 450px.
+#search-form {
   margin-left: 1em;
-  margin-bottom:.5em;
-  // @include mat.input-density(-2); // note: These lines may need to be moved
-  // @include mat.all-component-densities(-2);
+  margin-top: 1em;
+}
+
+.content-first-row {
+  display: flex;
+}
+
+.link {
+  word-break: break-all;
+}
+
+.table-container {
+  position:relative;
+  max-height: 90vh;
+  overflow-y:scroll;
 }
 
 .mini-button {
+  position: relative;
+  margin-top: 1em;
   background-color: #efefef;
   color: black;
 }
 
 .spinner {
-  margin-top: 60%;
-  margin-left: 40%;
-  margin-bottom:60%;
+  position: absolute;
+  top: calc(50vh - 2em);
+  left: 40%;
 }
 
 .close-button-container {
   display: flex;
   justify-content: right;
+  height:4em;
   button {
     margin-top: 5px;
   }
 }
 
-// .drop-selector {
-//   text-align: right;
-// }
-// ::ng-deep .mat-form-field-flex > .mat-form-field-infix { padding: 0.1em 0px !important;}
-// .search-input {
+.close-button {
+  margin-top: 0.5em;
+}
 
-  // height: 15px;
-  // @include mat.button-density(-2);
-// }
-// ::ng-deep .mat-form-field-appearance-outline .mat-form-field-infix {
-//     padding: .1em;
-// }
+.close-button-fab {
+  position: fixed;
+  z-index: 100;
+  top: 45vh;
+  left: 370px;
+  background-color: white;
+  color: black;
+}
+
+.paginator-container {
+  align-content: left;
+  justify-content: left;
+  justify-items: left;
+}
+
+.column-header {
+  position: relative;
+}

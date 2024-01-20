@@ -115,11 +115,11 @@ export class StudyService {
     };
 
     const body = {
-      studyId: request.studyId,
-      localIdentifiers: request.localIdentifiers,
-      sensorType: request.sensorType,
-      geometryType: request.geometryType,
-      options: request.options,
+      studyId: request.StudyId,
+      localIdentifiers: request.LocalIdentifiers,
+      sensorType: request.SensorType,
+      geometryType: request.GeometryType,
+      options: request.Options,
     };
 
     // NOTE: Error responses should be handled by the caller.

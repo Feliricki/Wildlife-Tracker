@@ -44,6 +44,13 @@
   margin-right: 1em;
 }
 
+// .animal-header-cell {
+//   display:flex;
+//   align-content:end;
+//   span {
+//   }
+// }
+
 // This row contains the slider.
 .third-row {
   display:flex;
@@ -63,11 +70,11 @@
 //   // max-height: 95vh;
 // }
 
-.event-form {
-  // overflow-y: scroll;
-  // max-height: 300px;
-  max-height: 80vh;
-}
+// .event-form {
+//   // overflow-y: scroll;
+//   // max-height: 300px;
+//   max-height: 80vh;
+// }
 
 // .animal-table {
 //   // overflow: clip;
@@ -85,6 +92,16 @@
 //   // margin-left: 1em;
 // }
 
+#table-container {
+  position: relative;
+  // display: flex;
+  // flex-flow: column;
+  max-height: calc(90vh - 12.75em);
+  // height: 100%;
+  // max-height: calc(100vh - 35vh);
+  // max-height:fit-content;
+  overflow-y: scroll;
+}
 
 .slider {
   flex: 1 1 auto;

@@ -1,0 +1,46 @@
+/* You can add global styles to this file, and also import other style files */
+// /* @use '@angular/material' as mat; */
+@use '@angular/material' as mat;
+
+
+.dense-1 {
+  @include mat.all-component-densities(-1);
+}
+
+.dense-2 {
+  @include mat.all-component-densities(-2);
+}
+.dense-3 {
+  @include mat.all-component-densities(-3);
+}
+
+html, body {
+  // height: 900px;
+  width: 100%;
+  /* height: 200px; */
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+// table {
+//   border: 0px;
+//   border-spacing: 0px;
+//   border-collapse: collapse;
+// }
+//
+//   table tr {
+//     border-bottom: 1px solid #dddddd;
+//   }
+//     table tr:nth-child(even) {
+//       background-color: #f4f4f4;
+//     }
+//   table tr:nth-child(even) mat-expansion-panel {
+//   background-color: #f4f4f4;
+// }
+//   table th tr {
+//     text-align: left;
+//     padding: 5px 10px;
+//   }

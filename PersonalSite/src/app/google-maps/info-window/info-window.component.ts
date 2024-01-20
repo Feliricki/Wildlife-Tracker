@@ -12,11 +12,13 @@ import { StudyDTO } from 'src/app/studies/study';
   imports: [CommonModule, MatButtonModule, MatIconModule],
   template:
     `
-      <h5>{{ currentStudy?.name }}</h5>
+      <div class="container">
+      <h4>{{ currentStudy?.name }}</h4>
       <span>latitude: {{ currentStudy?.mainLocationLat }}</span><br>
       <span>longitude: {{ currentStudy?.mainLocationLon }}</span><br>
-      <button mat-button (click)="emitEventRequest(currentStudy!)">See Event Data</button>
-    `,
+      <button mat-raised-button extended (click)="emitEventRequest(currentStudy!)">See Event Data</button>
+      </div>
+`,
   styleUrl: './info-window.component.css'
 })
 export class InfoWindowComponent implements OnDestroy {

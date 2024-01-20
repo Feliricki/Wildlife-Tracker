@@ -228,8 +228,7 @@ namespace PersonalSiteAPI.Constants
             var splitList = location_sensor_ids.Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
             foreach (var sensor in  splitList)
             {
-                if (string.IsNullOrEmpty(sensor) || !locationSensors.Contains(sensor.Trim())) continue;
-                Console.WriteLine("Found sensor: " + sensor.Trim());
+                if (string.IsNullOrEmpty(sensor) || !locationSensors.Contains(sensor.Trim())) continue;                
                 return true;
             }
             return false;

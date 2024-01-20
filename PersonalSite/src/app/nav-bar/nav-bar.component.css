@@ -8,7 +8,11 @@
 }
 
 .mat-toolbar.mat-primary {
+  /* z-index: 3; */
   position: fixed;
-  z-index: 2;
-  background-color: rgb(4, 131, 114);
+  background-color: rgb(4, 131, 114, 1);
+}
+
+.login-button {
+  z-index: 5;
 }

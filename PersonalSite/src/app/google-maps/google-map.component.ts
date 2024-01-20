@@ -1,5 +1,5 @@
-import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, WritableSignal, signal, AfterViewInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
-import { forkJoin, from, Observable, Subscription } from 'rxjs';
+import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, WritableSignal, signal, AfterViewInit, OnDestroy, ChangeDetectionStrategy, Injector, inject, Inject } from '@angular/core';
+import { distinctUntilChanged, forkJoin, from, Observable, skip, Subscription } from 'rxjs';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
 import { Loader } from '@googlemaps/js-api-loader';
@@ -11,12 +11,22 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NgElement, WithProperties } from '@angular/elements';
 import { InfoWindowComponent } from './info-window/info-window.component';
-import { GoogleMapOverlayController } from '../deckGL/GoogleOverlay';
-// import { LineStringFeatureCollection } from ''
+import { GoogleMapOverlayController, LayerTypes, StreamStatus } from '../deckGL/GoogleOverlay';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpResponse } from '@angular/common/http';
-import {LineStringFeatureCollection, LineStringPropertiesV1 } from "../deckGL/GeoJsonTypes";
-import {EventRequest} from "../studies/EventRequest";
+import { LineStringFeatureCollection, LineStringPropertiesV1 } from "../deckGL/GeoJsonTypes";
+import { EventRequest } from "../studies/EventRequest";
+import { MapStyles } from '../tracker-view/tracker-view.component';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import {
+  MAT_SNACK_BAR_DATA,
+  MatSnackBar,
+  MatSnackBarAction,
+  MatSnackBarActions,
+  MatSnackBarLabel,
+  MatSnackBarRef,
+} from '@angular/material/snack-bar';
 
 type MapState =
   'initial' |
@@ -41,8 +51,9 @@ export type EventResponse = Observable<HttpResponse<LineStringFeatureCollection<
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    NgIf, AsyncPipe, MatButtonModule,
-    MatIconModule, MatProgressSpinnerModule]
+    NgIf, AsyncPipe, MatButtonModule, MatProgressBarModule,
+    MatIconModule, MatProgressSpinnerModule,
+  ]
 })
 export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
   mainSubscription$?: Subscription;
@@ -52,6 +63,12 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   @Input() focusedMarker?: bigint;
   @Input() pathEventData$?: EventResponse;
   @Input() eventRequest?: EventRequest;
+
+  // INFO:Map Controls
+  @Input() mapType: MapStyles = "roadmap";
+
+  // INFO:Overlay controls
+  @Input() selectedLayer: LayerTypes = LayerTypes.ArcLayer;
 
   @Output() JsonDataEmitter = new EventEmitter<Observable<JsonResponseData[]>>();
   @Output() componentInitialized = new EventEmitter<true>;
@@ -92,8 +109,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     libraries: ['marker']
   });
 
-  map: google.maps.Map | undefined;
-  // @ViewChild(google.maps.Map)
+  map?: google.maps.Map;
   studies?: Map<bigint, StudyDTO>;
 
   @Output() studiesEmitter = new EventEmitter<Map<bigint, StudyDTO>>();
@@ -106,13 +122,17 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   infoWindow: google.maps.InfoWindow | undefined;
 
   deckOverlay?: GoogleMapOverlayController;
+  streamStatus$?: Observable<StreamStatus>;
+  streamStatusSubscription?: Subscription;
 
   // NOTE: New event data in some form will come from the events component.
   // lineDataStream: BehaviorSubject<Observable<LineStringSource>>;
   // lineSource: Subscription<>;
 
   constructor(
-    private studyService: StudyService) {
+    private studyService: StudyService,
+    private snackbar: MatSnackBar,
+    private injector: Injector) {
     console.log("Constructing deckOverlayController.");
   }
 
@@ -130,8 +150,8 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   //  and forbidden responses correctly.
   ngOnChanges(changes: SimpleChanges): void {
     for (const propertyName in changes) {
-      const currentValue = changes[propertyName].currentValue;
 
+      const currentValue = changes[propertyName].currentValue;
       if (currentValue === undefined) {
         continue;
       }
@@ -143,19 +163,28 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           this.panToMarker(currentValue);
           break;
 
-        // TODO: The backend needs to be changed to use CSV responses.
-        // Event data to be returned here in LineFeatureCollection format
         case "pathEventData$":
           console.log(`Received event observable in google maps component.`);
           this.pathEventData$ = currentValue as EventResponse;
-          // this.handleEventData(this.pathEventData$);
           break;
 
         case "eventRequest":
           console.log("Received event fetch request in google maps component.");
           this.eventRequest = currentValue as EventRequest;
           this.handleEventRequest(currentValue as EventRequest);
+          break;
 
+        case "mapType":
+          //TODO:This case is untested. Test with the tracker component's controller.
+          console.log(`Changing style into ${currentValue}`);
+          this.mapType = currentValue as MapStyles;
+          this.map?.setMapTypeId(this.mapType);
+          break;
+
+        case "selectedLayer":
+          this.selectedLayer = currentValue as LayerTypes;
+          console.log(`Changing selected layer to ${this.selectedLayer}`);
+          this.deckOverlay?.changeActiveLayer(this.selectedLayer);
           break;
 
         default:
@@ -164,9 +193,9 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     }
   }
 
-  handleEventRequest(request: EventRequest){
-    if (!this.map){
-      console.log("Map not set before setting overlay");
+  handleEventRequest(request: EventRequest) {
+    if (!this.map) {
+      console.error("Map not set before setting overlay.");
       return;
     }
     this.deckOverlay?.loadData(request);
@@ -178,6 +207,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   ngOnDestroy(): void {
     this.mainSubscription$?.unsubscribe();
+    this.streamStatusSubscription?.unsubscribe();
   }
 
   sendMapState(loaded: boolean): void {
@@ -190,7 +220,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     }
 
     this.mapState.set('loading');
-    // TODO: Consider loading the neded components only. Refactor is potentially needed to ensure optimal performance.
+
     const mapRes$ = from(this.loader.importLibrary('maps'));
     const markerRes$ = from(this.loader.importLibrary('marker'));
     const studies$ = this.studyService.getAllStudies();
@@ -209,23 +239,23 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         console.log("Successfully loaded google maps markers and map.")
         const mapEl = document.getElementById("map");
 
-        // NOTE: Set control positions.
-        this.defaultMapOptions.mapTypeControl = true;
+        // NOTE:Write a custom controller to prevent excessively flickering.
+        this.defaultMapOptions.mapTypeControl = false;
         this.defaultMapOptions.mapTypeControlOptions = {
           style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-          position: google.maps.ControlPosition.BLOCK_START_INLINE_CENTER,
+          position: google.maps.ControlPosition.TOP_CENTER,
         };
 
         this.defaultMapOptions.fullscreenControl = true;
         this.defaultMapOptions.fullscreenControlOptions = {
-          position: google.maps.ControlPosition.BLOCK_START_INLINE_CENTER,
+          position: google.maps.ControlPosition.BOTTOM_RIGHT,
         };
-
-        this.defaultMapOptions.zoomControl = true;
-        this.defaultMapOptions.zoomControlOptions = {
-          // position: google.maps.ControlPosition.BLOCK_END_INLINE_CENTER,
-          position: google.maps.ControlPosition.BLOCK_START_INLINE_CENTER
-        }
+        //
+        // this.defaultMapOptions.zoomControl = true;
+        // this.defaultMapOptions.zoomControlOptions = {
+        //   // position: google.maps.ControlPosition.BLOCK_END_INLINE_CENTER,
+        //   position: google.maps.ControlPosition.BLOCK_START_INLINE_CENTER
+        // }
 
 
         // this.defaultMapOptions.streetViewControl = true;
@@ -321,13 +351,59 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           // }
         });
 
-        this.deckOverlay = new GoogleMapOverlayController(this.map);
+        this.initializeDeckOverylay(this.map);
         this.mapState.set('loaded');
         this.sendMapState(true);
       },
       error: err => console.error(err)
     });
     return true;
+  }
+
+
+  initializeDeckOverylay(map: google.maps.Map) {
+    this.deckOverlay = new GoogleMapOverlayController(map, this.selectedLayer);
+    this.streamStatus$ = toObservable(this.deckOverlay.StreamStatus, {
+      injector: this.injector
+    });
+
+    this.streamStatusSubscription = this.streamStatus$.pipe(
+      skip(1),
+      distinctUntilChanged()
+    ).subscribe({
+      next: (status: StreamStatus) => {
+        // TODO: Finish this method and also remove the snack bar button.
+        // The toolbar in the tracker component should be a separate component.
+        switch (status) {
+          case "standby":
+            console.log("Finished loading events.");
+            if (this.deckOverlay?.contentArray.length === 0) {
+              this.openSnackBar("No Events Found.");
+              break;
+            }
+            this.openSnackBar(`Events found for ${this.deckOverlay?.contentArray.length} animal(s).`);
+            break;
+
+          case "error":
+            console.log("Error while loading events.");
+            this.openSnackBar("Error retrieving events.");
+            break;
+
+          case "streaming":
+            console.log("Streaming events.");
+            break;
+
+          default:
+            return;
+        }
+      },
+      error: err => console.error(err)
+    });
+  }
+
+  openSnackBar(message: string, timeLimit: number = 2) {
+    this.snackbar.openFromComponent(GoogleMapsSnackbarComponent, { duration: timeLimit * 1000, data: message });
+    // this.snackbar.open(message, "dismiss", { duration: timeLimit * 1000 });
   }
 
   // NOTE: This function serves to create a dynamic button element every time the info window is opened
@@ -370,5 +446,34 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   emitStudies(studies: Map<bigint, StudyDTO>): void {
     this.studiesEmitter.emit(studies);
   }
+}
 
+@Component({
+  selector: "app-google-maps-snackbar",
+  template:
+    `<span class="snackbar-label" matSnackBarLabel>
+      {{data}}
+    </span>
+    <span class="dense-2" matSnackBarActions>
+      <button mat-button matSnackBarAction (click)="snackBarRef.dismissWithAction()">Dismiss</button>
+    </span>`,
+
+  styles: [`
+    :host {
+      display: flex;
+    }
+    .snackbar-label {
+      /* background-color: white; */
+      /* color: white; */
+    }
+    span {
+      /* color: white; */
+    }
+  `],
+  standalone: true,
+  imports: [MatButtonModule, MatSnackBarLabel, MatSnackBarActions, MatSnackBarAction]
+})
+export class GoogleMapsSnackbarComponent {
+  snackBarRef = inject(MatSnackBarRef);
+  constructor(@Inject(MAT_SNACK_BAR_DATA) public data: string) {}
 }

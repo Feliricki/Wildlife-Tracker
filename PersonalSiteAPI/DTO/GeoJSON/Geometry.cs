@@ -1,30 +1,46 @@
-﻿using System.Text.Json.Serialization;
+﻿using MessagePack;
+using System.Text.Json.Serialization;
 
 namespace PersonalSiteAPI.DTO.GeoJSON;
 
+[Union(0, typeof(LineStringGeometry))]
+[Union(1, typeof(Point))]
+[MessagePackObject]
 public abstract class Geometry<TCoord>
 {
+    [Key(0)]
     [JsonPropertyName(name: "type")]
-    public string Type { get; set; }
-
+    public string Type { get; set; } = default!;
+    [Key(1)]
     [JsonPropertyName(name: "coordinates")]
-    public List<TCoord> Coordinates { get; set; }
+    public List<TCoord> Coordinates { get; set; } = default!;
+}
 
-    protected Geometry(string curType, List<TCoord> newCoordinates)
+// TODO: This class may be a messagePack attribute.
+[MessagePackObject]
+public class LineStringGeometry : Geometry<List<float>>
+{
+    public LineStringGeometry(
+        string type,
+        List<List<float>> path)
     {
-        Type = curType;
-        Coordinates = newCoordinates;
+        Type = type;
+        Coordinates = path;
     }
 }
 
+
+[MessagePackObject]
 public class Point : Geometry<float>
 {
-    public Point(List<float> newCoordinate): base("Point", newCoordinate) {}
+    public Point(
+        List<float> newCoordinate) 
+    {
+        Type = "Point";
+        Coordinates = newCoordinate;
+    }
 }
-public class LineStringGeometry : Geometry<List<float>>
-{
-    public LineStringGeometry(List<List<float>> newPath) : base("LineString", newPath) {}
-}
+
 
 // NOTE: The following collections are to be used in protobuf messages and services.
 public record Position
@@ -34,10 +50,5 @@ public record Position
     {
         position = coordinates;
     }
-}
-public record LineStringGeometryGeoBuf
-{
-    public string type { get; set; } = "LineString";
-    public List<Position> coordinates { get; set; } = new();
 }
 

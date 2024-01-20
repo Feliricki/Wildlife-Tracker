@@ -5,17 +5,17 @@ import { BinaryLineStringResponse, BufferAttribute, ContentBufferArrays, Numeric
 import { LineStringFeature, LineStringFeatures, LineStringPropertiesV2 } from "./GeoJsonTypes";
 // import { environment } from '../../environments/environment';
 import { geojsonToBinary } from '@loaders.gl/gis'
-import { BinaryLineFeatures, BinaryAttribute } from '@loaders.gl/schema'
-// import { ISubscription, HubConnection, HubConnectionBuilder } from "@microsoft/signalr";
+import { BinaryLineFeatures, BinaryAttribute, TypedArray } from '@loaders.gl/schema'
 import { NonNumericProps, NumericPropsType } from "./MessageTypes";
 import * as signalR from '@microsoft/signalr';
+import { MessagePackHubProtocol } from '@microsoft/signalr-protocol-msgpack';
+import * as msgPack from '@msgpack/msgpack';
 
 
 let streamSubscription: signalR.ISubscription<LineStringFeature<LineStringPropertiesV2>> | null = null;
 
 addEventListener('message', ({ data }) => {
 
-  console.log(`Data type = ${data.type} in web worker.`);
   switch (data.type) {
     case "FetchRequest":
       setData(data.data as WorkerFetchRequest);
@@ -27,18 +27,20 @@ addEventListener('message', ({ data }) => {
   }
 });
 
-// TODO: Find a way to keep track of chunk indices.
+// TODO:Use the fetch api in browser that do not support webworkers.
 export async function setData(
   fetchRequest: WorkerFetchRequest,
   mainThread: boolean = false) {
-  console.log(`Running setData in webworker. Main thread = ${mainThread}`);
   try {
+
+    console.log(mainThread);
 
     streamSubscription?.dispose();
     const connection: signalR.HubConnection =
       new signalR.HubConnectionBuilder()
         .configureLogging(signalR.LogLevel.Debug)
         .withUrl("https://localhost:4200/api/MoveBank-Hub", { withCredentials: false })
+        .withHubProtocol(new MessagePackHubProtocol())
         .withStatefulReconnect()
         .build();
 
@@ -47,16 +49,22 @@ export async function setData(
     console.log("SignalR connection made in web worker.");
 
     const streamResponse =
-      connection.stream<LineStringFeatures<LineStringPropertiesV2>>("StreamEvents", fetchRequest.request);
+      connection.stream<TypedArray>("StreamEvents", fetchRequest.request);
 
     streamSubscription = streamResponse.subscribe({
-
       next: handleFeatures,
       complete: () => {
         console.log("Stream successfully ended.");
+        postMessage({
+          type: "StreamEnded"
+        });
       },
-      error: (err: unknown) => console.error(err)
-
+      error: (err: unknown) => {
+        console.error(err);
+        postMessage({
+          type: "StreamError"
+        });
+      }
     });
 
   } catch (error) {
@@ -64,20 +72,68 @@ export async function setData(
   }
 }
 
-async function handleFeatures(featuresRes: LineStringFeatures<LineStringPropertiesV2>) {
+
+// TODO:Consider if this function can be made into an async iterator so that deck.gl layers
+// can be imcrementally loaded.
+// This is done by by manually implementing next and return callback functions.
+// async function handleFeatures(featuresRes: LineStringFeatures<LineStringPropertiesV2>) {
+async function handleFeatures(binaryRes: TypedArray) {
+
+  console.log("Handling new feature in web worker.");
+  const decoded = msgPack.decode(binaryRes) as Array<number | string | unknown[]>;
+  const featuresRes = parseMsgPackResponse(decoded);
+  if (featuresRes.count === 0) return;
+
   const features = featuresRes.features;
+
   const binaryFeature = geojsonToBinary(features);
   const binaryLineFeatures = binaryFeature.lines;
+  // console.log(binaryLineFeatures);
+  // console.log(`Processing ${featuresRes.count} features from the signalr client`);
 
-  console.log(`Processing ${featuresRes.count} features from the signalr client`);
-
-  if (binaryLineFeatures === undefined || featuresRes.count === 0) return;
+  if (binaryLineFeatures === undefined || features.length === 0) return;
 
   const binaryResponse = createBinaryResponse(
     binaryLineFeatures,
     featuresRes);
 
   postMessage(binaryResponse[0], binaryResponse[1]);
+}
+
+function parseMsgPackResponse(msg: Array<number | string | unknown[]>) {
+  const features = msg[0] as object[][];
+  const localIdentfier = msg[1] as string;
+  const count = msg[2] as number;
+  const index = msg[3] as number;
+
+  const parsedFeatures = features.map(parseMsgPackFeature);
+  return {
+    features: parsedFeatures,
+    individualLocalIdentifier: localIdentfier,
+    count: count,
+    index: index
+  } as LineStringFeatures<LineStringPropertiesV2>;
+}
+
+function parseMsgPackFeature(feature: Array<object>): LineStringFeature<LineStringPropertiesV2> {
+  const geometry = feature[1] as unknown[];
+  const properties = feature[2] as (number | string)[];
+  const coordinates = geometry[1] as number[][];
+
+  return {
+    type: "Feature",
+    geometry: {
+      type : "LineString",
+      coordinates : coordinates,
+    },
+    properties: {
+      sourceTimestamp: properties[0],
+      destinationTimestamp: properties[1],
+      content: properties[2],
+      distanceKm: properties[3],
+      distanceTravelledKm: properties[4]
+    }
+  } as LineStringFeature<LineStringPropertiesV2>;
 }
 
 // INFO: The following are the current numericProps.
@@ -103,10 +159,10 @@ export function createBinaryResponse(
     index: featureRes.index,
     length: featureRes.count,
     individualLocalIdentifier: featureRes.individualLocalIdentifier,
-    featureId: BinaryResponseHelper(binaryLines.featureIds),
-    globalFeatureIds: BinaryResponseHelper(binaryLines.globalFeatureIds),
-    pathIndices: BinaryResponseHelper(binaryLines.pathIndices),
-    position: BinaryResponseHelper(binaryLines.positions),
+    featureId: GetBufferFromBinaryAttribute(binaryLines.featureIds),
+    globalFeatureIds: GetBufferFromBinaryAttribute(binaryLines.globalFeatureIds),
+    pathIndices: GetBufferFromBinaryAttribute(binaryLines.pathIndices),
+    position: GetBufferFromBinaryAttribute(binaryLines.positions),
     colors: generateColors(content.contentArray.length),
     numericProps: numericPropsPairValue[0],
     content: content,
@@ -192,8 +248,7 @@ export function randomColor(): [number, number, number, number] {
   color.push(255);
   return color as [number, number, number, number];
 }
-
-function BinaryResponseHelper(attribute: BinaryAttribute): { size: number, value: ArrayBufferLike } {
+function GetBufferFromBinaryAttribute(attribute: BinaryAttribute): { size: number, value: ArrayBufferLike } {
   return {
     size: attribute.size,
     value: attribute.value.buffer

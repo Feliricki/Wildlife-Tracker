@@ -176,6 +176,7 @@ namespace PersonalSiteAPI.Services
             }
         }
 
+        // TODO: Validation should occur in the controller method.
         public async Task<HttpResponseMessage?> DirectRequestEvents(EventRequest request)
         {
             var parameters = new Dictionary<string, string?>();

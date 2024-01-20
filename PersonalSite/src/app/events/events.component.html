@@ -83,10 +83,12 @@
       <!-- </div> -->
       <!-- <br> -->
 
-      <div class="fourth-row" [ngStyle]="(screenChange | async) ? fourthRowSmall : fourthRowDefault">
+      <!-- <div class="fourth-row" [ngStyle]="(screenChange | async) ? fourthRowSmall : fourthRowDefault"> -->
+      <div class="dense-3" [ngStyle]="(screenChange | async) ? fourthRowSmall : fourthRowDefault">
         <mat-form-field class="reduction-profile-form">
-          <mat-label>Reduction Profile</mat-label>
-          <mat-select formControlName="eventProfiles"
+          <!-- <mat-label>Reduction Profile</mat-label> -->
+          <!-- <mat-label>Placeholder</mat-label> -->
+          <mat-select formControlName="eventProfiles" placeholder="Event Profiles"
             matTooltip="Limit the number of events to improve performance and reduce clutter.">
 
             <mat-option value="EURING_01">24 hours between events.</mat-option>
@@ -103,8 +105,8 @@
         </mat-form-field>
         <mat-form-field class="sensor-form">
 
-          <mat-label>Sensor Type</mat-label>
-          <mat-select formControlName="sensorForm" matTooltip="Select a sensor type.">
+          <!-- <mat-label>Sensor Type</mat-label> -->
+          <mat-select formControlName="sensorForm" placeholder="Sensors" matTooltip="Select a sensor type.">
             <!-- <mat-option [value]="null">-</mat-option> -->
             <!-- <mat-option [value]="null">Any Sensor Type</mat-option> -->
             @for (option of currentLocationSensors(); track option){
@@ -134,17 +136,17 @@
       }@else{
       <br>
       }
-      <div class="table-container">
+      <!-- <div class="table-container"> -->
+      <div class="dense-3" id="table-container">
         <table mat-table formArrayName="checkboxes" matSort matSortDisableClear matSortActive="name"
           matSortDirection="asc" [dataSource]="tableSource" #Table [trackBy]="trackById" class="animal-table">
 
           <!-- Checkbox Column -->
           <ng-container matColumnDef="select">
-            <th mat-header-cell *matHeaderCellDef>
 
+            <th mat-header-cell *matHeaderCellDef>
               <mat-checkbox [checked]="hasValue() && isAllSelected()" [indeterminate]="hasValue() && !isAllSelected()"
                 (change)="$event ? toggleAllRows() : null"></mat-checkbox>
-
             </th>
 
             <!-- TODO: Decide if a form needs to be used or if a request can be made with the selectionModel only -->
@@ -156,9 +158,11 @@
             </td>
 
             <td mat-footer-cell *matFooterCellDef>
-
-              <button mat-icon-button (click)="EventRef.scrollIntoView(true)"><mat-icon>close</mat-icon></button>
-              <!-- Placeholder -->
+              <!-- <mat-divider></mat-divider> -->
+              <button mat-raised-button [disabled]="TableState() !== 'loaded' || eventForm.invalid" color="primary"
+                type="submit">
+                Submit
+              </button><!-- <button mat-icon-button (click)="EventRef.scrollIntoView(true)"><mat-icon>close</mat-icon></button> -->
             </td>
 
             <mat-progress-bar mode="indeterminate"></mat-progress-bar>
@@ -167,27 +171,25 @@
 
           <ng-container matColumnDef="name" class="ng-container">
 
-            <th mat-header-cell *matHeaderCellDef mat-sort-header sortActionDescription="Sort by name">
-              <span>Animals</span>
-              <mat-icon
-                matTooltip="Each animal is assigned a unique individual identifier provided by the owner of the study."
-                aria-label="false" fontIcon="info"></mat-icon>
+            <th mat-header-cell class="animal-header-cell" *matHeaderCellDef mat-sort-header
+              sortActionDescription="Sort by name">
+              <div class="animal-header-content">
+                <span>Animals</span>
+                <mat-icon
+                  matTooltip="Each animal is assigned a unique individual identifier provided by the owner of the study."
+                  aria-label="false" fontIcon="info"></mat-icon>
+              </div>
             </th>
 
             <!-- TODO: Set the value attribute to the local identifier. -->
             <!-- INFO: This the templating for the individual local identifiers -->
             <td mat-cell *matCellDef="let control; let j = index;" class="individual-header-cell">
-
               <p>{{getIndividual(j)()?.LocalIdentifier ?? "N/A" }}</p>
-
             </td>
 
 
+            <!-- TODO:Decide on an element to place here. -->
             <td mat-footer-cell *matFooterCellDef>
-              <button mat-raised-button [disabled]="TableState() !== 'loaded' || eventForm.invalid" color="primary"
-                type="submit">
-                Submit
-              </button>
             </td>
 
           </ng-container>
@@ -207,6 +209,7 @@
 
   </mat-tab>
 
-  <mat-tab [label]="(extraSmallScreenChange | async) ? 'Event Info.' : 'Event Information'">
-  </mat-tab>
+  <mat-tab label="Events"></mat-tab>
+  <!-- <mat-tab [label]="(extraSmallScreenChange | async) ? 'Event Options' : 'Event Information'"> -->
+  <!-- </mat-tab> -->
 </mat-tab-group>

@@ -33,13 +33,14 @@ export interface LineStringPropertiesV1 {
 }
 
 export interface LineStringPropertiesV2 {
-  sourceTimestamp: bigint;
-  destinationTimestamp: bigint;
+  sourceTimestamp: bigint | number;
+  destinationTimestamp: bigint | number;
   content: string;
   distanceKm: number;
   distanceTravelledKm: number;
 }
 
+// Shadows deck.gl's version.
 export type LineStringFeatures<TProp> = {
   features: LineStringFeature<TProp>[];
   individualLocalIdentifier: string;

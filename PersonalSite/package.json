@@ -27,6 +27,7 @@
     "@googlemaps/js-api-loader": "^1.16.2",
     "@googlemaps/markerclusterer": "^2.5.2",
     "@microsoft/signalr": "^8.0.0",
+    "@microsoft/signalr-protocol-msgpack": "^8.0.0",
     "@types/node": "^20.10.8",
     "deck.gl": "^8.9.33",
     "directive": "^0.1.0",

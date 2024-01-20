@@ -1,10 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using MessagePack;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace PersonalSiteAPI.DTO.MoveBankAttributes;
 
 
 // TODO: This class will need a custom validator.
+[MessagePackObject(keyAsPropertyName:true)]
 public class EventRequest
 {
     [Required]
@@ -19,10 +21,11 @@ public class EventRequest
     [JsonPropertyName(name: "options")] public EventOptions Options { get; set; } = default!;
 }
 
+[MessagePackObject(keyAsPropertyName:true)]
 public class EventOptions
 {
     [JsonPropertyName(name: "maxEventsPerIndividual")]
-    public int? MaxEventsPerIndividual { get; set;}
+    public int? MaxEventsPerIndividual { get; set; }
     
     [JsonPropertyName(name:"timestampStart")]
     public long? TimestampStart { get; set; }
