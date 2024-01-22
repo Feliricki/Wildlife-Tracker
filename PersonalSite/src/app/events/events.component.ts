@@ -39,7 +39,11 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import  { LineStringFeatureCollection, LineStringMetaData, LineStringPropertiesV1 } from "../deckGL/GeoJsonTypes";
 import { HttpResponse } from '@angular/common/http';
 import { EventRequest } from '../studies/EventRequest';
-
+import { MatCardModule } from '@angular/material/card';
+import {MatBadgeModule} from '@angular/material/badge';
+import { OverlayPathOptions, OverlayPointOptions } from '../deckGL/GoogleOverlay';
+// import { OverylayPathOptions } from '../tracker-view/OverlayOptions';
+import { EventMetaData } from './EventsMetadata';
 
 @Component({
   selector: 'app-events',
@@ -50,8 +54,9 @@ import { EventRequest } from '../studies/EventRequest';
     AsyncPipe, ReactiveFormsModule, MatFormFieldModule,
     MatInputModule, MatIconModule, MatButtonModule,
     MatExpansionModule, MatTooltipModule, MatCheckboxModule,
-    MatSelectModule, MatDividerModule, MatDatepickerModule,
-    MatSlideToggleModule, MatSliderModule, MatProgressBarModule],
+    MatSelectModule, MatDividerModule, MatDatepickerModule, MatBadgeModule,
+    MatSlideToggleModule, MatSliderModule, MatProgressBarModule, MatCardModule
+  ],
   templateUrl: './events.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './events.component.scss'
@@ -68,6 +73,14 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   displayedColumnsWithExpanded: string[] = [...this.displayedColumns, 'expanded'];
 
   @Input() currentStudy?: StudyDTO;
+
+  // INFO:This section contains metadata on events from the maps component.
+  // and the outputs from the wouldbe overlay controls
+  // Consider if the controls should be made into a proper reative form.
+  @Input() currentEventData?: EventMetaData;
+  @Output() pathOverlayOptions = new EventEmitter<OverlayPathOptions>();
+  @Output() pointOverlayOptions = new EventEmitter<OverlayPointOptions>();
+
   currentSortOrder: 'asc' | 'desc' = 'asc';
   currentLocationSensors: WritableSignal<string[]> = signal([]);
 
@@ -91,9 +104,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     //   end: this.formBuilder.control(null as null | Date),
     // }),
     eventProfiles: this.formBuilder.control(null as EventProfiles),
-
     sensorForm: this.formBuilder.control(null as null | string),
-
     checkboxes: new FormArray<FormControl<boolean>>([]),
   }, {
     validators: [
@@ -109,7 +120,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   tableState$?: Observable<SourceState>;
   tableStateSubscription?: Subscription;
 
-  // TODO: Aria label needs to be for accessibility purposes.
+  // INFO: The following are changes to styling in response to screen size changes.
   smallTabSize = {
     // 'min-width': '150px',
     // 'max-width': '290px',
@@ -174,9 +185,9 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
       this.breakpointObserver.observe([Breakpoints.XSmall, Breakpoints.Small])
         .pipe(
           map(state => state.matches),
-          tap(state => {
-            this.screenChangeSignal.set(state);
-          })
+          // tap(state => {
+          //   this.screenChangeSignal.set(state);
+          // })
         );
 
     this.extraSmallScreenChange =
@@ -204,12 +215,15 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
       switch (propertyName) {
         case "currentStudy":
           this.eventForm.disable();
-
-          console.log(currentValue);
+          // console.log(currentValue);
           this.currentStudy = currentValue as StudyDTO;
           this.currentLocationSensors.set(filterForLocationsSensors(this.currentStudy?.sensorTypeIds));
           this.tableSource.getAnimalData(this.currentStudy.id, this.currentSortOrder);
           break
+
+        case "currentEventData":
+          this.currentEventData = currentValue as EventMetaData;
+          break;
 
         default:
           break;
@@ -306,7 +320,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   }
 
   toggleAllRows() {
-    // console.log("toggling all rows");
     this.tableSource.toggleAllRows();
     this.eventForm.markAsDirty();
   }
@@ -325,6 +338,11 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
 
   trackById(index: number) {
     return index;
+  }
+
+  // @ts-expect-warning - Index goes unused.
+  trackByAnimalName(index: number, item: string) {
+    return item;
   }
 
   mapToArray<T, U>(map: Map<T, U>): U[] {

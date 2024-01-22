@@ -116,6 +116,10 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   @Output() studyEmitter = new EventEmitter<StudyDTO>();
   @Output() mapStateEmitter = new EventEmitter<boolean>();
 
+  // INFO:Section for chaging overlay display options;
+  // Decide on a more specific type.
+  // @Input() OverlayOptions: object;
+
   markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> | undefined;
   mapCluster: MarkerClusterer | undefined;
 
@@ -150,7 +154,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   //  and forbidden responses correctly.
   ngOnChanges(changes: SimpleChanges): void {
     for (const propertyName in changes) {
-
       const currentValue = changes[propertyName].currentValue;
       if (currentValue === undefined) {
         continue;
@@ -185,6 +188,11 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           this.selectedLayer = currentValue as LayerTypes;
           console.log(`Changing selected layer to ${this.selectedLayer}`);
           this.deckOverlay?.changeActiveLayer(this.selectedLayer);
+          break;
+
+        // TODO: Implement this.
+        case "OverlayOptions":
+          // this.OverlayOptions
           break;
 
         default:
@@ -374,14 +382,16 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
       next: (status: StreamStatus) => {
         // TODO: Finish this method and also remove the snack bar button.
         // The toolbar in the tracker component should be a separate component.
+        // const numIndividuals = this.deckOverlay?.NumberofIndividuals() ?? 0;
+        const numIndividuals = this.deckOverlay?.CurrentIndividuals().size ?? 0;
         switch (status) {
           case "standby":
             console.log("Finished loading events.");
-            if (this.deckOverlay?.contentArray.length === 0) {
+            if (numIndividuals === 0) {
               this.openSnackBar("No Events Found.");
               break;
             }
-            this.openSnackBar(`Events found for ${this.deckOverlay?.contentArray.length} animal(s).`);
+            this.openSnackBar(`Events found for ${numIndividuals} animal(s).`);
             break;
 
           case "error":
@@ -403,7 +413,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   openSnackBar(message: string, timeLimit: number = 2) {
     this.snackbar.openFromComponent(GoogleMapsSnackbarComponent, { duration: timeLimit * 1000, data: message });
-    // this.snackbar.open(message, "dismiss", { duration: timeLimit * 1000 });
   }
 
   // NOTE: This function serves to create a dynamic button element every time the info window is opened
@@ -418,6 +427,12 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   getJsonData(entityType: "study" | "individual" | "tag", studyId: bigint): Observable<JsonResponseData[]> {
     return this.studyService.jsonRequest(entityType, studyId);
+  }
+
+  //NOTE:The focusedMarker needs to be set before calling this function.
+  panToCurrentMarker() {
+    if (this.focusedMarker === undefined) return;
+    this.panToMarker(this.focusedMarker);
   }
 
   // NOTE: This function only affects the map component
@@ -475,5 +490,5 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 })
 export class GoogleMapsSnackbarComponent {
   snackBarRef = inject(MatSnackBarRef);
-  constructor(@Inject(MAT_SNACK_BAR_DATA) public data: string) {}
+  constructor(@Inject(MAT_SNACK_BAR_DATA) public data: string) { }
 }

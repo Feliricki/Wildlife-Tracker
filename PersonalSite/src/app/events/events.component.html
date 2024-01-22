@@ -209,7 +209,47 @@
 
   </mat-tab>
 
-  <mat-tab label="Events"></mat-tab>
-  <!-- <mat-tab [label]="(extraSmallScreenChange | async) ? 'Event Options' : 'Event Information'"> -->
-  <!-- </mat-tab> -->
+  <!-- TODO: Get started on the event controls-->
+  <!-- Look at notes for info. on available options -->
+  <!-- Add a notification for this tab when new events arrive. -->
+  <mat-tab label="Events">
+    <!-- @switch(currentEventData){ -->
+    <!-- @case(undefined){ -->
+    <!-- } -->
+    <!-- @default{ -->
+    <!-- } -->
+    <!-- } -->
+    <!-- NOTE: Individual names are unique -->
+    <!-- Consider adding an actual form to hold the content. -->
+    <!-- Add a max width and place the items in a flex container? -->
+    <div class="controls-container"
+      *ngFor="let animal of currentEventData?.currentIndividuals ?? []; trackBy: trackByAnimalName">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-subtitle>
+            Placeholder: {{animal}}
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <!-- TODO: Add the controls here. The exact controls are specified in the notes. -->
+
+          <!-- <mat-form-field> -->
+          <!-- </mat-form-field> -->
+          <p>Some Content</p>
+
+          <mat-divider></mat-divider>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-button>Submit</button>
+        </mat-card-actions>
+        <mat-card-footer>
+          <!-- TODO: If events are still arriving from the stream then add a loading bar? -->
+        </mat-card-footer>
+      </mat-card>
+      <br>
+    </div>
+    @if(currentEventData !== undefined; as Events){
+    {{ currentEventData?.currentIndividuals?.join(",") ?? "N/A"}}
+    }
+  </mat-tab>
 </mat-tab-group>

@@ -63,8 +63,9 @@
         <!--   <!-- <mat-chip-option color="accent">Satellite</mat-chip-option> -->
         <!--   <!-- <mat-chip-option color="warn">Satellite</mat-chip-option> -->
         <!-- </mat-chip-listbox> -->
+
         <div class="trackbar-elements">
-          <button mat-fab extended class="extended-fab" [matMenuTriggerFor]="layerMenu">
+          <button mat-fab matRipple extended class="extended-fab" [matMenuTriggerFor]="layerMenu">
             <mat-icon>layers</mat-icon>Layers
           </button>
           <mat-menu #layerMenu="matMenu" xPosition="after" yPosition="below">

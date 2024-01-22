@@ -21,6 +21,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { LayerTypes } from '../deckGL/GoogleOverlay';
+import { MatRippleModule } from '@angular/material/core';
 
 export type MapStyles =
   "roadmap" | "terrain" | "hybrid" | "satellite";
@@ -45,7 +46,8 @@ export type MapStyles =
     MatMenuModule,
     MatDividerModule,
     MatChipsModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    MatRippleModule
   ],
   animations: [
 
@@ -118,9 +120,12 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   readonly layerMenuOptions = [
     ["Arc Layer", LayerTypes.ArcLayer],
     ["Line Layer", LayerTypes.LineLayer],
-    // ["Heatmap Layer", LayerTypes.HeatmapLayer],
     ["Hexagon Layer", LayerTypes.HexagonLayer],
-    ["Scatterplot Layer", LayerTypes.ScatterplotLayer]
+    ["Scatterplot Layer", LayerTypes.ScatterplotLayer],
+    ["Screen Grid Layer", LayerTypes.ScreenGridLayer],
+    ["Grid Layer", LayerTypes.GridLayer],
+    // ["Heatmap Layer", LayerTypes.HeatmapLayer],
+    // ["Path Layer", LayerTypes.GeoJsonLayer], // TODO: Remove this option.
   ] as [string, LayerTypes][];
 
   constructor(private breakpointObserver: BreakpointObserver) { }
@@ -143,7 +148,6 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     this.XSmallScreen = this.breakpointObserver
       .observe([Breakpoints.XSmall]).pipe(
         map((state: BreakpointState) => state.matches),
-        // tap(val => console.log(`Trigger View: Small Screen = ${val}`))
       );
   }
 
@@ -164,18 +168,26 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  selectedLayer(layer: LayerTypes){
+  // INFO: Section for overlay controls
+  setOverlayOption(){
+    // this.currentOverlayOptions
+  }
+
+  // INFO:Overlay controls.
+  selectedLayer(layer: LayerTypes) {
     this.currentLayer = layer;
+  }
+
+  // INFO:Map and component state.
+  updateMapState(state: boolean): void {
+    this.mapLoaded.set(state);
   }
 
   initializeSearchNav(): void {
     this.searchOpened.set(true);
   }
 
-  updateMapState(state: boolean): void {
-    this.mapLoaded.set(state);
-  }
-
+  // INFO:Events messages from the google maps component.
   updateLineStringData(
     event: Observable<HttpResponse<LineStringFeatureCollection<LineStringPropertiesV1>[] | null>>): void {
     this.currentEventLineData$ = event;
@@ -186,8 +198,6 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     this.currentEventRequest = request;
   }
 
-  // NOTE: This message is received on the event component
-  // On mobile this should close the left sidenav if it's open.
   updateCurrentStudy(study: StudyDTO): void {
     if (study === undefined) {
       return;
@@ -209,24 +219,26 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     this.currentMarker = studyId;
   }
 
-  // Change this to accept the checkbox event.
-  setMapType(mapStyle: MapStyles){
-    if ((mapStyle === "roadmap" || mapStyle == "terrain") && (this.currentMapType == "terrain" || this.currentMapType == "roadmap")){
+  // INFO: Map Controls
+  setMapType(mapStyle: MapStyles) {
+    if ((mapStyle === "roadmap" || mapStyle == "terrain") && (this.currentMapType == "terrain" || this.currentMapType == "roadmap")) {
       return;
     }
-    if((mapStyle === "satellite" || mapStyle === "hybrid") && (this.currentMapType === "hybrid" || this.currentMapType === "satellite")){
+    if ((mapStyle === "satellite" || mapStyle === "hybrid") && (this.currentMapType === "hybrid" || this.currentMapType === "satellite")) {
       return;
     }
     this.currentMapType = mapStyle;
   }
-  setMapTypeCheckbox(event: MatCheckboxChange){
-    if (event.source.value === "roadmap"){
+
+  setMapTypeCheckbox(event: MatCheckboxChange) {
+    if (event.source.value === "roadmap") {
       this.currentMapType = event.checked ? "terrain" : "roadmap";
       return;
     }
     this.currentMapType = event.checked ? "hybrid" : "satellite";
   }
 
+  // INFO: Left and right sidenav controls.
   closeRightNav(): void {
     this.rightNav.close();
     this.rightButtonFlag.set(true);
