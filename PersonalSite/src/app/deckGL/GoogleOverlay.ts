@@ -128,6 +128,27 @@ export class GoogleMapOverlayController {
     transitions: {} // Consider using this down the line.
   }
 
+
+  defaultPointOptions: Partial<ScatterplotLayerProps> = {
+    radiusUnits: 'meters',
+    radiusScale: 1,
+    lineWidthUnits: 'meters',
+    lineWidthScale: 30,
+    stroked: false,
+    filled: true,
+    autoHighlight: true,
+    radiusMinPixels: 1.0,
+    radiusMaxPixels: Number.MAX_SAFE_INTEGER,
+    billboard: false,
+    antialiasing: false,
+    getRadius: 1,
+    opacity: 0.8,
+    getColor: undefined,
+    getFillColor: undefined,
+    getLineColor: undefined,
+    getLineWidth: 1,
+  }
+
   // TODO:Add the trips layer.
   defaultPathOptions: Partial<ArcLayerProps & LineLayerProps & PathLayerProps> = {
     // NOTE: Arc Layer Specific Options
@@ -160,27 +181,6 @@ export class GoogleMapOverlayController {
     opacity: 0.8, // default = 1
   }
 
-  defaultPointOptions: Partial<ScatterplotLayerProps> = {
-    radiusUnits: 'meters',
-    radiusScale: 1,
-    lineWidthUnits: 'meters',
-    lineWidthScale: 30,
-    stroked: false,
-    filled: true,
-    autoHighlight: true,
-    radiusMinPixels: 1.0,
-    radiusMaxPixels: Number.MAX_SAFE_INTEGER,
-    billboard: false,
-    antialiasing: false,
-    // getPosition:
-    getRadius: 1,
-    opacity: 0.8,
-    getColor: undefined,
-    getFillColor: undefined,
-    getLineColor: undefined,
-    getLineWidth: 1,
-  }
-
   defaultAggregationOptions: Partial<HeatmapLayerProps & HexagonLayerProps & ScreenGridLayerProps & GridLayerProps> = {
     // INFO:Hexagon specific options
     radius: 1000,
@@ -203,7 +203,7 @@ export class GoogleMapOverlayController {
     getElevationWeight: 1,
 
     // INFO: Grid Specific Options
-    gpuAggregation: false, // TODO:This needs to be to true in actual layers.
+    gpuAggregation: true, // TODO:This needs to be to true in actual layers.
 
     // NOTE: The following will go unused for now.
     // hexagonAggregator: d3-hexbin,
@@ -215,7 +215,7 @@ export class GoogleMapOverlayController {
     layer: this.currentLayer,
     numberOfEvents: 0,
     numberOfIndividuals: 0,
-    currentIndividuals: [],
+    currentIndividuals: new Set(),
     pathWidth: 3,
     widthUnits: 'pixel',
     textLayer: false,
@@ -226,7 +226,7 @@ export class GoogleMapOverlayController {
       layer: this.currentLayer,
       numberOfEvents: 0,
       numberOfIndividuals: 0,
-      currentIndividuals: [],
+      currentIndividuals: new Set(),
       pathWidth: 3,
       widthUnits: 'pixel',
       textLayer: false,
@@ -435,6 +435,7 @@ export class GoogleMapOverlayController {
       return {
         numberOfEvents: prev.numberOfEvents + binaryLineFeatures.length,
         numberOfIndividuals: this.currentIndividuals().size,
+        currentIndividuals: this.currentIndividuals(),
         layer: this.currentLayer,
         pathWidth: prev.pathWidth,
         widthUnits: prev.widthUnits,

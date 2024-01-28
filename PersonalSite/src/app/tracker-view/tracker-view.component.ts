@@ -20,8 +20,9 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
-import { LayerTypes } from '../deckGL/GoogleOverlay';
+import { LayerTypes, StreamStatus } from '../deckGL/GoogleOverlay';
 import { MatRippleModule } from '@angular/material/core';
+import { EventMetaData } from '../events/EventsMetadata';
 
 export type MapStyles =
   "roadmap" | "terrain" | "hybrid" | "satellite";
@@ -97,6 +98,9 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   currentStudy?: StudyDTO;
   studyEventMessage?: StudyDTO;
 
+  currentChunkInfo?: EventMetaData;
+  currentStreamStatus?: StreamStatus;
+
   @ViewChild('sidenav', { static: true }) sidenav!: MatSidenav;
   @ViewChild('rightSidenav', { static: true }) rightNav!: MatSidenav;
   @ViewChild('eventComponent') event!: EventsComponent;
@@ -168,11 +172,6 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     }
   }
 
-  // INFO: Section for overlay controls
-  setOverlayOption(){
-    // this.currentOverlayOptions
-  }
-
   // INFO:Overlay controls.
   selectedLayer(layer: LayerTypes) {
     this.currentLayer = layer;
@@ -217,6 +216,14 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
       return;
     }
     this.currentMarker = studyId;
+  }
+
+  updateChunkMetadata(chunkInfo: EventMetaData){
+    this.currentChunkInfo = chunkInfo;
+  }
+
+  updateStreamState(streamStatus: StreamStatus){
+    this.currentStreamStatus = streamStatus;
   }
 
   // INFO: Map Controls

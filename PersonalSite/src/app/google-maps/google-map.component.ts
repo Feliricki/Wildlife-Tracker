@@ -27,6 +27,7 @@ import {
   MatSnackBarLabel,
   MatSnackBarRef,
 } from '@angular/material/snack-bar';
+import { EventMetaData } from '../events/EventsMetadata';
 
 type MapState =
   'initial' |
@@ -72,6 +73,8 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   @Output() JsonDataEmitter = new EventEmitter<Observable<JsonResponseData[]>>();
   @Output() componentInitialized = new EventEmitter<true>;
+  // INFO:This where event info. gets sent to the track and then the events component.
+  @Output() eventMetaData = new EventEmitter<EventMetaData>();
 
   defaultMapOptions: google.maps.MapOptions = {
     center: {
@@ -116,9 +119,10 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   @Output() studyEmitter = new EventEmitter<StudyDTO>();
   @Output() mapStateEmitter = new EventEmitter<boolean>();
 
-  // INFO:Section for chaging overlay display options;
+  // INFO:Section for changing overlay display options;
   // Decide on a more specific type.
-  // @Input() OverlayOptions: object;
+  @Output() chunkInfoEmitter = new EventEmitter<EventMetaData>();
+  @Output() streamStatusEmitter = new EventEmitter<StreamStatus>();
 
   markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> | undefined;
   mapCluster: MarkerClusterer | undefined;
@@ -128,6 +132,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   deckOverlay?: GoogleMapOverlayController;
   streamStatus$?: Observable<StreamStatus>;
   streamStatusSubscription?: Subscription;
+  chunkLoadSubscription?: Subscription;
 
   // NOTE: New event data in some form will come from the events component.
   // lineDataStream: BehaviorSubject<Observable<LineStringSource>>;
@@ -191,14 +196,19 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           break;
 
         // TODO: Implement this.
-        case "OverlayOptions":
-          // this.OverlayOptions
+        case "overlayOptions":
           break;
 
         default:
           break;
       }
     }
+  }
+
+  ngOnDestroy(): void {
+    this.mainSubscription$?.unsubscribe();
+    this.streamStatusSubscription?.unsubscribe();
+    this.chunkLoadSubscription?.unsubscribe();
   }
 
   handleEventRequest(request: EventRequest) {
@@ -213,10 +223,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     return new google.maps.LatLng(coordinates[0], coordinates[1]);
   }
 
-  ngOnDestroy(): void {
-    this.mainSubscription$?.unsubscribe();
-    this.streamStatusSubscription?.unsubscribe();
-  }
 
   sendMapState(loaded: boolean): void {
     this.mapStateEmitter.emit(loaded);
@@ -375,6 +381,22 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
       injector: this.injector
     });
 
+    const onChunkLoad$ = toObservable(this.deckOverlay.currentMetaData,
+      { injector: this.injector });
+
+    onChunkLoad$.pipe(
+      skip(1), // NOTE: A skip will result in the first loaded chunk being seen.
+      // distinctUntilChanged(),
+    ).
+      subscribe({
+        next: res => {
+          this.emitChunkData(res);
+        },
+        error: err => console.error(err),
+      });
+
+
+    // TODO:Another subscription of the chunk loads may be necesssary.
     this.streamStatusSubscription = this.streamStatus$.pipe(
       skip(1),
       distinctUntilChanged()
@@ -387,6 +409,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         switch (status) {
           case "standby":
             console.log("Finished loading events.");
+            this.emitStreamStatus("standby");
             if (numIndividuals === 0) {
               this.openSnackBar("No Events Found.");
               break;
@@ -396,11 +419,13 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
           case "error":
             console.log("Error while loading events.");
+            this.emitStreamStatus("error");
             this.openSnackBar("Error retrieving events.");
             break;
 
           case "streaming":
             console.log("Streaming events.");
+            this.emitStreamStatus("streaming");
             break;
 
           default:
@@ -460,6 +485,14 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   emitStudies(studies: Map<bigint, StudyDTO>): void {
     this.studiesEmitter.emit(studies);
+  }
+
+  emitChunkData(chunkInfo: EventMetaData): void {
+    this.chunkInfoEmitter.emit(chunkInfo);
+  }
+
+  emitStreamStatus(streamStatus: StreamStatus): void {
+    this.streamStatusEmitter.emit(streamStatus);
   }
 }
 

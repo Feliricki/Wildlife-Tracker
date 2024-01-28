@@ -27,7 +27,9 @@
 
       <app-events #eventComponent (eventRequestEmitter)="updateCurrentEventRequest($event)"
         (lineDataEmitter)="updateLineStringData($event)" (closeRightNavEmitter)="closeRightNav()"
-        [currentStudy]="currentStudy"></app-events>
+        [currentStudy]="currentStudy" [currentEventData]="currentChunkInfo"
+        [streamStatus]="currentStreamStatus"
+        ></app-events>
 
     </mat-sidenav>
 
@@ -110,8 +112,11 @@
       @if (activeMap === "google"){
       <app-google-map [pathEventData$]="currentEventLineData$" (mapStateEmitter)="updateMapState($event)"
         (studiesEmitter)="updateCurrentStudies($event)" (studyEmitter)="updateCurrentStudy($event)"
-        [focusedMarker]="currentMarker" [eventRequest]="currentEventRequest"
-        [mapType]="currentMapType" [selectedLayer]="currentLayer"></app-google-map>
+        [focusedMarker]="currentMarker" [eventRequest]="currentEventRequest" [mapType]="currentMapType"
+        [selectedLayer]="currentLayer" (chunkInfoEmitter)="updateChunkMetadata($event)"
+        (streamStatusEmitter)="updateStreamState($event)">
+
+      </app-google-map>
       }
 
       @if (rightButtonFlag() === true && mapLoaded()){

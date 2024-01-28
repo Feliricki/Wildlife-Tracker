@@ -9,8 +9,6 @@
 /* INFO:This changes the width of the search component. */
 .search-container {
   position:relative;
-  /* width: 450px; */
-  /* border: 1px solid rgba(0, 0, 0, 0.5); */
 }
 
 .sidenav-content {
@@ -47,11 +45,14 @@
   z-index: 3;
 }
 
-/* NOTE:The width for this component needs to be different depending on the screen size. */
+/* NOTE:This setting is currently changed, */
 .right-sidenav {
-  max-width: 300px;
+  max-width: 800px;
+  // margin: 50px 50px 50px 50px;
 }
 
+/* TODO: The toolbar is broken on mobile and
+ blocks acess to button. */
 #toolbar {
   position: absolute;
   display: flex;

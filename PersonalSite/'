@@ -197,7 +197,6 @@
           <tr mat-header-row class="header-row" *matHeaderRowDef="displayedColumns; sticky:true"></tr>
           <tr mat-row class="rows" *matRowDef="let row; let i = index; columns:displayedColumns;"></tr>
           <tr mat-footer-row *matFooterRowDef="displayedColumns; sticky: true">
-
         </table>
 
       </div>
@@ -228,199 +227,79 @@
           Animal: {{animal}}
         </mat-card-subtitle>
       </mat-card-header>
-      <mat-card-content class="dense-3" id="card-content">
-        <!-- TODO:This could be rewritten as a formbuilder service to reduce this file size. -->
-        <!-- The following form needs to be tested with other layer types. -->
+      <mat-card-content class="card-content">
+        <!-- TODO: Add the controls here. The exact controls are specified in the notes. -->
+        <!-- This could be rewritten as a formbuilder service to reduce this file size. -->
         @if (currentEventData && isPathLayer(currentEventData.layer)){
-        <p>Path Layer Test</p>
-        <form FormGroupName="pathOverlayControls">
-          <div class="first-content-row">
+        <mat-form-field>
+          <mat-label>Opacity</mat-label>
+          <input matInput type="number">
+        </mat-form-field>
 
-            <!-- TODO: Rewrite the entire first row. -->
+        <mat-form-field>
+          <mat-label>Path Radius</mat-label>
+          <input matInput type="number">
+        </mat-form-field>
 
-            <!-- <mat-form-field FormControlName="Opacity"> -->
-            <!--   <mat-label>Opacity</mat-label> -->
-            <!--   <input matInput type="number"> -->
-            <!-- </mat-form-field> -->
-            <!---->
-            <!-- <mat-form-field FormControlName="pathRadius"> -->
-            <!--   <mat-label>Path Radius</mat-label> -->
-            <!--   <input matInput type="number"> -->
-            <!-- </mat-form-field> -->
-            <!---->
-            <!-- <mat-form-field FormControlName="pathScale"> -->
-            <!--   <mat-label>Path Scale</mat-label> -->
-            <!--   <input matInput type="number"> -->
-            <!-- </mat-form-field> -->
-            <!---->
-            <!-- <mat-form-field FormControlName="pathUnits"> -->
-            <!--   <mat-label>Path Units</mat-label> -->
-            <!--   <input matInput type="text"> -->
-            <!-- </mat-form-field> -->
+        <mat-form-field>
+          <mat-label>Path Scale</mat-label>
+          <input matInput type="number">
+        </mat-form-field>
 
-          </div>
-        </form>
+        <mat-form-field>
+          <mat-label>Path Units</mat-label>
+          <input matInput type="number">
+        </mat-form-field>
 
-        <div class="second-row-content">
-          <mat-form-field formControlName="WidthUnits">
-            <mat-label>Width Units</mat-label>
-            <input matInput type="text">
-          </mat-form-field>
+        <mat-form-field>
+          <mat-label>Width Units</mat-label>
+          <input matInput type="number">
+        </mat-form-field>
 
-          <!-- <mat-form-field formControlName="WidthScale"> -->
-          <!--   <mat-label>Width Scale</mat-label> -->
-          <!--   <input matInput type="text"> -->
-          <!-- </mat-form-field> -->
-          <!-- <mat-form-field formControlName="getWidth"> -->
-          <!--   <mat-label>Width</mat-label> -->
-          <!--   <input matInput type="number"> -->
-          <!-- </mat-form-field> -->
-          <!-- <mat-form-field FormControlName="widthMinPixels"> -->
-          <!--   <mat-label>Width Minimum Pixels</mat-label> -->
-          <!--   <input matInput type="number"> -->
-          <!-- </mat-form-field> -->
-          <!-- <mat-form-field FormControlName="widthMaxPixels"> -->
-          <!--   <mat-label>Width Maximum Pixels</mat-label> -->
-          <!--   <input matInput type="number"> -->
-          <!-- </mat-form-field> -->
-        </div>
+        <mat-form-field>
+          <mat-label>Width Scale</mat-label>
+          <input matInput type="number">
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Width</mat-label>
+          <input matInput type="number">
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Width Minimum Pixels</mat-label>
+          <input matInput type="number">
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Width Maximum Pixels</mat-label>
+          <input matInput type="number">
+        </mat-form-field>
 
         <!-- NOTE: The following two fields are colors field
         Use the color picker from the ngx module extension -->
-        <div class="third-content-row">
-          <mat-form-field FormControlName="getFillColor">
-            <mat-label>Fill Color</mat-label>
-            <input matInput type="color">
-          </mat-form-field>
+        <mat-form-field>
+          <mat-label>Fill Color</mat-label>
+          <input matInput type="color">
+        </mat-form-field>
 
-          <!-- <mat-form-field FormControlName="getLineColor"> -->
-          <!--   <mat-label>Line Color</mat-label> -->
-          <!--   <input matInput type="color"> -->
-          <!-- </mat-form-field> -->
-          <!---->
-          <!-- TODO:Checkboxes and other forms are currrently not working and need further testing.-->
-          <!-- <mat-checkbox FormControlName="autoHighlight">Auto Hightlight</mat-checkbox> -->
+        <mat-form-field>
+          <mat-label>Line Color</mat-label>
+          <input matInput type="color">
+        </mat-form-field>
 
-        </div>
+        <mat-form-field>
+          <mat-label>AutoHighlight</mat-label>
+          <input matInput type="checkbox">
+        </mat-form-field>
         }
 
         @else if(currentEventData && isPointLayer(currentEventData.layer)){
-        <div class="first-row-content">
-          <p>Point Layer test</p>
-          <mat-form-field FormControlName="getRadius">
-            <mat-label>Radius</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
 
-          <mat-form-field FormControlName="elevationRange">
-            <mat-label>Radius Units</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="elevationScale">
-            <mat-label>Radius Scale</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="RadiusMinumumContent">
-            <mat-label>Radius Minimum Content</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="RadiusMaximumContent">
-            <mat-label>Radius Maximium Content</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-
-        </div>
-
-        <div class="second-content-row">
-          <mat-form-field FormControlName="LineWidthUnits">
-            <mat-label>Line Width Units</mat-label>
-            <input matInput type="text">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="LineWidthScale">
-            <mat-label>Line Width Scale</mat-label>
-            <input matInput type="text">
-          </mat-form-field>
-
-          <mat-checkbox FormControlName="AutoHighlight"></mat-checkbox>
-
-          <mat-form-field FormControlName="Opacity">
-            <mat-label>Opacity</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-
-        </div>
-
-        <div class="third-content-row">
-          <mat-form-field FormControlName="GetFillColor">
-            <mat-label>Fill Color</mat-label>
-            <input matInput type="color">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="getLineColor">
-            <mat-label>Line Color</mat-label>
-            <input matInput type="color">
-          </mat-form-field>
-
-        </div>
+        <p>Placeholder for path layers.</p>
         }
         @else if (currentEventData && isAggregationLayer(currentEventData.layer)){
-        <p>Aggregation Layer Test</p>
-        <div class="first-row-content">
-
-          <mat-form-field FormControlName="radius">
-            <mat-label>Radius</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="elevationRange">
-            <mat-label>Elevation Range</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="elevationScale">
-            <mat-label>Elevation Scale</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="elevationLowerPercentile">
-            <mat-label>Elevation Lower Percentile</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="elevationUpperPercentile">
-            <mat-label>Elevation Upper Percentile</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="elevationAggregration">
-            <mat-label>Elevation Aggregation</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="colorScaleType">
-            <mat-label>Color Scale Type</mat-label>
-            <input matInput type="text">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="colorAggregation">
-            <mat-label>Color Aggregation</mat-label>
-            <input matInput type="text">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="colorWeight">
-            <mat-label>Color Weight</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-
-          <mat-form-field FormControlName="getElevationRange">
-            <mat-label>Elevation Range</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-        </div>
+        <p>Aggregation layer test</p>
         }
 
         <mat-divider></mat-divider>
