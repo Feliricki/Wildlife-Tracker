@@ -264,7 +264,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         this.defaultMapOptions.fullscreenControlOptions = {
           position: google.maps.ControlPosition.BOTTOM_RIGHT,
         };
-        //
+
         // this.defaultMapOptions.zoomControl = true;
         // this.defaultMapOptions.zoomControlOptions = {
         //   // position: google.maps.ControlPosition.BLOCK_END_INLINE_CENTER,
@@ -384,9 +384,9 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     const onChunkLoad$ = toObservable(this.deckOverlay.currentMetaData,
       { injector: this.injector });
 
+    // TODO: This subcription responses to emitted chunks from the deck overlay class.
     onChunkLoad$.pipe(
       skip(1), // NOTE: A skip will result in the first loaded chunk being seen.
-      // distinctUntilChanged(),
     ).
       subscribe({
         next: res => {
@@ -395,8 +395,8 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         error: err => console.error(err),
       });
 
-
-    // TODO:Another subscription of the chunk loads may be necesssary.
+    // TODO: This subscription will response to the latest stream status of the signalr
+    // client.
     this.streamStatusSubscription = this.streamStatus$.pipe(
       skip(1),
       distinctUntilChanged()
@@ -408,7 +408,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         const numIndividuals = this.deckOverlay?.CurrentIndividuals().size ?? 0;
         switch (status) {
           case "standby":
-            console.log("Finished loading events.");
+            console.log("Google Maps Component: Instantiating signalr client or finished streaming events from a data source.");
             this.emitStreamStatus("standby");
             if (numIndividuals === 0) {
               this.openSnackBar("No Events Found.");
@@ -418,13 +418,13 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
             break;
 
           case "error":
-            console.log("Error while loading events.");
+            console.log("Google Map Component Overlay Status: Error");
             this.emitStreamStatus("error");
             this.openSnackBar("Error retrieving events.");
             break;
 
           case "streaming":
-            console.log("Streaming events.");
+            console.log("Google Map Component Overlay Status: Streaming");
             this.emitStreamStatus("streaming");
             break;
 

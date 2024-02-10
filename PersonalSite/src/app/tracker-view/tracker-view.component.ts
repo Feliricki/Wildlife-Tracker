@@ -53,22 +53,18 @@ export type MapStyles =
   animations: [
 
     trigger('leftToggleClick', [
-
       transition('void => *', [
         style({ transform: 'translateX(-100%)' }),
         animate('.3s ease-in'),
       ]),
-
     ]),
 
     trigger('rightToggleClick', [
-
       transition('void => *', [
         style({ transform: 'translateX(100%)' }),
         animate('.3s ease-in'),
       ]),
     ])
-
   ]
 })
 export class TrackerViewComponent implements OnInit, OnDestroy {
@@ -120,22 +116,27 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     "width": "400px",
   }
 
-  XSmallScreen?: Observable<boolean>;
+  XSmallScreen$?: Observable<boolean>;
+
   readonly layerMenuOptions = [
     ["Arc Layer", LayerTypes.ArcLayer],
     ["Line Layer", LayerTypes.LineLayer],
+    ["Path Layer", LayerTypes.PathLayer],
     ["Hexagon Layer", LayerTypes.HexagonLayer],
     ["Scatterplot Layer", LayerTypes.ScatterplotLayer],
     ["Screen Grid Layer", LayerTypes.ScreenGridLayer],
     ["Grid Layer", LayerTypes.GridLayer],
     // ["Heatmap Layer", LayerTypes.HeatmapLayer],
-    // ["Path Layer", LayerTypes.GeoJsonLayer], // TODO: Remove this option.
-  ] as [string, LayerTypes][];
+  ] as Array<[string, LayerTypes]>;
 
   constructor(private breakpointObserver: BreakpointObserver) { }
 
+  // TODO:
+  // 1) Fix the event forms. Or rewrite them scratch if its not possible to resize the input elements.
+  // 2) Rework the UI more.
+  // 3) Look up how to set multiple docker containers for deployment.
   ngOnInit(): void {
-    const observer = this.breakpointObserver
+    const breakpointObserver = this.breakpointObserver
       .observe([Breakpoints.XSmall, Breakpoints.Small]).pipe(
         map((state: BreakpointState) => {
           return state.matches;
@@ -143,13 +144,13 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
       );
 
     // INFO:Close the search component on smaller screens.
-    firstValueFrom(observer).then(value => {
+    firstValueFrom(breakpointObserver).then(value => {
       if (value) {
         this.closeSearchNav();
       }
     });
 
-    this.XSmallScreen = this.breakpointObserver
+    this.XSmallScreen$ = this.breakpointObserver
       .observe([Breakpoints.XSmall]).pipe(
         map((state: BreakpointState) => state.matches),
       );
@@ -219,6 +220,8 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
 
   updateChunkMetadata(chunkInfo: EventMetaData){
+    console.log("Tracker Component: Current chunk info  is ");
+    console.log(chunkInfo);
     this.currentChunkInfo = chunkInfo;
   }
 
@@ -246,6 +249,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
 
   // INFO: Left and right sidenav controls.
+
   closeRightNav(): void {
     this.rightNav.close();
     this.rightButtonFlag.set(true);

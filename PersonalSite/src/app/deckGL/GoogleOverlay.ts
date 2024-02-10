@@ -12,6 +12,7 @@ import { Signal, WritableSignal, computed, signal } from '@angular/core';
 import { HeatmapLayer, HeatmapLayerProps, HexagonLayer, HexagonLayerProps, ScreenGridLayer, ScreenGridLayerProps, GridLayer, GridLayerProps } from '@deck.gl/aggregation-layers/typed';
 import { EventMetaData } from '../events/EventsMetadata';
 
+// This is the type returned by the geoJsonToBinary function.
 type BinaryFeatureWithAttributes = {
   points?: BinaryPointFeatures;
   lines: BinaryLineFeatures & OptionalAttributes;
@@ -20,6 +21,8 @@ type BinaryFeatureWithAttributes = {
 
 // TODO:Work out a user interface for showing layers within a certain timeframe.
 // Add a UI for changing certain options such as color, width, etc.
+
+// NOTE:This files needs to be renamed when mapbox is used as a basemap.
 export enum LayerTypes {
   ArcLayer,
   ContourLayer,
@@ -90,7 +93,8 @@ export type StreamStatus = "standby" | "streaming" | "error";
 export class GoogleMapOverlayController {
   map: google.maps.Map;
   deckOverlay?: DeckOverlay | MapboxOverlay;
-  webWorker?: Worker; // NOTE: Not supported on older browsers.
+  // NOTE: Not supported on older browsers.
+  webWorker?: Worker;
 
   // INFO: The following are used to check for the category of some layer.
   readonly pathLayers = new Set<LayerTypes>([
@@ -108,15 +112,17 @@ export class GoogleMapOverlayController {
     LayerTypes.HeatmapLayer, LayerTypes.HexagonLayer, LayerTypes.ScreenGridLayer,
   ]);
 
-  // TODO:Consider if recieved chunks can appended to their corresponding layer going by individual.
-  dataChunks: Array<BinaryFeatureWithAttributes> = [];
-  contentArray: ArrayBufferLike[][] = [];
-
   textDecoder = new TextDecoder();
   textEncoder = new TextEncoder();
 
+  // TODO:Consider if recieved chunks can appended to their corresponding layer going by individual.
+  // If it's posibble to pull this off then I should consider making a layer for each individual
+  // and one large layer containing all the individual's event data.
+  dataChunks: Array<BinaryFeatureWithAttributes> = [];
+  contentArray: ArrayBufferLike[][] = [];
+
   streamStatus: WritableSignal<StreamStatus> = signal("standby");
-  currentAnimals = new Map<string, [Color, Color]>();
+  individualColors = new Map<string, [Color, Color]>();
   currentIndividuals: WritableSignal<Set<string>> = signal(new Set());
 
   currentLayer: LayerTypes = LayerTypes.ArcLayer;
@@ -246,7 +252,6 @@ export class GoogleMapOverlayController {
 
           case "BinaryLineString":
             this.handleBinaryResponse(message.data as BinaryLineStringResponse<LineStringPropertiesV2>);
-            // Set the new metadata.
             break;
 
           case "StreamEnded":
@@ -302,11 +307,10 @@ export class GoogleMapOverlayController {
 
   loadData(request: EventRequest) {
     console.log("Begun loading event data.");
-
     // TODO: This needs to be refactored.
     this.dataChunks = [];
     this.contentArray = [];
-    this.currentAnimals.clear();
+    this.individualColors.clear();
     this.currentMetaData.set(structuredClone(this.MetadataDefaultOptions));
     this.currentIndividuals.set(new Set());
     this.deckOverlay?.finalize();
@@ -352,8 +356,8 @@ export class GoogleMapOverlayController {
     if (layerIndex === undefined) {
       return;
     }
-    const content = this.contentArray.at(layerIndex)?.at(index);
 
+    const content = this.contentArray.at(layerIndex)?.at(index);
     if (content === undefined) {
       return;
     }
@@ -381,18 +385,27 @@ export class GoogleMapOverlayController {
 
       case LayerTypes.ArcLayer:
         return this.createArcLayer(data, layerId);
-      case LayerTypes.LineLayer:
-        return this.createLineLayer(data, layerId);
+
       case LayerTypes.ScatterplotLayer:
         return this.createScatterplotLayer(data, layerId);
+
       case LayerTypes.HexagonLayer:
         return this.createHexagonLayer(data, layerId);
-      case LayerTypes.PathLayer:
-        return this.createPathLayer(data, layerId);
+
+      case LayerTypes.LineLayer:
+        return this.createLineLayer(data, layerId);
+
       case LayerTypes.ScreenGridLayer:
         return this.createScreenGridLayer(data, layerId);
+
       case LayerTypes.GridLayer:
         return this.createGridLayer(data, layerId);
+
+      // BUG: This layer is currently not working properly. The attributes are incorrectly formatted.
+      // Fix at another time.
+      // case LayerTypes.PathLayer:
+      //   return this.createPathLayer(data, layerId);
+
       // NOTE: Heatmap layer is temporarily removed until it stops falling back to CPU aggregation.
       // case LayerTypes.HeatmapLayer:
       //   return this.createHeatmapLayer(data, layerId);
@@ -408,6 +421,7 @@ export class GoogleMapOverlayController {
   // NOTE: This method is called when the web worker finishes processing the requested event data.
   handleBinaryResponse(BinaryData: BinaryLineStringResponse<LineStringPropertiesV2>): void {
     const binaryLineFeatures: BinaryLineFeatures & OptionalAttributes = {
+      type: "LineString",
       featureIds: { size: BinaryData.featureId.size, value: new Uint16Array(BinaryData.featureId.value) },
       globalFeatureIds: { size: BinaryData.globalFeatureIds.size, value: new Uint16Array(BinaryData.globalFeatureIds.value) },
       positions: { size: BinaryData.position.size, value: new Float32Array(BinaryData.position.value) },
@@ -418,13 +432,13 @@ export class GoogleMapOverlayController {
       individualLocalIdentifier: BinaryData.individualLocalIdentifier,
       numericProps: this.numericPropsHelper(BinaryData.numericProps),
       properties: [],
-      type: "LineString"
     };
     const [pointsFeatures, polygonFeatures] = this.BinaryFeaturesPlaceholder();
 
     this.dataChunks.push({ points: pointsFeatures, lines: binaryLineFeatures, polygons: polygonFeatures });
     this.contentArray.push(binaryLineFeatures.content.contentArray);
-    // Update signals.
+
+    // Updates the signal via memoization.
     this.currentIndividuals.update(prev => {
       prev.add(binaryLineFeatures.individualLocalIdentifier);
       return prev;
@@ -543,28 +557,35 @@ export class GoogleMapOverlayController {
       }
     });
   }
-  // TODO: This layer is untested.
+  // TODO: This layer needs to have the start vertices specified.
   createPathLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
     const BYTE_SIZE = 4;
     const positions = binaryFeatures.positions;
     const positionSize = positions.size;
     const entrySize = positionSize * 2 * BYTE_SIZE;
+
+    console.debug("Creating the path layer with layerId = " + layerId.toString());
+    const startIndices: number[] = [0];
+    for (let i = 0; i < binaryFeatures.length - 1; i++) {
+      const lastIndex = startIndices[startIndices.length + 1] + binaryFeatures.positions.size;
+      startIndices.push(lastIndex);
+    }
+
     return new PathLayer({
       id: `${LayerTypes.PathLayer}-${layerId}`,
       data: {
         length: binaryFeatures.length,
         attributes: {
           getPath: {
-            // This layer accepts a binary attrbute such as positions if
-            // they're given in a flattened format.
             value: new Float32Array(binaryFeatures.positions.value),
             size: binaryFeatures.positions.size,
             stride: entrySize,
             offset: 0,
           },
+          startIndices: new Uint16Array(startIndices),
           getColor: {
             value: new Float32Array(binaryFeatures.colors.value),
-            size: binaryFeatures.positions.size,
+            size: binaryFeatures.colors.size,
             stride: BYTE_SIZE * binaryFeatures.colors.size
           },
         },
@@ -789,12 +810,12 @@ export class GoogleMapOverlayController {
   }
 
   getColorHelper(animal: string): [Color, Color] {
-    const color = this.currentAnimals.get(animal);
+    const color = this.individualColors.get(animal);
     if (color !== undefined) {
       return color;
     }
     const newColor = [randomColor(), randomColor()] as [Color, Color];
-    this.currentAnimals.set(animal, newColor);
+    this.individualColors.set(animal, newColor);
     return newColor;
   }
 

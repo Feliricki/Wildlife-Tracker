@@ -5,7 +5,7 @@
   <!-- <mat-sidenav #sidenav mode="over" [opened]="true" [fixedInViewport]="true" class="sidenav" [disableClose]="true" -->
   <!--   [ngStyle]="(XSmallScreen | async) ? leftNavSmallStyle : leftNavLargeStyle"> -->
   <mat-sidenav #sidenav mode="over" [opened]="true" [fixedInViewport]="true" class="sidenav" [disableClose]="true"
-    [ngStyle]="(XSmallScreen | async) ? leftNavSmallStyle : leftNavLargeStyle">
+    [ngStyle]="(XSmallScreen$ | async) ? leftNavSmallStyle : leftNavLargeStyle">
 
     <div class="search-container">
 
@@ -50,7 +50,6 @@
         <!--   <span style="border-right-style:groove;">Map</span> -->
         <!--   <span>Satellite</span> -->
         <!-- </button> -->
-        <!---->
         <!-- <button mat-raised-button> -->
         <!--   <span style="border-right-style:groove;">Map </span> -->
         <!--   <span>Satellite</span> -->
@@ -67,6 +66,7 @@
         <!-- </mat-chip-listbox> -->
 
         <div class="trackbar-elements">
+
           <button mat-fab matRipple extended class="extended-fab" [matMenuTriggerFor]="layerMenu">
             <mat-icon>layers</mat-icon>Layers
           </button>

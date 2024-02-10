@@ -17,33 +17,33 @@ type ColorScalingTypes = "quantize" | "quantile" | "ordinal";
 // see which options form a base
 // for the arc and path layers.
 // Derived class must override certain fields
-export class PathOverlayBaseClass<T> {
-  // NOTE: The options in the constructor
-  // has certain fields that are carried over on every chunk load.
-  // This would include:
-  constructor(
-    // This first value hold the initial type which in this case is path.
-    value: T | undefined,
-    type: OverlayTypes,
-    individual: string,
-    getPosition?: Position,
-    getColor?: Color,
-    getSourcePosition?: Position,
-    getTargetPosition?: Position,
-    // options:  { key, value: string[]},
-  ){
-  }
-  // type: string;
-  // getWidth: number = 1;
-  autoHighlight: boolean = true;
-  widthUnits: 'pixels' | 'meters' | 'common' = 'pixels';
-  widthScale: number = 1;
-
-  widthMinPixels: number = 1;
-  widthMaxPixels: number = Number.MAX_SAFE_INTEGER;
-
-  opacity: number = 0.8;
-}
+// export class PathOverlayBaseClass<T> {
+//   // NOTE: The options in the constructor
+//   // has certain fields that are carried over on every chunk load.
+//   // This would include:
+//   constructor(
+//     // This first value hold the initial type which in this case is path.
+//     value: T | undefined,
+//     type: OverlayTypes,
+//     individual: string,
+//     getPosition?: Position,
+//     getColor?: Color,
+//     getSourcePosition?: Position,
+//     getTargetPosition?: Position,
+//     // options:  { key, value: string[]},
+//   ) {
+//   }
+//   // type: string;
+//   // getWidth: number = 1;
+//   autoHighlight: boolean = true;
+//   widthUnits: 'pixels' | 'meters' | 'common' = 'pixels';
+//   widthScale: number = 1;
+//
+//   widthMinPixels: number = 1;
+//   widthMaxPixels: number = Number.MAX_SAFE_INTEGER;
+//
+//   opacity: number = 0.8;
+// }
 
 // export class PointOverlayOptionsBase<T> {
 //   constructor(
@@ -104,60 +104,61 @@ export class PathOverlayBaseClass<T> {
 //   // 2) itself or put it in the base class.
 //   // 3) Another approach is create a service to build up the form.
 // }
+export type PointOverlayOptions = {
+  type: "pointOverlayOptions",
+
+  currentIndividual: string;
+  getRadius: number;
+
+  opacity: number;
+  focusOpacity: number;
+
+  widthMinPixels: number;
+  widthMaxPixels: number;
+
+  getFillColor: Color;
+  getLineColor: Color;
+
+  getLineWidth: number;
+}
 
 // Point Layers, Path layers, and aggregation layers
 // TODO: since that data gets sent in a different message.
 // NOTE: This file contains type meant to sent as messages from the event
 // component in order to change certain options in the overlay controls.
 export type PathOverlayOptions = {
-  type:"pathOverlayOptions",
-  // metadata?: EventMetaData;
+  type: "pathOverlayOptions",
   currentIndividual: string;
-  opacity: number;
-  SourcePosition?: number;
-  TargetPosition?: number;
-  tilt?: number;
-  getPosition: number;
+  getWidth: number;
 
-  widthScale: number;
-  widthUnits: 'pixel' | 'common' | 'meters';
+  opacity: number;
+
   widthMinPixels: number;
   widthMaxPixels: number;
 
+  getFillColor: Color;
+  getLineColor: Color;
+
   focusOpacity: number;
-  textEnabled: boolean;
+
+  autoHighlight: boolean;
+  textEnabled?: boolean;
 }
 
 // NOTE: Currently this only holds information for the scatterplot layer.
-export type PointOverlayOptions = {
-  type:"pointOverlayOptions",
-  // metadata: EventMetaData;
-  currentIndividual: string;
-  opacity: number;
-  getRadius: number;
-  radiusScale: number;
-  radiusUnits: 'pixel' | 'common' | 'meters';
-  widthMinPixels: number;
-  widthMaxPixels: number;
-  getFillColor: Color;
-  getLineColor: Color;
-}
 
 // TODO: In the deckoverlay class where this message arrives in,
 // make sure to differentiate between the three types of
 // overlay controls messages.
 export type AggregationOverlayOptions = {
-  type:"AggregationOverlayOptions",
-  radius: number;
-  coverage: number;
-
   currentIndividual: string;
-  upperPercentile: number;
-  lowerPercentile: number;
-
-  // elevationRange: Array<number>;
-  elevationRange: Range;
-  elevationScale: number;
+  type: "AggregationOverlayOptions",
+  radius: number;
+  // coverage: number;
+  // elevationRange: Range;
+  // elevationScale: number;
+  // upperPercentile: number;
+  // lowerPercentile: number;
 
   elevationLowerPercentile: number;
   elevationUpperPercentile: number;
@@ -165,9 +166,7 @@ export type AggregationOverlayOptions = {
 
   colorScaleType?: 'quantize' | 'quantile' | 'ordinal' // Scaling functions used to determine the color of the grid cell.
   colorAggregation: 'SUM' | 'MEAN' | 'MAX' | 'MIN';
+
   getColorWeight: number;
   getElevationWeight: number;
-  // getColorValue: null, // If provided, will override the value of getColorWeight and colorAggregation.
-  // getElevationValue: null, // Do not use for now.
-  // gpuAggregration?: boolean; // This should always be true.
 }

@@ -102,23 +102,13 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   @Output() overlayOptionsEmitter = new EventEmitter<PointOverlayOptions | AggregationOverlayOptions | PathOverlayOptions>();
   eventForm = this.formBuilder.nonNullable.group({
 
-    // This field will go unused.
-    // maxEvents: new FormControl<number | null>(
-    //   0,
-    //   { nonNullable: false }),
-    //
-    // dateRange: this.formBuilder.group({
-    //   start: this.formBuilder.control(null as null | Date),
-    //   end: this.formBuilder.control(null as null | Date),
-    // }),
     eventProfiles: this.formBuilder.control(null as EventProfiles),
     sensorForm: this.formBuilder.control(null as null | string),
     checkboxes: new FormArray<FormControl<boolean>>([]),
+
   }, {
     validators: [
       checkboxOptionSelectedValidator(),
-      // dateRangeValidators(),
-      // maxEventsValidator(),
       sensorValidator()
     ],
     updateOn: "change"
@@ -128,103 +118,72 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   // Consider the following:
   // 1) making a base form for each layer type.
   // 2) moving these form types into a separate file.
-  pointOverlayControls = this.formBuilder.array([
-    this.formBuilder.nonNullable.group({
-      // TODO: The part needs a custom validator.
-      individual: this.formBuilder.nonNullable.control(null as null | string),
+  pointOverlayControls = this.formBuilder.nonNullable.group({
+    individual: this.formBuilder.array([
+      this.formBuilder.group({
+        individual: this.formBuilder.nonNullable.control(null as null | string),
+        radius: this.formBuilder.nonNullable.control(3),
 
-      radius: this.formBuilder.nonNullable.control(3),
-      radiusUnits: this.formBuilder.nonNullable.control('meters' as 'pixel' | 'common' | 'meters'),
-      radiusScale: this.formBuilder.nonNullable.control(1),
+        widthMinPixels: this.formBuilder.nonNullable.control(1),
+        widthMaxPixels: this.formBuilder.nonNullable.control(Number.MAX_SAFE_INTEGER),
 
-      radiusMinPixels: this.formBuilder.nonNullable.control(1),
-      radiusMaxPixels: this.formBuilder.nonNullable.control(Number.MAX_SAFE_INTEGER),
+        autoHighlight: this.formBuilder.nonNullable.control(true),
 
-      lineWidthUnits: this.formBuilder.nonNullable.control(30),
-      lineWidthScale: this.formBuilder.nonNullable.control(30),
+        opacity: this.formBuilder.nonNullable.control(0.8),
 
-      // Draw the outline of the points.
-      // stroked: this.formBuilder.nonNullable.control(false),
-      // filled: this.formBuilder.nonNullable.control(true),
+        getFillColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
+        getLineColor: this.formBuilder.nonNullable.control(1),
 
-      autoHighlight: this.formBuilder.nonNullable.control(true),
-      opacity: this.formBuilder.nonNullable.control(0.8),
-
-      // NOTE:These options are sent from the chunks loaded from the overlay class
-      // on chunk load.
-      getColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
-      getFillColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
-
-      getLineColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
-      getLineWidth: this.formBuilder.nonNullable.control(1),
-
-      // billboard: this.formBuilder.nonNullable.control(false),
-    })
-  ]);
+        focusOpacity: this.formBuilder.nonNullable.control(1.0),
+      })
+    ])
+  });
 
   // TODO: Fix the default options.
-  // All of the fields within this formBuilder array may need to contain
-  // a getter method to fix templating.
-  pathOverlayControls = this.formBuilder.array([
-    this.formBuilder.group({
-      individual: this.formBuilder.nonNullable.control(null as null | string),
+  pathOverlayControls = this.formBuilder.nonNullable.group({
+    individual: this.formBuilder.array([
+      this.formBuilder.group({
+        individual: this.formBuilder.nonNullable.control(null as null | string),
+        getWidth: this.formBuilder.nonNullable.control(3),
 
-      pathRadius: this.formBuilder.nonNullable.control(0),
-      pathScale: this.formBuilder.nonNullable.control(0),
-      pathUnits: this.formBuilder.nonNullable.control('pixel' as 'pixel' | 'common' | 'meters'),
+        opacity: this.formBuilder.nonNullable.control(0.8),
 
-      widthUnits: this.formBuilder.nonNullable.control('pixel' as 'pixel' | 'common' | 'meters'),
-      widthScale: this.formBuilder.nonNullable.control(1),
-      getWidth: this.formBuilder.nonNullable.control(3),
+        widthMinPixels: this.formBuilder.nonNullable.control(1),
+        widthMaxPixels: this.formBuilder.nonNullable.control(Number.MAX_SAFE_INTEGER),
 
-      widthMinPixels: this.formBuilder.nonNullable.control(1),
-      widthMaxPixels: this.formBuilder.nonNullable.control(Number.MAX_SAFE_INTEGER),
+        getFillColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
+        getLineColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
 
-      opacity: this.formBuilder.nonNullable.control(0.8),
-      getFillColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
-      getLineColor: this.formBuilder.nonNullable.control([0, 0, 0, 0] as RGBAColor),
+        focusOpacity: this.formBuilder.nonNullable.control(1.0),
+        autoHighlight: this.formBuilder.nonNullable.control(true),
+      })
+    ])
+  });
 
-      autoHighlight: this.formBuilder.nonNullable.control(true),
-    })
-  ]);
-
-  //NOTE:The default options may need to be removed or otherwise removed.
+   //NOTE:The default options may need to be removed or otherwise removed.
   aggregationOverlayControls = this.formBuilder.array([
     this.formBuilder.group({
-      individual: this.formBuilder.nonNullable.control(null as null | string),
+      individual: this.formBuilder.nonNullable.group({
+        currentIndividual: this.formBuilder.control(null as null | string),
+        radius: this.formBuilder.nonNullable.control(1000),
 
-      radius: this.formBuilder.nonNullable.control(1000),
-      // coverage: this.formBuilder.nonNullable.control(1),
+        elevationLowerPercentile: this.formBuilder.nonNullable.control(0),
+        elevationUpperPercentile:  this.formBuilder.nonNullable.control(Number.MAX_SAFE_INTEGER),
+        elevationAggregation: this.formBuilder.nonNullable.control('SUM' as 'SUM' | 'MEAN' | 'MIN' | 'MAX'),
 
-      elevationRange: this.formBuilder.nonNullable.control([0, 1000] as Range),
-      elevationScale: this.formBuilder.nonNullable.control(1),
+        colorScaleType: this.formBuilder.nonNullable.control('quantize' as 'quantize' | 'quantile' | 'ordinal'),
+        colorAggregation: this.formBuilder.nonNullable.control('SUM' as 'SUM' | 'MEAN' | 'MIN' | 'MAX'),
 
-      elevationLowerPercentile: this.formBuilder.nonNullable.control(0),
-      elevationUpperPercentile: this.formBuilder.nonNullable.control(100),
-
-      UpperPercentile: this.formBuilder.nonNullable.control(100),
-      lowerPercentile: this.formBuilder.nonNullable.control(0),
-
-      colorScaleType: this.formBuilder.nonNullable.control('quantize' as 'quantize' | 'quantile' | 'ordinal'),
-      colorAggregation: this.formBuilder.nonNullable.control('SUM' as 'SUM' | 'MEAN' | 'MIN' | 'MAX'),
-      elevationAggregation: this.formBuilder.nonNullable.control('SUM' as 'SUM' | 'MEAN' | 'MIN' | 'MAX'),
-
-      getColorWeight: this.formBuilder.nonNullable.control(1),
-      getElevationWeight: this.formBuilder.nonNullable.control(1),
+        getColorWeight: this.formBuilder.nonNullable.control(1),
+        focusOpacity: this.formBuilder.nonNullable.control(1.0),
+      }),
     })
   ]);
-
-  // TODO: This will be a formarray containing the overlay controls
-  // Rather than use this form, just switch them out depending on the current layer type.
-  // overlayControls = this.formBuilder.nonNullable.group({
-  // });
 
   tableSource = new FormDataSource(this.studyService, this.CheckboxForm);
   tableState$?: Observable<SourceState>;
   tableStateSubscription?: Subscription;
 
-  // INFO: The following stylings should perhaps be applied to the
-  // input form.
   smallTabSize = {
     // 'min-width': '150px',
     // 'max-width': '290px',
@@ -316,15 +275,10 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     for (const propertyName in changes) {
       const currentValue = changes[propertyName].currentValue;
       const previousValue = changes[propertyName].previousValue;
-      // TODO:Consider if this check is necessary.
       if (currentValue === undefined || currentValue === previousValue) {
         continue;
       }
 
-      // TODO:An message event is needed if a stream ends or runs into an error.
-      // INFO: Work done so far.
-      // 1) Linked the overlay's stream status with the the events component
-      // 2) Linked incoming chunked data from the overlay's stream
       // TODO: Work to be done
       // 1) Implement the actual controls
       // 2) Set up the link from the events component to the maps component (the other way)
@@ -408,38 +362,44 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   }
 
 
-  // NOTE:The following three overlay controls
+
+  // TODO: Create a custom type to hold the requested information.
   submitPathLayer(index: number): void {
-    if (index < 0 || index >= this.pathOverlayControls.controls.length) {
+    if (index < 0 || index >= this.pathOverlayControls.controls.individual.controls.length) {
       return;
     }
 
-    const formGroup = this.pathOverlayControls.controls[index];
+    const formGroup = this.pathOverlayControls.controls.individual.controls[index];
     if (formGroup.invalid) {
       return;
     }
-    // NOTE:This emitter needs to emit different types of forms depending on the
-    // currently active layer type.
-    // The categeries are path, point and aggregation types.
+    // INFO:The categeries are path, point and aggregation types.
     this.overlayOptionsEmitter.emit({
       type: "pathOverlayOptions",
       currentIndividual: formGroup.controls.individual.value ?? "None",
+      getWidth: formGroup.controls.getWidth.value,
+
       opacity: formGroup.controls.opacity.value,
-      widthScale: formGroup.controls.widthScale.value,
-      widthUnits: formGroup.controls.widthUnits.value,
+
       widthMinPixels: formGroup.controls.widthMinPixels.value,
       widthMaxPixels: formGroup.controls.widthMaxPixels.value,
+
+      getLineColor: formGroup.controls.getLineColor.value,
+      getFillColor: formGroup.controls.getFillColor.value,
+
+      focusOpacity: formGroup.controls.focusOpacity.value,
+
+      autoHighlight: formGroup.controls.autoHighlight.value,
+
     } as PathOverlayOptions);
   }
-  // TODO: Create a custom type to hold the requested information.
   // Or reuse the overlay default options
-
   submitPointLayerForm(index: number): void {
-    if (index < 0 || index >= this.pathOverlayControls.controls.length) {
+    if (index < 0 || index >= this.pathOverlayControls.controls.individual.controls.length) {
       return;
     }
 
-    const formGroup = this.pointOverlayControls.controls[index];
+    const formGroup = this.pointOverlayControls.controls.individual.controls[index];
     if (formGroup.invalid) {
       return;
     }
@@ -447,14 +407,17 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     this.overlayOptionsEmitter.emit({
       type: "pointOverlayOptions",
       currentIndividual: formGroup.controls.individual.value,
+
       opacity: formGroup.controls.opacity.value,
       getRadius: formGroup.controls.radius.value,
-      radiusScale: formGroup.controls.radiusScale.value,
-      radiusUnits: formGroup.controls.radiusUnits.value,
-      widthMinPixels: formGroup.controls.radiusMinPixels.value,
-      widthMaxPixels: formGroup.controls.radiusMaxPixels.value,
+
+      widthMinPixels: formGroup.controls.widthMinPixels.value,
+      widthMaxPixels: formGroup.controls.widthMaxPixels.value,
+
       getFillColor: formGroup.controls.getFillColor.value,
       getLineColor: formGroup.controls.getLineColor.value,
+
+      // getLineWidth: formGroup.controls.get
     } as PointOverlayOptions);
   }
 
@@ -463,28 +426,26 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
       return;
     }
 
-    const formGroup = this.aggregationOverlayControls.controls[index];
+    const formGroup = this.pointOverlayControls.controls.individual.controls[index];
     if (formGroup.invalid) {
       return;
     }
     this.overlayOptionsEmitter.emit({
+      currentIndividual: formGroup.controls.individual.value,
       type: "AggregationOverlayOptions",
       radius: formGroup.controls.radius.value,
-      // coverage: formGroup.controls.coverage.value,
-
-      currentIndividual: formGroup.controls.individual.value,
 
       elevationRange: formGroup.controls.elevationRange.value,
-      elevationScale: formGroup.controls.elevationScale.value,
       elevationLowerPercentile: formGroup.controls.elevationLowerPercentile.value,
       elevationUpperPercentile: formGroup.controls.elevationUpperPercentile.value,
 
       upperPercentile: formGroup.controls.UpperPercentile.value,
       lowerPercentile: formGroup.controls.lowerPercentile.value,
+
       colorAggregation: formGroup.controls.colorAggregation.value,
       elevationAggregation: formGroup.controls.elevationAggregation.value,
+
       getColorWeight: formGroup.controls.getColorWeight.value,
-      // getElevationWeight: formGroup.controls.getElevationWeight.value,
     } as AggregationOverlayOptions);
   }
   //      individual: this.formBuilder.nonNullable.control(null as null | string),
