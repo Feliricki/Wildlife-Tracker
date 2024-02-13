@@ -45,6 +45,7 @@ import { LayerTypes, OverlayPathOptions, OverlayPointOptions, StreamStatus } fro
 import { EventMetaData } from './EventsMetadata';
 import { LayerTypesHelper } from '../deckGL/OverlayOption';
 import { AggregationOverlayOptions, PointOverlayOptions, PathOverlayOptions } from '../tracker-view/OverlayOptions';
+import { CdkTableModule } from '@angular/cdk/table';
 
 export type RGBAColor = [number, number, number, number];
 // type ColorTypes = RGBAColor | [number, number, number];
@@ -54,9 +55,9 @@ type Range = [number, number];
   selector: 'app-events',
   standalone: true,
   imports: [
-    CommonModule, MatListModule, MatSortModule, MatNativeDateModule,
-    MatTabsModule, MatTableModule, MatPaginatorModule,
-    AsyncPipe, ReactiveFormsModule, MatFormFieldModule,
+    MatTableModule, CommonModule, MatListModule,
+    MatSortModule, MatNativeDateModule, MatTabsModule,
+    MatPaginatorModule, AsyncPipe, ReactiveFormsModule, MatFormFieldModule,
     MatInputModule, MatIconModule, MatButtonModule, FormsModule,
     MatExpansionModule, MatTooltipModule, MatSelectModule,
     MatDividerModule, MatDatepickerModule, MatBadgeModule,

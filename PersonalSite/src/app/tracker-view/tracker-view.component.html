@@ -9,7 +9,9 @@
 
     <div class="search-container">
 
-      @if(sidenav.opened || searchOpened()){
+      <!-- BUG:Issues are being caused by some component. Conditionally remove the components until the issue goes away. -->
+      <!-- @if(sidenav.opened || searchOpened()){ -->
+      @if(false){
       <app-simple-search [hidden]="!searchOpened" [allStudies]="currentStudies" (closeComponent)="closeSearchNav()"
         (componentInitialized)="initializeSearchNav()"
         (panToMarkerEvent)="updateCurrentMarkers($event)"></app-simple-search>
@@ -25,11 +27,12 @@
       <!-- <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="side" -->
       <!--   [fixedInViewport]="true"> -->
 
+      @if(true){
       <app-events #eventComponent (eventRequestEmitter)="updateCurrentEventRequest($event)"
         (lineDataEmitter)="updateLineStringData($event)" (closeRightNavEmitter)="closeRightNav()"
         [currentStudy]="currentStudy" [currentEventData]="currentChunkInfo"
-        [streamStatus]="currentStreamStatus"
-        ></app-events>
+        [streamStatus]="currentStreamStatus"></app-events>
+      }
 
     </mat-sidenav>
 
@@ -65,40 +68,40 @@
         <!--   <!-- <mat-chip-option color="warn">Satellite</mat-chip-option> -->
         <!-- </mat-chip-listbox> -->
 
-        <div class="trackbar-elements">
+        <!-- <div class="toolbar-elements"> -->
 
-          <button mat-fab matRipple extended class="extended-fab" [matMenuTriggerFor]="layerMenu">
-            <mat-icon>layers</mat-icon>Layers
-          </button>
-          <mat-menu #layerMenu="matMenu" xPosition="after" yPosition="below">
-            @for(layerOptions of layerMenuOptions; track layerOptions[0]){
-            <button mat-menu-item [value]="layerOptions[1]" #layerButton
-              (click)="selectedLayer(layerOptions[1])">{{layerOptions[0]}}</button>
-            }
+        <button mat-fab matRipple extended class="extended-fab" [matMenuTriggerFor]="layerMenu">
+          <mat-icon>layers</mat-icon>Layers
+        </button>
+        <mat-menu #layerMenu="matMenu" xPosition="after" yPosition="below">
+          @for(layerOptions of layerMenuOptions; track layerOptions[0]){
+          <button mat-menu-item [value]="layerOptions[1]" #layerButton
+            (click)="selectedLayer(layerOptions[1])">{{layerOptions[0]}}</button>
+          }
+        </mat-menu>
+
+        <mat-button-toggle-group class="toggle-group">
+          <mat-button-toggle (click)="setMapType(checkboxMap.checked ? 'terrain' : 'roadmap')"
+            [matMenuTriggerFor]="roadMap">
+            <mat-icon>map</mat-icon>Map
+            <!-- Map -->
+          </mat-button-toggle>
+          <mat-button-toggle (click)="setMapType(checkboxSatellite.checked ? 'hybrid' : 'satellite')"
+            [matMenuTriggerFor]="Satellitemenu">
+            <mat-icon>satellite</mat-icon>Satellite
+          </mat-button-toggle>
+
+          <mat-menu #roadMap="matMenu" xPosition="after" yPosition="below">
+            <button mat-menu-item><mat-checkbox #checkboxMap color="primary" value="roadmap"
+                (change)="setMapTypeCheckbox($event)">Terrain</mat-checkbox></button>
           </mat-menu>
 
-          <mat-button-toggle-group class="toggle-group">
-            <mat-button-toggle (click)="setMapType(checkboxMap.checked ? 'terrain' : 'roadmap')"
-              [matMenuTriggerFor]="roadMap">
-              <mat-icon>map</mat-icon>Map
-              <!-- Map -->
-            </mat-button-toggle>
-            <mat-button-toggle (click)="setMapType(checkboxSatellite.checked ? 'hybrid' : 'satellite')"
-              [matMenuTriggerFor]="Satellitemenu">
-              <mat-icon>satellite</mat-icon>Satellite
-            </mat-button-toggle>
-
-            <mat-menu #roadMap="matMenu" xPosition="after" yPosition="below">
-              <button mat-menu-item><mat-checkbox #checkboxMap color="primary" value="roadmap"
-                  (change)="setMapTypeCheckbox($event)">Terrain</mat-checkbox></button>
-            </mat-menu>
-
-            <mat-menu #Satellitemenu="matMenu" xPosition="after" yPosition="below">
-              <button mat-menu-item><mat-checkbox #checkboxSatellite color="primary" value="satellite"
-                  (change)="setMapTypeCheckbox($event)">Label</mat-checkbox></button>
-            </mat-menu>
-          </mat-button-toggle-group>
-        </div>
+          <mat-menu #Satellitemenu="matMenu" xPosition="after" yPosition="below">
+            <button mat-menu-item><mat-checkbox #checkboxSatellite color="primary" value="satellite"
+                (change)="setMapTypeCheckbox($event)">Label</mat-checkbox></button>
+          </mat-menu>
+        </mat-button-toggle-group>
+        <!-- </div> -->
       </mat-toolbar>
 
       }

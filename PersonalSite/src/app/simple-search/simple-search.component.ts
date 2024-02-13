@@ -10,7 +10,7 @@ import { ENAAPIService } from '../ENA-API/ena-api.service';
 import { WikipediaSearchService } from '../wikipedia/wikipedia-search.service';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatOptionModule } from '@angular/material/core';
-import { MatSelectModule } from '@angular/material/select';
+// import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { NgIf, NgFor, AsyncPipe, DatePipe, NgStyle } from '@angular/common';
@@ -22,6 +22,7 @@ import { AutoComplete } from '../auto-complete/auto-complete';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/layout';
+// import { OverlayModule } from '@angular/cdk/overlay';
 
 
 interface WikiLinks {
@@ -39,9 +40,8 @@ interface WikiLinks {
     NgIf, MatTableModule, MatTooltipModule,
     FormsModule, ReactiveFormsModule,
     MatFormFieldModule, MatInputModule,
-    MatSelectModule, MatOptionModule,
-    MatExpansionModule, MatIconModule, NgStyle,
-    NgFor, MatPaginatorModule, MatDividerModule,
+    MatOptionModule, MatExpansionModule, MatIconModule,
+    NgStyle, NgFor, MatPaginatorModule, MatDividerModule,
     AsyncPipe, DatePipe, MatProgressSpinnerModule,
     MatRadioModule, MatButtonModule, MatAutocompleteModule,
     ]
