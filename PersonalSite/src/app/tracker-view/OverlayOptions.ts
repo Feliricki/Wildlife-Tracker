@@ -152,7 +152,7 @@ export type PathOverlayOptions = {
 // overlay controls messages.
 export type AggregationOverlayOptions = {
   currentIndividual: string;
-  type: "AggregationOverlayOptions",
+  type: "aggregationOverlayOptions",
   radius: number;
   // coverage: number;
   // elevationRange: Range;
