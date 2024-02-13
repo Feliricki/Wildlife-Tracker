@@ -121,7 +121,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   readonly layerMenuOptions = [
     ["Arc Layer", LayerTypes.ArcLayer],
     ["Line Layer", LayerTypes.LineLayer],
-    ["Path Layer", LayerTypes.PathLayer],// Having both the line and path layer is redundant.
+    // ["Path Layer", LayerTypes.PathLayer],// Having both the line and path layer is redundant.
     ["Hexagon Layer", LayerTypes.HexagonLayer],
     ["Scatterplot Layer", LayerTypes.ScatterplotLayer],
     ["Screen Grid Layer", LayerTypes.ScreenGridLayer],

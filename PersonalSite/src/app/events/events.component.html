@@ -152,13 +152,13 @@
 
             </td>
 
-            <!-- <td mat-footer-cell *matFooterCellDef> -->
-            <!--   <!-- <mat-divider></mat-divider> --> -->
-            <!--   <button mat-raised-button [disabled]="TableState() !== 'loaded' || eventForm.invalid" color="primary" -->
-            <!--     type="submit"> -->
-            <!--     Submit -->
-            <!--   </button><!-- <button mat-icon-button (click)="EventRef.scrollIntoView(true)"><mat-icon>close</mat-icon></button> --> -->
-            <!-- </td> -->
+            <td mat-footer-cell *matFooterCellDef>
+              <!-- <mat-divider></mat-divider> -->
+              <button mat-raised-button [disabled]="TableState() !== 'loaded' || eventForm.invalid" color="primary"
+                type="submit">
+                Submit
+              </button>
+            </td>
 
             <mat-progress-bar mode="indeterminate"></mat-progress-bar>
           </ng-container>
@@ -182,16 +182,16 @@
               <p>{{getIndividual(j)()?.LocalIdentifier ?? "N/A" }}</p>
             </td>
 
-            <!-- <td mat-footer-cell *matFooterCellDef> -->
-            <!--   <p>Footer content for name column.</p> -->
-            <!-- </td> -->
+            <td mat-footer-cell *matFooterCellDef>
+              <!-- <p>Footer content for name column.</p> -->
+            </td>
 
           </ng-container>
 
           <!-- <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky:true"></tr> -->
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; let i = index; columns:displayedColumns;"></tr>
-          <!-- <tr mat-footer-row *matFooterRowDef="displayedColumns; sticky: true"> -->
+          <tr mat-footer-row *matFooterRowDef="displayedColumns; sticky: true">
 
         </table>
 

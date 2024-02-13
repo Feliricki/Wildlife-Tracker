@@ -10,8 +10,7 @@
     <div class="search-container">
 
       <!-- BUG:Issues are being caused by some component. Conditionally remove the components until the issue goes away. -->
-      <!-- @if(sidenav.opened || searchOpened()){ -->
-      @if(false){
+      @if(sidenav.opened || searchOpened()){
       <app-simple-search [hidden]="!searchOpened" [allStudies]="currentStudies" (closeComponent)="closeSearchNav()"
         (componentInitialized)="initializeSearchNav()"
         (panToMarkerEvent)="updateCurrentMarkers($event)"></app-simple-search>
@@ -27,12 +26,10 @@
       <!-- <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="side" -->
       <!--   [fixedInViewport]="true"> -->
 
-      @if(true){
       <app-events #eventComponent (eventRequestEmitter)="updateCurrentEventRequest($event)"
         (lineDataEmitter)="updateLineStringData($event)" (closeRightNavEmitter)="closeRightNav()"
         [currentStudy]="currentStudy" [currentEventData]="currentChunkInfo"
         [streamStatus]="currentStreamStatus"></app-events>
-      }
 
     </mat-sidenav>
 

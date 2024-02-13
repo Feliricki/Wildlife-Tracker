@@ -1,5 +1,5 @@
 import { GoogleMapsOverlay as DeckOverlay } from '@deck.gl/google-maps/typed';
-import { MapboxOverlay } from '@deck.gl/mapbox/typed'; // TODO: Consider adding leaflet as the basemap before mapbox
+import { MapboxOverlay } from '@deck.gl/mapbox/typed';
 // import { TripsLayer } from '@deck.gl/geo-layers/typed';
 import { ArcLayer, LineLayer, ScatterplotLayer, PathLayer, ArcLayerProps, PathLayerProps, LineLayerProps, ScatterplotLayerProps } from '@deck.gl/layers/typed';
 import { PickingInfo, Layer, Color, LayerProps } from '@deck.gl/core/typed';
@@ -19,8 +19,8 @@ type BinaryFeatureWithAttributes = {
   polygons?: BinaryPolygonFeatures;
 };
 
-// TODO:Work out a user interface for showing layers within a certain timeframe.
-// Add a UI for changing certain options such as color, width, etc.
+// TODO:Agggregation layers are implemented incorrectly. Everything needs to be in a single layer.
+// Work out a user interface for showing layers within a certain timeframe.
 
 // NOTE:This files needs to be renamed when mapbox is used as a basemap.
 export enum LayerTypes {
