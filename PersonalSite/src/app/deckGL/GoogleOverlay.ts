@@ -378,9 +378,22 @@ export class GoogleMapOverlayController {
     this.deckOverlay?.setProps({ layers: layers });
   }
 
+  isPointLayer(layer: LayerTypes): boolean {
+    return this.pointLayers.has(layer);
+  }
+
+  isPathLayer(layer: LayerTypes): boolean {
+    return this.pathLayers.has(layer);
+  }
+
+  isAggregationLayer(layer: LayerTypes): boolean {
+    return this.aggregationLayers.has(layer);
+  }
+
   // NOTE:This method create a layer for a single chunk of data.
   createActiveLayer(layer: LayerTypes, data: BinaryLineFeatures & OptionalAttributes, layerId: number): Layer | null {
     this.currentLayer = layer;
+
     switch (layer) {
 
       case LayerTypes.ArcLayer:
@@ -436,9 +449,9 @@ export class GoogleMapOverlayController {
     const [pointsFeatures, polygonFeatures] = this.BinaryFeaturesPlaceholder();
 
     this.dataChunks.push({ points: pointsFeatures, lines: binaryLineFeatures, polygons: polygonFeatures });
+    // this.currentData.push(); // NOTE:This variable is being used to store all of the positions
     this.contentArray.push(binaryLineFeatures.content.contentArray);
 
-    // Updates the signal via memoization.
     this.currentIndividuals.update(prev => {
       prev.add(binaryLineFeatures.individualLocalIdentifier);
       return prev;
@@ -457,9 +470,13 @@ export class GoogleMapOverlayController {
       } as EventMetaData;
     });
 
+    // BUG:Aggregation layers needs to be all on the same layer to work properly.
+    // This might be fine if individual can be toggled or shown one at time.
+    // If this implementation is used, then all individuals should start out at the 'toggled on' state
+    // If all user are toggled on then all individuals should belong to the same layer.
+    // This will incur a signficant performance penalty on the main thread. This computation should be done on the webworker.
     const layers = this.dataChunks.map((chunk, index) => this.createActiveLayer(this.currentLayer, chunk.lines, index));
     console.log(`Overlay has ${this.dataChunks.length} layers with ${this.contentArray.reduce((acc, arr) => acc + arr.length, 0)} total elements.`);
-
     this.deckOverlay?.setProps({
       layers: layers
     });

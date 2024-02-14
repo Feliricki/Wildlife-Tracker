@@ -25,9 +25,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
-// import { dateRangeValidators } from './Validators/dateRangeValidator';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-// import { maxEventsValidator } from './Validators/maxEventsValidator';
 import { sensorValidator } from './Validators/SensorValidator';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
 import { Observable, Subscription, distinctUntilChanged, map, tap } from 'rxjs';
@@ -45,11 +43,10 @@ import { LayerTypes, OverlayPathOptions, OverlayPointOptions, StreamStatus } fro
 import { EventMetaData } from './EventsMetadata';
 import { LayerTypesHelper } from '../deckGL/OverlayOption';
 import { AggregationOverlayOptions, PointOverlayOptions, PathOverlayOptions } from '../tracker-view/OverlayOptions';
-import { CdkTableModule } from '@angular/cdk/table';
 
 export type RGBAColor = [number, number, number, number];
 // type ColorTypes = RGBAColor | [number, number, number];
-type Range = [number, number];
+// type Range = [number, number];
 
 @Component({
   selector: 'app-events',
@@ -57,12 +54,12 @@ type Range = [number, number];
   imports: [
     MatTableModule, CommonModule, MatListModule,
     MatSortModule, MatNativeDateModule, MatTabsModule,
-    MatPaginatorModule, AsyncPipe, ReactiveFormsModule, MatFormFieldModule,
+    MatPaginatorModule, AsyncPipe, ReactiveFormsModule,
     MatInputModule, MatIconModule, MatButtonModule, FormsModule,
     MatExpansionModule, MatTooltipModule, MatSelectModule,
     MatDividerModule, MatDatepickerModule, MatBadgeModule,
-    MatSlideToggleModule, MatSliderModule, MatProgressBarModule, MatCardModule,
-    MatCheckboxModule,
+    MatSlideToggleModule, MatSliderModule, MatProgressBarModule,
+    MatCardModule, MatCheckboxModule, MatFormFieldModule
   ],
   templateUrl: './events.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -119,18 +116,20 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   // Consider the following:
   // 1) making a base form for each layer type.
   // 2) moving these form types into a separate file.
+  // 3) reconsider the default options
   pointOverlayControls = this.formBuilder.nonNullable.group({
     individual: this.formBuilder.array([
       this.formBuilder.group({
         individual: this.formBuilder.nonNullable.control(null as null | string),
+        opacity: this.formBuilder.nonNullable.control(0.8),
+
         radius: this.formBuilder.nonNullable.control(3),
 
         widthMinPixels: this.formBuilder.nonNullable.control(1),
-        widthMaxPixels: this.formBuilder.nonNullable.control(Number.MAX_SAFE_INTEGER),
+        // widthMaxPixels: this.formBuilder.nonNullable.control(Number.MAX_SAFE_INTEGER),
 
         autoHighlight: this.formBuilder.nonNullable.control(true),
 
-        opacity: this.formBuilder.nonNullable.control(0.8),
 
         getFillColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
         getLineColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
@@ -140,17 +139,16 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     ])
   });
 
-  // TODO: Fix the default options.
   pathOverlayControls = this.formBuilder.nonNullable.group({
     individual: this.formBuilder.array([
       this.formBuilder.group({
         individual: this.formBuilder.nonNullable.control(null as null | string),
-        getWidth: this.formBuilder.nonNullable.control(3),
-
         opacity: this.formBuilder.nonNullable.control(0.8),
 
+        getWidth: this.formBuilder.nonNullable.control(3),
+
         widthMinPixels: this.formBuilder.nonNullable.control(1),
-        widthMaxPixels: this.formBuilder.nonNullable.control(Number.MAX_SAFE_INTEGER),
+        // widthMaxPixels: this.formBuilder.nonNullable.control(Number.MAX_SAFE_INTEGER),
 
         getFillColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
         getLineColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
@@ -381,7 +379,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
       getRadius: formGroup.controls.radius.value,
 
       widthMinPixels: formGroup.controls.widthMinPixels.value,
-      widthMaxPixels: formGroup.controls.widthMaxPixels.value,
+      // widthMaxPixels: formGroup.controls.widthMaxPixels.value,
 
       getFillColor: formGroup.controls.getFillColor.value,
       getLineColor: formGroup.controls.getLineColor.value,
@@ -408,7 +406,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
       opacity: formGroup.controls.opacity.value,
 
       widthMinPixels: formGroup.controls.widthMinPixels.value,
-      widthMaxPixels: formGroup.controls.widthMaxPixels.value,
+      // widthMaxPixels: formGroup.controls.widthMaxPixels.value,
 
       getLineColor: formGroup.controls.getLineColor.value,
       getFillColor: formGroup.controls.getFillColor.value,

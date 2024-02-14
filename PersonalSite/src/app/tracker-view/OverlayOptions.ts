@@ -1,21 +1,19 @@
 // NOTE: This object should one of three types
 
-import { OverlayAggregationOptions } from "../deckGL/GoogleOverlay";
-
 // RGBA or RGB
 type Color = [number, number, number, number] | [number, number, number];
-type Range = [number, number];
 
-type Position = [number, number] | [number, number, number] // XYZ or XY
-type OverlayTypes = "pathOverlayOptions" | "pointOverlayOptions" | "AggregationOverlayOptions";
-type AggrgationTypes = "SUM" | "MEAN";
-type GridAggregationTypes = "SUM" | "MEAN" | "MIN" | "MAX";
-// NOTE: This type is used to select the type of coloring in aggragation layers.
-type ColorScalingTypes = "quantize" | "quantile" | "ordinal";
+// type Position = [number, number] | [number, number, number] // XYZ or XY
+// type OverlayTypes = "pathOverlayOptions" | "pointOverlayOptions" | "AggregationOverlayOptions";
+// type AggrgationTypes = "SUM" | "MEAN";
+// type GridAggregationTypes = "SUM" | "MEAN" | "MIN" | "MAX";
+// // NOTE: This type is used to select the type of coloring in aggragation layers.
+// type ColorScalingTypes = "quantize" | "quantile" | "ordinal";
 
 // NOTE:Look through deck.gl documentaion to
 // see which options form a base
 // for the arc and path layers.
+
 // Derived class must override certain fields
 // export class PathOverlayBaseClass<T> {
 //   // NOTE: The options in the constructor
@@ -114,7 +112,7 @@ export type PointOverlayOptions = {
   focusOpacity: number;
 
   widthMinPixels: number;
-  widthMaxPixels: number;
+  // widthMaxPixels: number;
 
   getFillColor: Color;
   getLineColor: Color;
@@ -134,7 +132,7 @@ export type PathOverlayOptions = {
   opacity: number;
 
   widthMinPixels: number;
-  widthMaxPixels: number;
+  // widthMaxPixels: number;
 
   getFillColor: Color;
   getLineColor: Color;
