@@ -192,7 +192,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
         getElevationWeight: this.formBuilder.nonNullable.control(1),
       } as AggregationForms)
     ])
-  })
+  });
 
   tableSource = new FormDataSource(this.studyService, this.CheckboxForm);
   tableState$?: Observable<SourceState>;
@@ -414,24 +414,55 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
       return;
     }
     // INFO:The categeries are path, point and aggregation types.
-    // this.overlayOptionsEmitter.emit({
-    //   type: "pathOverlayOptions",
-    //   currentIndividual: formGroup.controls.individual.value ?? "None",
-    //   getWidth: formGroup.controls.getWidth.value,
-    //
-    //   opacity: formGroup.controls.opacity.value,
-    //
-    //   widthMinPixels: formGroup.controls.widthMinPixels.value,
-    //   // widthMaxPixels: formGroup.controls.widthMaxPixels.value,
-    //
-    //   getLineColor: formGroup.controls.getLineColor.value,
-    //   getFillColor: formGroup.controls.getFillColor.value,
-    //
-    //   focusOpacity: formGroup.controls.focusOpacity.value,
-    //
-    //   autoHighlight: formGroup.controls.autoHighlight.value,
-    //
-    // } as PathOverlayOptions);
+    this.overlayOptionsEmitter.emit({
+      type: "pathOverlayOptions",
+      currentIndividual: formGroup.controls.currentIndividual.value,
+      widthScale: formGroup.controls.widthScale.value,
+
+      opacity: formGroup.controls.opacity.value,
+
+      widthMinPixels: formGroup.controls.widthMinPixels.value,
+      widthMaxPixels: formGroup.controls.widthMaxPixels.value,
+
+      getSourceColor: formGroup.controls.getSourceColor.value,
+      getTargetColor: formGroup.controls.getTargetColor.value,
+
+      focusLevel: formGroup.controls.focusLevel.value,
+      autoHighlight: formGroup.controls.autoHighlight.value,
+
+    } as PathOverlayOptions);
+  }
+
+  submitAggregationLayer(index: number): void {
+    if (index < 0 || index >= this.aggregationOverlayControls.controls.individual.controls.length) {
+      return;
+    }
+    const formGroup = this.aggregationOverlayControls.controls.individual.controls[index];
+    if (formGroup.invalid) return;
+
+    this.overlayOptionsEmitter.emit({
+      type: "aggregationOverlayOptions",
+      currentIndividual: formGroup.controls.currentIndividual.value,
+      radius: formGroup.controls.radius.value,
+
+      elevationRange: formGroup.controls.elevationRange.value,
+      elevationScale: formGroup.controls.elevationScale.value,
+
+      lowerPercentile: formGroup.controls.lowerPercentile.value,
+      upperPercentile: formGroup.controls.upperPercentile.value,
+
+      elevationLowerPercentile: formGroup.controls.elevationLowerPercentile.value,
+      elevationUpperPercentile: formGroup.controls.elevationUpperPercentile.value,
+
+      elevationAggregation: formGroup.controls.elevationAggregation.value,
+
+      colorScaleType: formGroup.controls.colorScaleType.value,
+      colorAggregation: formGroup.controls.colorAggregation.value,
+
+      getColorWeight: formGroup.controls.getColorWeight.value,
+      getElevationWeight: formGroup.controls.getElevationWeight.value,
+      // autoHighlight: formGroup.controls.autoHighlight.value,
+    } as AggregationOverlayOptions);
   }
 
   // setMaxEventsValue(values: number) {

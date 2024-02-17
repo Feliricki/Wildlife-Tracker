@@ -216,7 +216,7 @@ export type AggregationOverlayOptions = {
   currentIndividual: string;
   radius: number;
   // coverage: number;
-  elevationRange: Range;
+  elevationRange: [number, number];
   elevationScale: number;
   upperPercentile: number;
   lowerPercentile: number;
