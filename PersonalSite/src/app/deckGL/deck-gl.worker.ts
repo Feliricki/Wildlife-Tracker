@@ -88,8 +88,6 @@ async function handleFeatures(binaryRes: TypedArray) {
 
   const binaryFeature = geojsonToBinary(features);
   const binaryLineFeatures = binaryFeature.lines;
-  // console.log(binaryLineFeatures);
-  // console.log(`Processing ${featuresRes.count} features from the signalr client`);
 
   if (binaryLineFeatures === undefined || features.length === 0) return;
 

@@ -65,42 +65,60 @@
         <!--   <!-- <mat-chip-option color="warn">Satellite</mat-chip-option> -->
         <!-- </mat-chip-listbox> -->
 
-        <!-- <div class="toolbar-elements"> -->
+        <div class="toolbar-elements" [ngStyle]="(XSmallScreen$ | async) ? toolbarOffsetSmall : toolbarOffset">
 
-        <button mat-fab matRipple extended class="extended-fab" [matMenuTriggerFor]="layerMenu">
-          <mat-icon>layers</mat-icon>Layers
-        </button>
-        <mat-menu #layerMenu="matMenu" xPosition="after" yPosition="below">
-          @for(layerOptions of layerMenuOptions; track layerOptions[0]){
-          <button mat-menu-item [value]="layerOptions[1]" #layerButton
-            (click)="selectedLayer(layerOptions[1])">{{layerOptions[0]}}</button>
+          @if (XSmallScreen$ | async){
+          <button mat-mini-fab id="mini-fab-layer" class="extended-fab" [matMenuTriggerFor]="layerMenu">
+            <mat-icon>layers</mat-icon>
+          </button>
           }
-        </mat-menu>
+          @else {
+          <button mat-fab extended matRipple class="extended-fab" [matMenuTriggerFor]="layerMenu">
+            <mat-icon>layers</mat-icon>Layers
+          </button>
+          }
 
-        <mat-button-toggle-group class="toggle-group">
-          <mat-button-toggle (click)="setMapType(checkboxMap.checked ? 'terrain' : 'roadmap')"
-            [matMenuTriggerFor]="roadMap">
-            <mat-icon>map</mat-icon>Map
-            <!-- Map -->
-          </mat-button-toggle>
-          <mat-button-toggle (click)="setMapType(checkboxSatellite.checked ? 'hybrid' : 'satellite')"
-            [matMenuTriggerFor]="Satellitemenu">
-            <mat-icon>satellite</mat-icon>Satellite
-          </mat-button-toggle>
-
-          <mat-menu #roadMap="matMenu" xPosition="after" yPosition="below">
-            <button mat-menu-item><mat-checkbox #checkboxMap color="primary" value="roadmap"
-                (change)="setMapTypeCheckbox($event)">Terrain</mat-checkbox></button>
+          <mat-menu #layerMenu="matMenu" xPosition="after" yPosition="below">
+            @for(layerOptions of layerMenuOptions; track layerOptions[0]){
+            <button mat-menu-item [value]="layerOptions[1]" #layerButton (click)="selectedLayer(layerOptions[1])">
+              {{layerOptions[0]}}</button>
+            }
           </mat-menu>
 
-          <mat-menu #Satellitemenu="matMenu" xPosition="after" yPosition="below">
-            <button mat-menu-item><mat-checkbox #checkboxSatellite color="primary" value="satellite"
-                (change)="setMapTypeCheckbox($event)">Label</mat-checkbox></button>
-          </mat-menu>
-        </mat-button-toggle-group>
-        <!-- </div> -->
+          <mat-button-toggle-group class="toggle-group">
+            <mat-button-toggle (click)="setMapType(checkboxMap.checked ? 'terrain' : 'roadmap')"
+              [matMenuTriggerFor]="roadMap">
+              <mat-icon>map</mat-icon>Map
+              <!-- Map -->
+            </mat-button-toggle>
+            <mat-button-toggle (click)="setMapType(checkboxSatellite.checked ? 'hybrid' : 'satellite')"
+              [matMenuTriggerFor]="Satellitemenu">
+              <mat-icon>satellite</mat-icon>Satellite
+            </mat-button-toggle>
+
+            <mat-menu #roadMap="matMenu" xPosition="after" yPosition="below">
+              <button mat-menu-item><mat-checkbox #checkboxMap color="primary" value="roadmap"
+                  (change)="setMapTypeCheckbox($event)">Terrain</mat-checkbox></button>
+            </mat-menu>
+
+            <mat-menu #Satellitemenu="matMenu" xPosition="after" yPosition="below">
+              <button mat-menu-item><mat-checkbox #checkboxSatellite color="primary" value="satellite"
+                  (change)="setMapTypeCheckbox($event)">Label</mat-checkbox></button>
+            </mat-menu>
+          </mat-button-toggle-group>
+
+          <!-- TODO:Finish this button for toggling all markers' visibility -->
+          <button mat-mini-fab matRipple class="marker-toggle" (click)="toggleMarkerVisibility()"
+            aria-label="test label">
+            @if(!markersVisible()){
+            <mat-icon>location_on</mat-icon>
+            } @else {
+            <mat-icon>location_off</mat-icon>
+            }
+          </button>
+        </div>
+
       </mat-toolbar>
-
       }
 
       @if (leftButtonFlag() === true){
@@ -114,7 +132,7 @@
         (studiesEmitter)="updateCurrentStudies($event)" (studyEmitter)="updateCurrentStudy($event)"
         [focusedMarker]="currentMarker" [eventRequest]="currentEventRequest" [mapType]="currentMapType"
         [selectedLayer]="currentLayer" (chunkInfoEmitter)="updateChunkMetadata($event)"
-        (streamStatusEmitter)="updateStreamState($event)">
+        (streamStatusEmitter)="updateStreamState($event)" [markersVisible]="markersVisible()">
 
       </app-google-map>
       }

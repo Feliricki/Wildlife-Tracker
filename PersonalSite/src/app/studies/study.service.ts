@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams, HttpStatusCode } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams, HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, of, catchError, tap, map } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -8,7 +8,6 @@ import { EventJsonDTO } from './JsonResults/EventJsonDTO';
 import { EventOptions } from './EventOptions';
 import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
 import { JsonResponseData } from './JsonResults/JsonDataResponse';
-import * as GeoJSON from 'geojson';
 import { EventRequest } from './EventRequest';
 
 @Injectable({
@@ -104,32 +103,6 @@ export class StudyService {
     console.log(parameters);
     return this.httpClient.get<EventJsonDTO>(url, { params: parameters });
   }
-
-  getGeoJsonEventData<TGeo extends GeoJSON.Geometry, TProp, TMeta>(request: EventRequest) {
-    const url = environment.baseUrl + "api/MoveBank/GetEventData";
-
-    const opts = {
-      observe: 'response' as const,
-      responseType: 'json' as const,
-      headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
-    };
-
-    const body = {
-      studyId: request.StudyId,
-      localIdentifiers: request.LocalIdentifiers,
-      sensorType: request.SensorType,
-      geometryType: request.GeometryType,
-      options: request.Options,
-    };
-
-    // NOTE: Error responses should be handled by the caller.
-    return this.httpClient
-      .post<Array<{ metadata: TMeta } & GeoJSON.FeatureCollection<TGeo, TProp>> | null>
-      (url, JSON.stringify(body), opts).pipe(
-        tap(res => console.log(res.url))
-      );
-  }
-
   // NOTE: Validation should occur on the form and on the backend.
   // TODO: Consider sending the request using the given load function
   // to pass the parameters to the body instead of the url (to avoid URL too long responses)
@@ -198,4 +171,30 @@ export class StudyService {
       })
     )
   }
+  // getGeoJsonEventData<TGeo extends GeoJSON.Geometry, TProp, TMeta>(request: EventRequest) {
+  //   const url = environment.baseUrl + "api/MoveBank/GetEventData";
+  //
+  //   const opts = {
+  //     observe: 'response' as const,
+  //     responseType: 'json' as const,
+  //     headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
+  //   };
+  //
+  //   const body = {
+  //     studyId: request.StudyId,
+  //     localIdentifiers: request.LocalIdentifiers,
+  //     sensorType: request.SensorType,
+  //     geometryType: request.GeometryType,
+  //     options: request.Options,
+  //   };
+  //
+  //   // NOTE: Error responses should be handled by the caller.
+  //   return this.httpClient
+  //     .post<Array<{ metadata: TMeta } & GeoJSON.FeatureCollection<TGeo, TProp>> | null>
+  //     (url, JSON.stringify(body), opts).pipe(
+  //       tap(res => console.log(res.url))
+  //     );
+  // }
+
+
 }

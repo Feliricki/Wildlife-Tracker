@@ -101,12 +101,11 @@ type Color = [number, number, number, number] | [number, number, number];
 
 // TODO:Consider a rename
 export type PointForms = {
-  // type: "pathForms";
-  currentIndividual: FormControl<string | null>;
+  type: "pathForms";
+
+  currentIndividuals: FormControl<string>;
   getRadius: FormControl<number>;
   filled: FormControl<boolean>;
-
-  autoHighlight: FormControl<boolean>;
 
   opacity: FormControl<number>;
   focusLevel: FormControl<number>;
@@ -115,8 +114,22 @@ export type PointForms = {
   radiusMaxPixels: FormControl<number>;
 
   getFillColor: FormControl<Color>;
-  getLineColor: FormControl<Color>;
 }
+
+export type PathForms = {
+  type: "pathForms";
+
+  currentIndividual: FormControl<string>;
+  widthScale: FormControl<number>;
+
+  opacity: FormControl<number>;
+
+  widthMinPixels: FormControl<Color>;
+  widthMaxPixels: FormControl<Color>;
+
+
+}
+
 // TODO:
 // 1) Provide some methods here to adjust the message
 // 2) itself or put it in the base class.
@@ -129,8 +142,6 @@ export type PointOverlayOptions = {
   getRadius: number;
   filled: boolean;
 
-  autoHighlight: boolean;
-
   opacity: number;
   focusLevel: number;
 
@@ -138,29 +149,11 @@ export type PointOverlayOptions = {
   radiusMaxPixels: number;
 
   getFillColor: Color;
-  getLineColor: Color;
 }
 
 // TODO: since that data gets sent in a different message.
 // Certain inputs can be saved when the layers changes.
 // Instead of switching them out entirely we can toggle their visibility.
-
-export type PathForms = {
-  // type: "pathForms";
-  currentIndividual: FormControl<string>;
-  widthScale: FormControl<number>;
-
-  opacity: FormControl<number>;
-
-  widthMinPixels: FormControl<number>;
-  widthMaxPixels: FormControl<number>;
-
-  getSourceColor: FormControl<Color>;
-  getTargetColor: FormControl<Color | null>; // this is an optional field
-
-  focusLevel: FormControl<number>;
-  autoHighlight: FormControl<boolean>;
-}
 
 // NOTE: This file contains type meant to sent as messages from the event
 // component in order to change certain options in the overlay controls.
@@ -168,6 +161,7 @@ export type PathOverlayOptions = {
   type: "pathOverlayOptions",
 
   currentIndividual: string;
+  // getWidth: number; // Field in line layers
   widthScale: number; // Field in line layers
 
   opacity: number;
@@ -177,7 +171,7 @@ export type PathOverlayOptions = {
 
   // This fields is used as the value for getColor in line layers instantiatation.
   getSourceColor: Color;
-  getTargetColor?: Color;
+  getTargetColor: Color;
 
   focusLevel: number;
 
@@ -185,41 +179,20 @@ export type PathOverlayOptions = {
   textEnabled?: boolean;
 }
 
-export type AggregationForms = {
-  currentIndividual: FormControl<string | null>;
-  radius: FormControl<number>;
+// NOTE: Currently this only holds information for the scatterplot layer.
 
-  elevationRange: FormControl<[number, number]>;
-  elevationScale: FormControl<number>;
-
-  upperPercentile: FormControl<number>;
-  lowerPercentile: FormControl<number>;
-
-  elevationLowerPercentile: FormControl<number>;
-  elevationUpperPercentile: FormControl<number>;
-
-  elevationAggregation: FormControl<'SUM' | 'MEAN' | 'MAX' | 'MIN'>;
-
-  // nullable forms denote an optional field
-  colorScaleType: FormControl<'quantize' | 'quantile' | 'ordinal' | null>;
-  colorAggregation: FormControl<'SUM' | 'MEAN' | 'MAX' | 'MIN'>;
-
-  getColorWeight: FormControl<number>;
-  getElevationWeight: FormControl<number>;
-}
 // TODO: In the deckoverlay class where this message arrives in,
 // make sure to differentiate between the three types of
 // overlay controls messages.
 export type AggregationOverlayOptions = {
-  type: "aggregationOverlayOptions",
-
   currentIndividual: string;
+  type: "aggregationOverlayOptions",
   radius: number;
   // coverage: number;
-  elevationRange: Range;
-  elevationScale: number;
-  upperPercentile: number;
-  lowerPercentile: number;
+  // elevationRange: Range;
+  // elevationScale: number;
+  // upperPercentile: number;
+  // lowerPercentile: number;
 
   elevationLowerPercentile: number;
   elevationUpperPercentile: number;

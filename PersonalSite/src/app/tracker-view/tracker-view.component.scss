@@ -51,38 +51,62 @@
   // margin: 50px 50px 50px 50px;
 }
 
-/* TODO: The toolbar is broken on mobile and
- blocks acess to button. */
-#toolbar {
-  position: absolute;
-  display: flex;
-  z-index: 4;
-  background-color:rgba(0, 0, 0, 0.0);
 
-  button  {
-    left: 400px;
-    margin-left:1em;
-    margin-top:1em;
+.toolbar-elements {
+  display: flex;
+  flex-flow: row nowrap;
+  // justify-content:center;
+  // align-items: center;
+  // flex-basis: auto;
+  // flex-direction: row;
+  // align-items:center;
+  // justify-items: center;
+
+  #mini-fab-layer {
+    // margin-left: 0em;
+    margin-top: 1.75em;
     background-color: white;
     color:black;
   }
 
-  .toggle-group-container {
-    height: .5em;
+  .extended-fab {
+      // TODO: Let this margin
+      // be dynamically styled
+      margin-top: 1.5em;
+      margin-left:0.0em;
+      background-color: white;
+      color:black;
   }
 
-  mat-button-toggle-group {
-    left: 400px;
-    margin-left: 1em;
-    margin-right:1em;
+  .toggle-group {
+    margin-left: 0.25em;
+    // margin-right:1em;
     margin-top:1em;
-    // height: 1em;
+
     border-radius: 15px;
     background-color: white;
     mat-button-toggle {
-      font-style: normal;
+        font-style: normal;
     }
   }
+
+  .marker-toggle {
+    margin-top: 1.5em;
+    margin-left: 0.5em;
+    background-color: white;
+    color: black;
+  }
+}
+/* TODO: The toolbar is broken on mobile and
+ blocks acess to button. */
+#toolbar {
+  position: absolute;
+  // display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 4;
+  background-color:rgba(0, 0, 0, 0.0);
 
   .chip-listbox {
     position:relative;
@@ -101,10 +125,10 @@
     height: 2.5em;
   }
 
-  .rounded {
-    height: 2.5em;
-    padding-top: 1px;
-    padding-bottom: 1px;
-    border-radius: 25px;
-  }
+  // .rounded {
+  //   height: 2.5em;
+  //   padding-top: 1px;
+  //   padding-bottom: 1px;
+  //   border-radius: 25px;
+  // }
 }

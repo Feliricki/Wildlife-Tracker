@@ -67,6 +67,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   // INFO:Map Controls
   @Input() mapType: MapStyles = "roadmap";
+  @Input() markersVisible: boolean = true;
 
   // INFO:Overlay controls
   @Input() selectedLayer: LayerTypes = LayerTypes.ArcLayer;
@@ -142,7 +143,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     private studyService: StudyService,
     private snackbar: MatSnackBar,
     private injector: Injector) {
-    console.log("Constructing deckOverlayController.");
+    // console.log("Constructing deckOverlayController.");
   }
 
   ngOnInit(): void {
@@ -165,15 +166,16 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
       }
 
       switch (propertyName) {
+        // NOTE:Unused
+        case "pathEventData$":
+          console.log(`Received event observable in google maps component.`);
+          this.pathEventData$ = currentValue as EventResponse;
+          break;
+
         // This case sends a message that is received in the event component
         case "focusedMarker":
           console.log(`Panning to ${currentValue}`);
           this.panToMarker(currentValue);
-          break;
-
-        case "pathEventData$":
-          console.log(`Received event observable in google maps component.`);
-          this.pathEventData$ = currentValue as EventResponse;
           break;
 
         case "eventRequest":
@@ -182,13 +184,22 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           this.handleEventRequest(currentValue as EventRequest);
           break;
 
+        // INFO: Map controls section.
         case "mapType":
-          //TODO:This case is untested. Test with the tracker component's controller.
           console.log(`Changing style into ${currentValue}`);
           this.mapType = currentValue as MapStyles;
           this.map?.setMapTypeId(this.mapType);
           break;
 
+        // BUG:Not all markers get their visiblity toggled
+        // Recheck how the markers are instantiated and associated with the map clusterer.
+        case "markersVisible":
+          this.markersVisible = currentValue as boolean;
+          this.toggleMarkerVisibility(this.markersVisible).then(() => console.log("Toggled markers asynchronously."));
+          console.log(`markersVisible value = ${this.markersVisible}`);
+          break;
+
+        // INFO: Overlay controls sections
         case "selectedLayer":
           this.selectedLayer = currentValue as LayerTypes;
           console.log(`Changing selected layer to ${this.selectedLayer}`);
@@ -209,6 +220,36 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     this.mainSubscription$?.unsubscribe();
     this.streamStatusSubscription?.unsubscribe();
     this.chunkLoadSubscription?.unsubscribe();
+  }
+
+  // TODO: this implemention may cause a memory leak if repeatly toggled.
+  // Lookup if the documentation has a builtin way to
+  // toggle visibility without wasting resources.
+  //BUG:Currently adding markers incur a significant performance penalty.
+  // Consider storing the marker in an array or otherwise toggle the visibility some other way.
+  async toggleMarkerVisibility(visible: boolean): Promise<void> {
+    if (!this.mapCluster) return;
+    if (!this.markers) return;
+
+    const cluster = this.mapCluster;
+    // console.log(this.mapCluster);
+    // console.log(`There are ${this.markers?.size ?? 0} elements in markers collection.`);
+
+    const currentMarkers: google.maps.marker.AdvancedMarkerElement[] = [];
+    for await (const marker of this.markers.values()) {
+      marker.map = visible ? this.map : undefined;
+      currentMarkers.push(marker);
+    }
+    if (!visible) {
+      cluster.clearMarkers();
+    } else {
+      this.mapCluster = new MarkerClusterer({
+        map: this.map,
+        markers: currentMarkers,
+        renderer: new CustomRenderer1(),
+        algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
+      });
+    }
   }
 
   handleEventRequest(request: EventRequest) {
@@ -322,6 +363,9 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
             if (this.infoWindow === undefined) {
               return;
             }
+            // TODO:Remove this after debugging
+            console.log(`Clicked marker with id = ${studyDTO.id} Contained in markers = ${this.markers?.has(studyDTO.id)}`);
+            console.log(this.mapCluster);
             // NOTE: If a marker is clicked then close another instance of the info window component
             if (this.infoWindow.get("studyId") !== undefined
               && this.infoWindow.get("studyId") === studyDTO.id

@@ -9,7 +9,7 @@ import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
 import { MatIconModule } from '@angular/material/icon';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/layout';
-import { Observable, firstValueFrom, map } from 'rxjs';
+import { Observable, firstValueFrom, map, tap } from 'rxjs';
 import { HttpResponse } from '@angular/common/http';
 import { LineStringFeatureCollection, LineStringPropertiesV1 } from "../deckGL/GeoJsonTypes";
 import { EventRequest } from "../studies/EventRequest";
@@ -23,6 +23,7 @@ import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox
 import { LayerTypes, StreamStatus } from '../deckGL/GoogleOverlay';
 import { MatRippleModule } from '@angular/material/core';
 import { EventMetaData } from '../events/EventsMetadata';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 export type MapStyles =
   "roadmap" | "terrain" | "hybrid" | "satellite";
@@ -48,7 +49,8 @@ export type MapStyles =
     MatDividerModule,
     MatChipsModule,
     MatCheckboxModule,
-    MatRippleModule
+    MatRippleModule,
+    MatTooltipModule
   ],
   animations: [
 
@@ -104,6 +106,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   leftButtonFlag: WritableSignal<boolean> = signal(false);
   rightButtonFlag: WritableSignal<boolean> = signal(true);
 
+  markersVisible: WritableSignal<boolean> = signal(true);
   // INFO:The following are dynamic styling which
   // changes depending on the current screen size.
   leftNavSmallStyle = {
@@ -116,12 +119,33 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     "width": "400px",
   }
 
+  toolbarOffset = {
+    // "margin-left": "400px"
+    // "margin-left": "45%"
+    // "margin-left": "40vw"
+    // "align-items": "center",
+    // "justify-content": "center"
+  }
+
+  toolbarOffsetSmall = {
+    // "left": "0px"
+    // "margin-top": "1.25em"
+  }
+
+  // miniFabLayerButton = {
+  //   "margin-top": "1.75em"
+  // }
+  // miniFabLayerButtonXSmall = {
+  //   "margin-top": "1.5em"
+  // }
+
+  smallScreen$?: Observable<boolean>;
   XSmallScreen$?: Observable<boolean>;
 
   readonly layerMenuOptions = [
     ["Arc Layer", LayerTypes.ArcLayer],
     ["Line Layer", LayerTypes.LineLayer],
-    // ["Path Layer", LayerTypes.PathLayer],// Having both the line and path layer is redundant.
+    // ["Path Layer", LayerTypes.PathLayer], // Having both the line and path layer is redundant.
     ["Hexagon Layer", LayerTypes.HexagonLayer],
     ["Scatterplot Layer", LayerTypes.ScatterplotLayer],
     ["Screen Grid Layer", LayerTypes.ScreenGridLayer],
@@ -150,9 +174,15 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
       }
     });
 
+    this.smallScreen$ = this.breakpointObserver
+      .observe([Breakpoints.XSmall, Breakpoints.Small]).pipe(
+        map((state: BreakpointState) => state.matches),
+      );
+
     this.XSmallScreen$ = this.breakpointObserver
       .observe([Breakpoints.XSmall]).pipe(
         map((state: BreakpointState) => state.matches),
+        tap(value => console.log(`Current state ${value} in track view component.`)),
       );
   }
 
@@ -219,13 +249,13 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     this.currentMarker = studyId;
   }
 
-  updateChunkMetadata(chunkInfo: EventMetaData){
+  updateChunkMetadata(chunkInfo: EventMetaData) {
     console.log("Tracker Component: Current chunk info  is ");
     console.log(chunkInfo);
     this.currentChunkInfo = chunkInfo;
   }
 
-  updateStreamState(streamStatus: StreamStatus){
+  updateStreamState(streamStatus: StreamStatus) {
     this.currentStreamStatus = streamStatus;
   }
 
@@ -272,6 +302,20 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   openSearchNav(): void {
     this.sidenav.open().then(() => {
       this.leftButtonFlag.set(false);
-    })
+    });
   }
+
+  toggleMarkerVisibility(): boolean {
+    this.markersVisible.update(prev => !prev);
+    return this.markersVisible();
+  }
+
+  markerToggleLabel(): string {
+    if (this.markersVisible()){
+      return "Remove markers.";
+    } else {
+      return "Add markers.";
+    }
+  }
+
 }
