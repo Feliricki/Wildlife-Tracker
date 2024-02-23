@@ -264,7 +264,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     return new google.maps.LatLng(coordinates[0], coordinates[1]);
   }
 
-
   sendMapState(loaded: boolean): void {
     this.mapStateEmitter.emit(loaded);
   }

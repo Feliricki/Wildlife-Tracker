@@ -102,7 +102,7 @@ type Color = [number, number, number, number] | [number, number, number];
 // TODO:Consider a rename
 export type PointForms = {
   // type: "pathForms";
-  currentIndividual: FormControl<string | null>;
+  currentIndividual: FormControl<string>;
   getRadius: FormControl<number>;
   filled: FormControl<boolean>;
 
@@ -114,8 +114,10 @@ export type PointForms = {
   radiusMinPixels: FormControl<number>;
   radiusMaxPixels: FormControl<number>;
 
-  getFillColor: FormControl<Color>;
-  getLineColor: FormControl<Color>;
+  getFillColor: FormControl<string>;
+  // getFillColor: FormControl<Color>;
+  // getLineColor: FormControl<Color>;
+  getLineColor: FormControl<string>;
 }
 // TODO:
 // 1) Provide some methods here to adjust the message
@@ -146,7 +148,6 @@ export type PointOverlayOptions = {
 // Instead of switching them out entirely we can toggle their visibility.
 
 export type PathForms = {
-  // type: "pathForms";
   currentIndividual: FormControl<string>;
   widthScale: FormControl<number>;
 
@@ -155,8 +156,8 @@ export type PathForms = {
   widthMinPixels: FormControl<number>;
   widthMaxPixels: FormControl<number>;
 
-  getSourceColor: FormControl<Color>;
-  getTargetColor: FormControl<Color | null>; // this is an optional field
+  getSourceColor: FormControl<string>;
+  getTargetColor: FormControl<string | null>; // this is an optional field
 
   focusLevel: FormControl<number>;
   autoHighlight: FormControl<boolean>;

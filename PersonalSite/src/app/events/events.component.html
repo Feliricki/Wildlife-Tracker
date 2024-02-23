@@ -26,64 +26,12 @@
     <br>
 
     <form [formGroup]="eventForm" #EventRef (ngSubmit)="submitForm()" class="event-form">
-      <!-- TODO: -->
-      <!-- 1) implement the onSubmit() method to create the observable. -->
-      <!-- 2) Consider using a promise and awaiting method result. -->
-      <!-- 3) Consider if this data needs to be used in the google maps component. -->
-      <!-- TODO: Timestamp are used in conjunction with the studyId to retrieve event and nothing else. -->
-      <!-- <div class="first-row"> -->
-      <!--   <mat-form-field class="date-input"> -->
-      <!--     <mat-label>Enter a date range.</mat-label> -->
-      <!--     <mat-date-range-input [rangePicker]="picker" formGroupName="dateRange"> -->
-      <!--       <input matStartDate formControlName="start" placeholder="Start Date"> -->
-      <!--       <input matEndDate formControlName="end" placeholder="End Date"> -->
-      <!--     </mat-date-range-input> -->
-      <!--     <mat-hint>MM/DD/YYYY – MM/DD/YYYY</mat-hint> -->
-      <!--     <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle> -->
-      <!--     <mat-date-range-picker [touchUi]="extraSmallScreenChange | async" #picker></mat-date-range-picker> -->
-      <!--     @if (eventForm.hasError("IncompleteSubmission")){ -->
-      <!--     <mat-error>Incomplete Input.</mat-error> -->
-      <!--     } -->
-      <!--     @else if (eventForm.hasError("InvalidDateRange")){ -->
-      <!--     <mat-error>Invalid Date Range Entered.</mat-error> -->
-      <!--     } -->
-      <!--   </mat-form-field> -->
-      <!-- </div> -->
 
-      <!-- <div class="second-row"> -->
-      <!---->
-      <!--   <mat-slide-toggle class="slide-toggle" [disabled]="TableState() !== 'loaded'" #slideToggle> -->
-      <!--     Enable Event Limit -->
-      <!--   </mat-slide-toggle> -->
-      <!---->
-      <!--   <!-- INFO: This is the text input form for the maximum number of events to request from MoveBank's api -->
-      <!--   <mat-form-field class="maxEventForm"> -->
-      <!--     <mat-label>Maximum number of events</mat-label> -->
-      <!--     <input matInput class="maxEventInput" #maxEventInput formControlName="maxEvents" type="number" min="1" -->
-      <!--       [max]="MAX_EVENTS_LIMIT" /> -->
-      <!--   </mat-form-field> -->
-      <!--   <br> -->
-      <!--   @if (eventForm.hasError("InvalidNumber")){ -->
-      <!--   <mat-error>Invalid Input.</mat-error> -->
-      <!--   } -->
-      <!-- </div> -->
-      <!-- <!-- This slider should be synced with the text input box.-->
-      <!-- <!-- This is another form the maxEvents form. -->
-      <!-- <!-- [ngStyle]="(screenChange | async) ? smallTabSize : largeTabSize"-->
-      <!-- <div class="third-row"> -->
-      <!--   <mat-slider min="1" [max]="MAX_EVENTS_LIMIT" discrete class="slider"> -->
-      <!--     <input matSliderThumb name="slider" (valueChange)="setMaxEventsValue($event)" -->
-      <!--       [value]="maxEventInput.valueAsNumber"> -->
-      <!--   </mat-slider> -->
-      <!-- </div> -->
-      <!-- <br> -->
-
-      <!-- <div class="fourth-row" [ngStyle]="(screenChange | async) ? fourthRowSmall : fourthRowDefault"> -->
       <div class="dense-3" [ngStyle]="(screenChange | async) ? fourthRowSmall : fourthRowDefault">
         <mat-form-field class="reduction-profile-form">
-          <!-- <mat-label>Reduction Profile</mat-label> -->
+          <!-- <mat-label>Event Reduction Profile</mat-label> -->
           <!-- <mat-label>Placeholder</mat-label> -->
-          <mat-select formControlName="eventProfiles" placeholder="Event Profiles"
+          <mat-select formControlName="eventProfiles" placeholder="Reduction Profiles"
             matTooltip="Limit the number of events to improve performance and reduce clutter.">
 
             <mat-option value="EURING_01">24 hours between events.</mat-option>
@@ -179,7 +127,7 @@
             <!-- TODO: Set the value attribute to the local identifier. -->
             <!-- INFO: This the templating for the individual local identifiers -->
             <td mat-cell *matCellDef="let control; let j = index;" class="individual-header-cell">
-              <p>{{getIndividual(j)()?.LocalIdentifier ?? "N/A" }}</p>
+              <p>{{ getIndividual(j)()?.LocalIdentifier ?? "N/A" }}</p>
             </td>
 
             <td mat-footer-cell *matFooterCellDef>
@@ -200,23 +148,16 @@
     </form>
     @if (TableState() === "loaded" && tableSource.TableSize() === 0){
     <br>
-    <span>No Animals Found.</span>
+    <span id="no-animal-found">No Animals Found.</span>
     }
 
   </mat-tab>
 
-  <!-- TODO: Get started on the event controls-->
   <mat-tab #EventsTab label="Events" [matBadge]="1" [matBadgeHidden]="badgeHidden">
-    <!-- NOTE: Individual names are unique -->
 
-    <!-- TODO:1) Add notification here. -->
-    <!-- 2) Add a max width and place the items in a flex container? -->
-    <!-- Consider adding an actual form to hold the content. -->
-    <!-- @for (animal of currentIndividuals; track animal){ -->
-    <!-- <p>Test 1: {{animal}}</p> -->
-    <!-- } -->
-
-    @for (animal of currentIndividuals; track animal){
+    <!--TODO:Rewrite this for loop to iterate over the current number
+      of overlay controls of the correct type which is initially zero.-->
+    @for (animal of currentIndividuals; track animal; let i = $index){
     <mat-card>
       <mat-card-header class="card-header">
         <mat-card-subtitle>
@@ -230,219 +171,205 @@
 
         <!-- TODO: The correct approach is to wrap everything in a form element.
               and then wrap each input element in a mat-form-field element.-->
-        @if (currentEventData && isPointLayer(currentEventData.layer)){
+        @if (currentEventData && isPointLayer(CurrentActiveLayer())){
         <form [formGroup]="pointOverlayControls">
 
-          <div class="ArrayControls" formArrayName="individual">
+          <div class="arrayControls" formArrayName="individual">
 
-            <div class="first-content-row">
-              <mat-form-field FormControlName="radius">
-                <mat-label>Radius</mat-label>
-                <input matInput type="text">
-              </mat-form-field>
+            <!-- TODO:Make sure this group name is bound to the current index -->
+            <div [formGroupName]="i">
+              <!-- TODO:Check if the matInput attribute is required for this element to be styled properly. -->
+              <div class="first-content-row">
 
-              <!-- <mat-form-field FormControlName="radiusUnits"> -->
-              <!--   <mat-label>Radius Units</mat-label> -->
-              <!--   <input matInput type="text"> -->
-              <!-- </mat-form-field> -->
-              <!---->
-              <!-- <mat-form-field FormControlName="RadiusScale"> -->
-              <!--   <mat-label>Radius Scale</mat-label> -->
-              <!--   <input matInput type="text"> -->
-              <!-- </mat-form-field> -->
+                <mat-form-field formControlName="getRadius">
+                  <mat-label>Radius</mat-label>
+                  <input type="text">
+                </mat-form-field>
 
-              <mat-form-field FormControlName="radiusMinPixels">
-                <mat-label>Radius Minimum Pixels</mat-label>
-                <input matInput type="number">
-              </mat-form-field>
+                <mat-slide-toggle formControlName="filled">
+                  Filled Outline
+                </mat-slide-toggle>
 
-              <mat-form-field FormControlName="radiusMaxPixels">
-                <mat-label>Radius Maximum Pixels</mat-label>
-                <input matInput type="number">
-              </mat-form-field>
+                <mat-slide-toggle formControlName="autoHighlight">
+                  Auto-Highlight
+                </mat-slide-toggle>
 
+                <mat-form-field formControlName="opacity">
+                  <mat-label>Opacity</mat-label>
+                  <input type="number">
+                </mat-form-field>
+
+              </div>
+              <div class="second-row-content">
+
+                <mat-form-field formControlName="radiusMinPixels">
+                  <mat-label>Radius Minimum Pixels</mat-label>
+                  <input type="number">
+                </mat-form-field>
+
+                <mat-form-field formControlName="radiusMaxPixels">
+                  <mat-label>Radius Maximum Pixels</mat-label>
+                  <input type="number">
+                </mat-form-field>
+
+                <mat-form-field formControlName="getFillColor">
+                  <mat-label>Fill Color</mat-label>
+                  <input type="color">
+                </mat-form-field>
+
+                <!-- TODO:This may not be applicable to arc layers. Check the documentation for details -->
+                <mat-form-field formControlName="getLineColor">
+                  <mat-label>Line Color</mat-label>
+                  <input type="color">
+                </mat-form-field>
+
+              </div>
             </div>
-
-            <div class="second-row-content">
-
-              <!-- <mat-form-field formControlName="lineWidthUnits"> -->
-              <!--   <mat-label>Line Width Units</mat-label> -->
-              <!--   <input matInput type="text"> -->
-              <!-- </mat-form-field> -->
-              <!---->
-              <!-- <mat-form-field formControlName="lineWidthScale"> -->
-              <!--   <mat-label>Line Width Scale</mat-label> -->
-              <!--   <input matInput type="text"> -->
-              <!-- </mat-form-field> -->
-
-              <mat-checkbox formControlName="autoHighlight">
-                Auto-Highlight
-              </mat-checkbox>
-
-              <mat-form-field FormControlName="opacity">
-                <mat-label>opacity</mat-label>
-                <input matInput type="number">
-              </mat-form-field>
-
-            </div>
-
-            <div class="third-row-content">
-
-              <!-- <mat-form-field formControlName="getColor"> -->
-              <!--   <mat-label>Color</mat-label> -->
-              <!--   <input matInput type="text"> -->
-              <!-- </mat-form-field> -->
-
-              <mat-form-field formControlName="getFillColor">
-                <mat-label>Fill Color</mat-label>
-                <input matInput type="text">
-              </mat-form-field>
-
-              <mat-form-field formControlName="getLineColor">
-                <mat-label>Line Color</mat-label>
-                <input matInput type="text">
-              </mat-form-field>
-
-              <mat-form-field formControlName="getLineWidth">
-                <mat-label>Line Width</mat-label>
-                <input matInput type="number">
-              </mat-form-field>
-            </div>
-
           </div>
-
         </form>
         }
 
-        @else if(currentEventData && isPathLayer(currentEventData.layer)){
+        @else if(currentEventData && isPathLayer(CurrentActiveLayer())){
         <!-- TODO: To cut down on the number of input form it may be better to -->
         <!-- to remove the option to change the unit types -->
 
-        <div class="first-row-content">
+        <form [formGroup]="pathOverlayControls">
 
-          <mat-form-field FormControlName="pathRadius">
-            <mat-label>Path Radius</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
+          <div formArrayName="individual">
 
-          <mat-form-field FormControlName="width">
-            <mat-label>Width</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
+            <div [formGroupName]="i">
 
-          <mat-form-field FormControlName="widthMinPixels">
-            <mat-label>Width Minimum Pixels</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
+              <div class="first-row-content">
 
-          <mat-form-field FormControlName="widthMaxPixels">
-            <mat-label>Width Maximium Pixels</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
+                <mat-form-field formControlName="widthScale">
+                  <mat-label>Line Radius</mat-label>
+                  <input type="number">
+                </mat-form-field>
 
-          <!-- <mat-form-field FormControlName="pathScale"> -->
-          <!--   <mat-label>Path Scale</mat-label> -->
-          <!--   <input matInput type="number"> -->
-          <!-- </mat-form-field> -->
-          <!---->
-          <!-- <mat-form-field FormControlName="pathUnits"> -->
-          <!--   <mat-label>Path Units</mat-label> -->
-          <!--   <input matInput type="number"> -->
-          <!-- </mat-form-field> -->
+                <mat-form-field formControlName="opacity">
+                  <mat-label>Opacity</mat-label>
+                  <input matInput type="number">
+                </mat-form-field>
 
-          <!-- <mat-form-field FormControlName="widthUnits"> -->
-          <!--   <mat-label>Width Units</mat-label> -->
-          <!--   <input matInput type="number"> -->
-          <!-- </mat-form-field> -->
-          <!---->
-          <!-- <mat-form-field FormControlName="widthScale"> -->
-          <!--   <mat-label>Width Scale</mat-label> -->
-          <!--   <input matInput type="number"> -->
-          <!-- </mat-form-field> -->
+                <!-- NOTE:This section needs a tooltip to explain the following parameters. -->
+                <mat-form-field formControlName="widthMinPixels">
+                  <mat-label>Width Minimum Pixels</mat-label>
+                  <input type="number">
+                </mat-form-field>
 
+                <mat-form-field formControlName="widthMaxPixels">
+                  <mat-label>Width Maximium Pixels</mat-label>
+                  <input type="number">
+                </mat-form-field>
 
-        </div>
+              </div>
 
-        <div class="second-content-row">
+              <div class="second-content-row">
 
-          <mat-form-field FormControlName="opacity">
-            <mat-label>Opacity</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
+                <mat-form-field formControlName="getSourceColor">
+                  <mat-label>
+                    <!-- CASE 1: ArcLayer -->
+                    @if (currentActiveLayer() === 0){
+                    Source Color
+                    } @else {
+                    Color
+                    }
+                  </mat-label>
+                  <input type="color">
+                </mat-form-field>
 
-        </div>
+                <!-- TODO:Test if this field is properly hidden when the current active layer is of type arc. -->
+                <mat-form-field [hidden]="CurrentActiveLayer() === 0" formControlName="getTargetColor">
+                  <mat-label>
+                    Target Color
+                  </mat-label>
+                  <input type="color">
+                </mat-form-field>
 
-        <div class="third-content-row">
-          <mat-form-field FormControlName="GetFillColor">
-            <mat-label>Fill Color</mat-label>
-            <input matInput type="color">
-          </mat-form-field>
+                <mat-form-field formControlName="focusLevel">
+                  <mat-label>Focus Opacity</mat-label>
+                  <input type="number">
+                </mat-form-field>
 
-          <mat-form-field FormControlName="getLineColor">
-            <mat-label>Line Color</mat-label>
-            <input matInput type="color">
-          </mat-form-field>
+                <!-- TODO:Change this a slide toggle instead of a checkbox. -->
+                <mat-checkbox formControlName="AutoHighlight">
+                  Auto-Highlight
+                </mat-checkbox>
 
-          <mat-checkbox FormControlName="AutoHighlight">
-            Auto-Highlight
-          </mat-checkbox>
-        </div>
-
+              </div>
+              <!-- Current formGroupName = {{i}} Current Layer is of type path. -->
+            </div>
+          </div>
+        </form>
         }
-        @else if (currentEventData && isAggregationLayer(currentEventData.layer)){
-        <!-- <p>Aggregation Layer Test</p> -->
-        <div class="first-row-content">
 
-          <mat-form-field FormControlName="radius">
-            <mat-label>Radius</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
+        @else if (currentEventData && isAggregationLayer(CurrentActiveLayer())){
 
-          <mat-form-field FormControlName="elevationRange">
-            <mat-label>Elevation Range</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
+        <form [formGroup]="aggregationOverlayControls">
 
-          <mat-form-field FormControlName="elevationScale">
-            <mat-label>Elevation Scale</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
+          <div formArrayName="individual">
 
-          <mat-form-field FormControlName="elevationLowerPercentile">
-            <mat-label>Elevation Lower Percentile</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
+            <div [formGroupName]="i">
+              <div class="first-row-content">
 
-          <mat-form-field FormControlName="elevationUpperPercentile">
-            <mat-label>Elevation Upper Percentile</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
+                <mat-form-field formControlName="radius">
+                  <mat-label>Radius</mat-label>
+                  <input type="number">
+                </mat-form-field>
 
-          <mat-form-field FormControlName="elevationAggregration">
-            <mat-label>Elevation Aggregation</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
+                <mat-form-field formControlName="elevationRange">
+                  <mat-label>Elevation Range</mat-label>
+                  <input type="number">
+                </mat-form-field>
 
-          <mat-form-field FormControlName="colorScaleType">
-            <mat-label>Color Scale Type</mat-label>
-            <input matInput type="text">
-          </mat-form-field>
+                <mat-form-field formControlName="elevationScale">
+                  <mat-label>Elevation Scale</mat-label>
+                  <input type="number">
+                </mat-form-field>
 
-          <mat-form-field FormControlName="colorAggregation">
-            <mat-label>Color Aggregation</mat-label>
-            <input matInput type="text">
-          </mat-form-field>
+                <mat-form-field formControlName="elevationLowerPercentile">
+                  <mat-label>Elevation Lower Percentile</mat-label>
+                  <input type="number">
+                </mat-form-field>
 
-          <mat-form-field FormControlName="colorWeight">
-            <mat-label>Color Weight</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
+                <mat-form-field formControlName="elevationUpperPercentile">
+                  <mat-label>Elevation Upper Percentile</mat-label>
+                  <input type="number">
+                </mat-form-field>
 
-          <mat-form-field FormControlName="getElevationRange">
-            <mat-label>Elevation Range</mat-label>
-            <input matInput type="number">
-          </mat-form-field>
-        </div>
+              </div>
+
+              <div class="second-row-content">
+
+                <mat-form-field formControlName="elevationAggregration">
+                  <mat-label>Elevation Aggregation</mat-label>
+                  <input type="number">
+                </mat-form-field>
+
+                <mat-form-field formControlName="colorScaleType">
+                  <mat-label>Color Scale Type</mat-label>
+                  <input type="text">
+                </mat-form-field>
+
+                <mat-form-field formControlName="colorAggregation">
+                  <mat-label>Color Aggregation</mat-label>
+                  <input type="text">
+                </mat-form-field>
+
+                <mat-form-field formControlName="colorWeight">
+                  <mat-label>Color Weight</mat-label>
+                  <input type="number">
+                </mat-form-field>
+
+                <mat-form-field formControlName="getElevationRange">
+                  <mat-label>Elevation Range</mat-label>
+                  <input type="number">
+                </mat-form-field>
+
+              </div>
+            </div>
+          </div>
+        </form>
         }
 
         <mat-divider></mat-divider>

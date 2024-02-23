@@ -24,6 +24,7 @@ import { LayerTypes, StreamStatus } from '../deckGL/GoogleOverlay';
 import { MatRippleModule } from '@angular/material/core';
 import { EventMetaData } from '../events/EventsMetadata';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatRadioModule } from '@angular/material/radio';
 
 export type MapStyles =
   "roadmap" | "terrain" | "hybrid" | "satellite";
@@ -50,7 +51,8 @@ export type MapStyles =
     MatChipsModule,
     MatCheckboxModule,
     MatRippleModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatRadioModule,
   ],
   animations: [
 
@@ -89,7 +91,8 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   currentStudies?: Map<bigint, StudyDTO>;
   currentMapType: MapStyles = "roadmap";
 
-  currentLayer: LayerTypes = LayerTypes.ArcLayer;
+  // currentLayer: LayerTypes = LayerTypes.ArcLayer;
+  currentLayer: WritableSignal<LayerTypes>  = signal(LayerTypes.ArcLayer);
 
   displayedEvents?: EventJsonDTO[];
 
@@ -205,7 +208,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   // INFO:Overlay controls.
   selectedLayer(layer: LayerTypes) {
-    this.currentLayer = layer;
+    this.currentLayer.set(layer);
   }
 
   // INFO:Map and component state.

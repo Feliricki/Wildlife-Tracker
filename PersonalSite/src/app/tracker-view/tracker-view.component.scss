@@ -132,3 +132,14 @@
   //   border-radius: 25px;
   // }
 }
+
+.layer-radio-group {
+  display:flex;
+  flex-direction: column;
+  // margin-right: 5px;
+  align-content: flex-start;
+
+  .layer-radio-button {
+    margin-right: 1em;
+  }
+}

@@ -27,8 +27,7 @@
       <!--   [fixedInViewport]="true"> -->
 
       <app-events #eventComponent (eventRequestEmitter)="updateCurrentEventRequest($event)"
-        (lineDataEmitter)="updateLineStringData($event)" (closeRightNavEmitter)="closeRightNav()"
-        [currentStudy]="currentStudy" [currentEventData]="currentChunkInfo"
+        (closeRightNavEmitter)="closeRightNav()" [currentStudy]="currentStudy" [currentEventData]="currentChunkInfo"
         [streamStatus]="currentStreamStatus"></app-events>
 
     </mat-sidenav>
@@ -79,10 +78,11 @@
           }
 
           <mat-menu #layerMenu="matMenu" xPosition="after" yPosition="below">
-            @for(layerOptions of layerMenuOptions; track layerOptions[0]){
-            <button mat-menu-item [value]="layerOptions[1]" #layerButton (click)="selectedLayer(layerOptions[1])">
-              {{layerOptions[0]}}</button>
-            }
+            <mat-radio-group class="layer-radio-group">
+              @for(layerOptions of layerMenuOptions; track layerOptions[0]){
+              <mat-radio-button [value]="layerOptions[1]" class="layer-radio-button">{{layerOptions[0]}}</mat-radio-button>
+              }
+            </mat-radio-group>
           </mat-menu>
 
           <mat-button-toggle-group class="toggle-group">
@@ -131,9 +131,8 @@
       <app-google-map [pathEventData$]="currentEventLineData$" (mapStateEmitter)="updateMapState($event)"
         (studiesEmitter)="updateCurrentStudies($event)" (studyEmitter)="updateCurrentStudy($event)"
         [focusedMarker]="currentMarker" [eventRequest]="currentEventRequest" [mapType]="currentMapType"
-        [selectedLayer]="currentLayer" (chunkInfoEmitter)="updateChunkMetadata($event)"
+        [selectedLayer]="currentLayer()" (chunkInfoEmitter)="updateChunkMetadata($event)"
         (streamStatusEmitter)="updateStreamState($event)" [markersVisible]="markersVisible()">
-
       </app-google-map>
       }
 

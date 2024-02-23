@@ -370,9 +370,11 @@ export class GoogleMapOverlayController {
   // This render the latest options selected by the users.
   // Test if the updateTrigger attribute is actually doing something.
   changeActiveLayer(layer: LayerTypes): void {
-    if (this.currentLayer === layer || this.dataChunks.length === 0) return;
+    // if (this.currentLayer === layer || this.dataChunks.length === 0) return;
+    if (this.currentLayer === layer) return;
     this.currentLayer = layer;
     console.log(`Active layer is ${layer} in GoogleOverlay.`);
+    if (this.dataChunks.length === 0) return;
 
     const layers = this.dataChunks.map((chunk, index) => this.createActiveLayer(layer, chunk.lines, index));
     this.deckOverlay?.setProps({ layers: layers });

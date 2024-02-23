@@ -62,9 +62,14 @@ mat-card {
   margin: 10px 10px 30px 30px;
 }
 
+mat-form-field {
+  // width: 70px;
+  width: auto;
+  margin-right: 10px;
+}
+
 .first-content-row {
   display: flex;
-  // justify-content: left;
 }
 
 .second-content-row {
