@@ -60,7 +60,8 @@ export type OverlayTypes = FormGroup<PointForms> | FormGroup<PathForms> | FormGr
     MatExpansionModule, MatTooltipModule, MatSelectModule,
     MatDividerModule, MatDatepickerModule, MatBadgeModule,
     MatSlideToggleModule, MatSliderModule, MatProgressBarModule,
-    MatCardModule, MatCheckboxModule, MatFormFieldModule
+    MatCardModule, MatCheckboxModule, MatFormFieldModule,
+    MatInputModule
   ],
   templateUrl: './events.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -88,8 +89,26 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   currentSortOrder: 'asc' | 'desc' = 'asc';
   currentLocationSensors: WritableSignal<string[]> = signal([]);
   currentActiveForms: WritableSignal<ActiveForm> = signal("path");
-  currentActiveLayer: WritableSignal<LayerTypes> = signal(LayerTypes.ArcLayer); // NOTE:This may be subject to change
-  // currentIndividual: WritableSignal<string | null> = signal(null);
+
+  // NOTE:This may be subject to change
+  currentActiveLayer: WritableSignal<LayerTypes> = signal(LayerTypes.ArcLayer);
+
+  // NOTE: currentEventData is only not undefined when an event has been recieved meaning that
+  // forms can only be switched out when at least one event has been received.
+  pointFormValid: Signal<boolean> = computed(() => {
+    const newLayer = this.currentActiveLayer();
+    return this.isPointLayer(newLayer) && this.currentEventData !== undefined;
+  });
+
+  pathFormValid: Signal<boolean> = computed(() => {
+    const newLayer = this.currentActiveLayer();
+    return this.isPathLayer(newLayer) && this.currentEventData !== undefined;
+  });
+
+  aggregationFormValid: Signal<boolean> = computed(() => {
+    const newLayer = this.currentActiveLayer();
+    return this.isAggregationLayer(newLayer) && this.currentEventData !== undefined;
+  });
 
   @Output() closeRightNavEmitter = new EventEmitter<true>(true);
   @Output() eventRequestEmitter = new EventEmitter<EventRequest>();
@@ -114,100 +133,23 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     updateOn: "change"
   });
 
-  pathOverlayControls = this.formBuilder.nonNullable.group({
-    individual: this.formBuilder.array([] as Array<FormGroup<PathForms>>),
-  });
-
   // TODO:
   // 1) Rewrite these forms to match the types in the OverlayOptions.ts file
   // 2) making a base form for each layer type.
   //  This is necessary since some values can carried over onto other forms types.
   // 3) Make the form array initially empty.
   // 4) reconsider the default options
-  // pointOverlayControls = this.formBuilder.nonNullable.group({
-  //   individual: this.formBuilder.array([
-  //     this.formBuilder.group({
-  //
-  //       currentIndividual: this.formBuilder.nonNullable.control(null as null | string),
-  //       getRadius: this.formBuilder.nonNullable.control(3),
-  //       filled: this.formBuilder.nonNullable.control(true),
-  //
-  //       autoHighlight: this.formBuilder.nonNullable.control(true),
-  //
-  //       opacity: this.formBuilder.nonNullable.control(0.8),
-  //       focusLevel: this.formBuilder.nonNullable.control(1.0),
-  //
-  //       radiusMinPixels: this.formBuilder.nonNullable.control(1),
-  //       radiusMaxPixels: this.formBuilder.nonNullable.control(100),
-  //
-  //       // getFillColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
-  //       // getLineColor: this.formBuilder.nonNullable.control([0, 0, 0, 255] as RGBAColor),
-  //       getFillColor: this.formBuilder.nonNullable.control("#ff0000"),
-  //       getLineColor: this.formBuilder.nonNullable.control("#00ff00"),
-  //     } as PointForms)
-  //   ])
-  // });
-
   pointOverlayControls = this.formBuilder.nonNullable.group({
     individual: this.formBuilder.array([] as Array<FormGroup<PointForms>>),
   });
 
-  //TODO:Add a method to dynamically add entries to all 3 overlay controls.
-  // pathOverlayControls = this.formBuilder.nonNullable.group({
-  //   individual: this.formBuilder.array([
-  //     this.formBuilder.group({
-  //
-  //       currentIndividual: this.formBuilder.nonNullable.control(null as null | string),
-  //       widthScale: this.formBuilder.nonNullable.control(1),
-  //
-  //       opacity: this.formBuilder.nonNullable.control(0.8),
-  //
-  //       widthMinPixels: this.formBuilder.nonNullable.control(1),
-  //       widthMaxPixels: this.formBuilder.nonNullable.control(Number.MAX_SAFE_INTEGER),
-  //
-  //       // getSourceColor: this.formBuilder.nonNullable.control([0, 255, 0, 255] as RGBAColor),
-  //       // getTargetColor: this.formBuilder.nonNullable.control(null as RGBAColor | null),
-  //
-  //       getSourceColor: this.formBuilder.nonNullable.control("#ff00ff"),
-  //       getTargetColor: this.formBuilder.nonNullable.control(null as string | null),
-  //
-  //
-  //       focusLevel: this.formBuilder.nonNullable.control(1.0),
-  //       autoHighlight: this.formBuilder.nonNullable.control(true),
-  //     } as PathForms)
-  //   ])
-  // });
+  pathOverlayControls = this.formBuilder.nonNullable.group({
+    individual: this.formBuilder.array([] as Array<FormGroup<PathForms>>),
+  });
 
   aggregationOverlayControls = this.formBuilder.nonNullable.group({
     individual: this.formBuilder.array([] as Array<FormGroup<AggregationForms>>)
   });
-
-  // TODO:The default values need to be checked in the overlay controls file.
-  // aggregationOverlayControls = this.formBuilder.nonNullable.group({
-  //   individual: this.formBuilder.array([
-  //     this.formBuilder.group({
-  //       currentIndividual: this.formBuilder.nonNullable.control(null as null | string),
-  //       radius: this.formBuilder.nonNullable.control(1),
-  //
-  //       elevationRange: this.formBuilder.nonNullable.control([0, 1000] as [number, number]),
-  //       elevationScale: this.formBuilder.nonNullable.control(1),
-  //
-  //       lowerPercentile: this.formBuilder.nonNullable.control(0),
-  //       upperPercentile: this.formBuilder.nonNullable.control(100),
-  //
-  //       elevationLowerPercentile: this.formBuilder.nonNullable.control(0),
-  //       elevationUpperPercentile: this.formBuilder.nonNullable.control(100),
-  //
-  //       elevationAggregation: this.formBuilder.nonNullable.control("SUM" as "SUM" | "MEAN" | "MAX" | "MIN"),
-  //
-  //       colorScaleType: this.formBuilder.nonNullable.control(null as "quantize" | "quantile" | "ordinal" | null),
-  //       colorAggregation: this.formBuilder.nonNullable.control("SUM" as "SUM" | "MEAN" | "MAX" | "MIN"),
-  //
-  //       getColorWeight: this.formBuilder.nonNullable.control(1),
-  //       getElevationWeight: this.formBuilder.nonNullable.control(1),
-  //     } as AggregationForms)
-  //   ])
-  // });
 
   tableSource = new FormDataSource(this.studyService, this.CheckboxForm);
   tableState$?: Observable<SourceState>;
@@ -240,7 +182,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
 
   // TODO: Think about sorting this collection so
   // that new chunks can be appended to the list of individuals.
-  currentIndividuals: string[] = [];
+  currentIndividuals: WritableSignal<string[]> = signal([]);
   badgeHidden: boolean = true;
   @Input() streamStatus?: StreamStatus;
 
@@ -267,6 +209,18 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
       case "aggregation":
         return this.aggregationOverlayControls.controls.individual;
     }
+  }
+
+  get PointForms() {
+    return this.pointOverlayControls.controls.individual;
+  }
+
+  get PathForms() {
+    return this.pathOverlayControls.controls.individual;
+  }
+
+  get AggregationForms() {
+    return this.aggregationOverlayControls.controls.individual;
   }
 
   // TODO: This method is untested
@@ -379,30 +333,44 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
             case "streaming":
               // NOTE: This case refreshes the current individuals loaded
               // by the stream.
-              this.currentIndividuals = [];
+              this.currentIndividuals.set([]);
               break;
             case "error":
               this.currentEventData = undefined;
-              this.currentIndividuals = [];
+              this.currentIndividuals.set([]);
               break;
           }
           break;
 
         case "currentEventData":
-          console.log(`Received new chunk in events component.`);
+          console.log(`Received new chunk in events component:`);
           console.log(currentValue);
 
+          // TODO:New forms should be added to the list of form groups.
+          // Also continue testing by logging the output from the CurrrentActiveLayer signal.
           this.currentEventData = currentValue as EventMetaData;
           this.currentActiveLayer.set(this.currentEventData.layer);
 
-          // Consider making this variable into a signal.
-          this.currentIndividuals =
+          // console.log(`pointFormValid = ${this.currentEventData !== undefined && this.isPointLayer(this.currentActiveLayer())}`);
+          // console.log(`pathFormValid = ${this.currentEventData !== undefined && this.isPathLayer(this.currentActiveLayer())}`);
+          // console.log(`aggregationFormValid = ${this.currentEventData !== undefined && this.isAggregationLayer(this.currentActiveLayer())}`);
+
+          Array.from(this.currentEventData.currentIndividuals.values())
+            .filter(elem => this.currentIndividuals().indexOf(elem) === -1)
+            .forEach(elem => {
+              this.addForms(elem)
+            });
+
+          this.currentIndividuals.set(
             Array.from(
               this.currentEventData
                 .currentIndividuals
                 .values())
-              .sort();
+              .sort()
+          );
 
+          // TODO:Finish calling this method.
+          // Check if the previous two collection go out of sync.
           this.badgeHidden = true;
           break;
 
@@ -447,6 +415,8 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   }
 
   addForms(individual: string) {
+    console.log(`Adding for individual: ${individual}`);
+
     const pointForm = this.formBuilder.group({
       currentIndividual: new FormControl(individual),
       getRadius: this.formBuilder.nonNullable.control(3),
@@ -503,16 +473,19 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
 
       getColorWeight: this.formBuilder.nonNullable.control(1),
       getElevationWeight: this.formBuilder.nonNullable.control(1),
-    } as AggregationForms)
+    } as AggregationForms);
 
     this.pointOverlayControls.controls.individual.controls.push(pointForm);
     this.pathOverlayControls.controls.individual.controls.push(pathForm);
     this.aggregationOverlayControls.controls.individual.controls.push(aggregationForm);
 
-    // Sort by the individual's name alphabetically
+    // INFO:Sort by the individual's name alphabetically
     this.pointOverlayControls.controls.individual.controls.sort(this.sortControlByIndividual);
     this.pathOverlayControls.controls.individual.controls.sort(this.sortControlByIndividual);
     this.aggregationOverlayControls.controls.individual.controls.sort(this.sortControlByIndividual);
+
+    console.log("Current status of path forms.");
+    console.log(this.PathForms);
   }
 
   sortControlByIndividual(a: OverlayTypes, b: OverlayTypes) {
@@ -526,6 +499,23 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
       return 0;
     }
   }
+
+  // NOTE:This method is meant to be used in templates but may be prone to errors.
+  // formVisible(layerType: ActiveForm): Signal<boolean> {
+  //   return computed(() => {
+  //     let layerMatches = false;
+  //     if (layerType === "point") {
+  //       layerMatches = this.isPointLayer(this.CurrentActiveLayer());
+  //     }
+  //     else if (layerType === "path") {
+  //       layerMatches = this.isPathLayer(this.CurrentActiveLayer());
+  //     }
+  //     else if (layerType === "aggregation") {
+  //       layerMatches = this.isAggregationLayer(this.CurrentActiveLayer());
+  //     }
+  //     return layerMatches && this.currentEventData !== undefined;
+  //   });
+  // }
 
   submitPointLayerForm(index: number): void {
     if (index < 0 || index >= this.pathOverlayControls.controls.individual.controls.length) {

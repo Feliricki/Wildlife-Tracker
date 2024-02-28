@@ -157,232 +157,336 @@
 
     <!--TODO:Rewrite this for loop to iterate over the current number
       of overlay controls of the correct type which is initially zero.-->
-    @for (animal of currentIndividuals; track animal; let i = $index){
-    <mat-card>
-      <mat-card-header class="card-header">
-        <mat-card-subtitle>
-          Animal: {{animal}}
-        </mat-card-subtitle>
-      </mat-card-header>
+    <!-- @for (animal of currentIndividuals; track animal; let i = $index){ -->
 
-      <mat-card-content class="dense-3" id="card-content">
-        <!-- TODO:This could be rewritten as a formbuilder service to reduce this file size. -->
-        <!-- The following form needs to be tested with other layer types. -->
+    <!-- @switch(isPathLayer(CurrentActiveLayer())){ -->
+    <!-- @case (true){ -->
+    <!-- <p>Path layer is active.</p> -->
+    <!-- } -->
+    <!-- @default{ -->
+    <!-- <p>Default case for path layer check.</p> -->
+    <!-- } -->
+    <!-- } -->
 
-        <!-- TODO: The correct approach is to wrap everything in a form element.
-              and then wrap each input element in a mat-form-field element.-->
-        @if (currentEventData && isPointLayer(CurrentActiveLayer())){
-        <form [formGroup]="pointOverlayControls">
+    @if (currentEventData && isPointLayer(CurrentActiveLayer())){
+    <div [formGroup]="pointOverlayControls" class="dense-3">
+      <div formArrayName="individual" *ngFor="let pointForm of PointForms.controls; let i = index">
+        <mat-card>
+          <mat-card-header>
+            <p>
+              Animal: {{ pointForm.controls.currentIndividual.value }} And Path Layer.
+            </p>
+          </mat-card-header>
 
-          <div class="arrayControls" formArrayName="individual">
+          <mat-card-content>
 
-            <!-- TODO:Make sure this group name is bound to the current index -->
-            <div [formGroupName]="i">
-              <!-- TODO:Check if the matInput attribute is required for this element to be styled properly. -->
-              <div class="first-content-row">
+            <div class="first-row-content">
 
-                <mat-form-field formControlName="getRadius">
-                  <mat-label>Radius</mat-label>
-                  <input type="text">
-                </mat-form-field>
-
-                <mat-slide-toggle formControlName="filled">
-                  Filled Outline
-                </mat-slide-toggle>
-
-                <mat-slide-toggle formControlName="autoHighlight">
-                  Auto-Highlight
-                </mat-slide-toggle>
-
-                <mat-form-field formControlName="opacity">
-                  <mat-label>Opacity</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-              </div>
-              <div class="second-row-content">
-
-                <mat-form-field formControlName="radiusMinPixels">
-                  <mat-label>Radius Minimum Pixels</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-                <mat-form-field formControlName="radiusMaxPixels">
-                  <mat-label>Radius Maximum Pixels</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-                <mat-form-field formControlName="getFillColor">
-                  <mat-label>Fill Color</mat-label>
-                  <input type="color">
-                </mat-form-field>
-
-                <!-- TODO:This may not be applicable to arc layers. Check the documentation for details -->
-                <mat-form-field formControlName="getLineColor">
-                  <mat-label>Line Color</mat-label>
-                  <input type="color">
-                </mat-form-field>
-
-              </div>
             </div>
-          </div>
-        </form>
-        }
-
-        @else if(currentEventData && isPathLayer(CurrentActiveLayer())){
-        <!-- TODO: To cut down on the number of input form it may be better to -->
-        <!-- to remove the option to change the unit types -->
-
-        <form [formGroup]="pathOverlayControls">
-
-          <div formArrayName="individual">
-
             <div [formGroupName]="i">
-
-              <div class="first-row-content">
-
-                <mat-form-field formControlName="widthScale">
-                  <mat-label>Line Radius</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-                <mat-form-field formControlName="opacity">
-                  <mat-label>Opacity</mat-label>
-                  <input matInput type="number">
-                </mat-form-field>
-
-                <!-- NOTE:This section needs a tooltip to explain the following parameters. -->
-                <mat-form-field formControlName="widthMinPixels">
-                  <mat-label>Width Minimum Pixels</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-                <mat-form-field formControlName="widthMaxPixels">
-                  <mat-label>Width Maximium Pixels</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-              </div>
-
-              <div class="second-content-row">
-
-                <mat-form-field formControlName="getSourceColor">
-                  <mat-label>
-                    <!-- CASE 1: ArcLayer -->
-                    @if (currentActiveLayer() === 0){
-                    Source Color
-                    } @else {
-                    Color
-                    }
-                  </mat-label>
-                  <input type="color">
-                </mat-form-field>
-
-                <!-- TODO:Test if this field is properly hidden when the current active layer is of type arc. -->
-                <mat-form-field [hidden]="CurrentActiveLayer() === 0" formControlName="getTargetColor">
-                  <mat-label>
-                    Target Color
-                  </mat-label>
-                  <input type="color">
-                </mat-form-field>
-
-                <mat-form-field formControlName="focusLevel">
-                  <mat-label>Focus Opacity</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-                <!-- TODO:Change this a slide toggle instead of a checkbox. -->
-                <mat-checkbox formControlName="AutoHighlight">
-                  Auto-Highlight
-                </mat-checkbox>
-
-              </div>
-              <!-- Current formGroupName = {{i}} Current Layer is of type path. -->
+              <mat-form-field appearance="outline">
+                <mat-label>Width Scale</mat-label>
+                <input matInput type="number" formControlName="widthScale">
+              </mat-form-field>
             </div>
-          </div>
-        </form>
-        }
 
-        @else if (currentEventData && isAggregationLayer(CurrentActiveLayer())){
-
-        <form [formGroup]="aggregationOverlayControls">
-
-          <div formArrayName="individual">
-
-            <div [formGroupName]="i">
-              <div class="first-row-content">
-
-                <mat-form-field formControlName="radius">
-                  <mat-label>Radius</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-                <mat-form-field formControlName="elevationRange">
-                  <mat-label>Elevation Range</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-                <mat-form-field formControlName="elevationScale">
-                  <mat-label>Elevation Scale</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-                <mat-form-field formControlName="elevationLowerPercentile">
-                  <mat-label>Elevation Lower Percentile</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-                <mat-form-field formControlName="elevationUpperPercentile">
-                  <mat-label>Elevation Upper Percentile</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-              </div>
-
-              <div class="second-row-content">
-
-                <mat-form-field formControlName="elevationAggregration">
-                  <mat-label>Elevation Aggregation</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-                <mat-form-field formControlName="colorScaleType">
-                  <mat-label>Color Scale Type</mat-label>
-                  <input type="text">
-                </mat-form-field>
-
-                <mat-form-field formControlName="colorAggregation">
-                  <mat-label>Color Aggregation</mat-label>
-                  <input type="text">
-                </mat-form-field>
-
-                <mat-form-field formControlName="colorWeight">
-                  <mat-label>Color Weight</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-                <mat-form-field formControlName="getElevationRange">
-                  <mat-label>Elevation Range</mat-label>
-                  <input type="number">
-                </mat-form-field>
-
-              </div>
-            </div>
-          </div>
-        </form>
-        }
-
-        <mat-divider></mat-divider>
-      </mat-card-content>
-      <mat-card-actions>
-        <button mat-button>Submit</button>
-      </mat-card-actions>
-      <mat-card-footer>
-        <!-- TODO: If events are still arriving from the stream then add a loading bar? -->
-      </mat-card-footer>
-    </mat-card>
-    <br>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
     }
+
+    @else if (currentEventData && isPathLayer(CurrentActiveLayer())){
+    <div [formGroup]="pathOverlayControls" class="dense-3">
+      <div formArrayName="individual" *ngFor="let pathForm of PathForms.controls; let i = index">
+        <mat-card>
+          <mat-card-header>
+            <p>
+              Animal: {{ pathForm.controls.currentIndividual.value }} And Path Layer.
+            </p>
+          </mat-card-header>
+
+          <mat-card-content>
+
+            <!-- TODO:Test different form types such as checkboxes -->
+            <!-- and sliders to test if the different input types can be reduced in size. -->
+            <div [formGroupName]="i" class="path-controls">
+              <div class="first-row">
+                <mat-form-field appearance="outline">
+                  <mat-label>Width</mat-label>
+                  <input matInput type="number" formControlName="widthScale">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Opacity</mat-label>
+                  <input matInput type="number" formControlName="opacity">
+                </mat-form-field>
+
+              </div>
+
+              <div class="second-row">
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Width Minimum Pixels</mat-label>
+                  <input matInput type="number" formControlName="widthMinPixels">
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Width Maximum Pixels</mat-label>
+                  <input matInput type="number" formControlName="widthMaxPixels">
+                </mat-form-field>
+                <!-- TODO:Include a field of some sort for autohighlighting -->
+                <!-- <mat-form-field appearance="outline"> -->
+                <!--   <mat-label>Auto-Highlight</mat-label> -->
+                <!--   <input matInput type="checkbox" formControlName="autoHighlight"> -->
+                <!-- </mat-form-field> -->
+              </div>
+
+              <mat-form-field appearance="outline">
+                @if(currentActiveLayer() === 0){
+                <mat-label>Source Color</mat-label>
+                } @else {
+                <mat-label>Color</mat-label>
+                }
+                <input matInput type="color" formControlName="getSourceColor">
+              </mat-form-field>
+
+
+              <div class="third-row">
+                @if(currentActiveLayer() === 0){
+                <mat-form-field appearance="outline">
+                  <mat-label>Target Color</mat-label>
+                  <input matInput type="color" formControlName="getTargetColor">
+                </mat-form-field>
+                }
+
+                <!-- <mat-form-field appearance="outline"> -->
+                <!--   <mat-label>Focus Opacity</mat-label> -->
+                <!--   <input matInput type="number" formControlName="focusLevel"> -->
+                <!-- </mat-form-field> -->
+              </div>
+            </div>
+
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+    }
+
+    @else if (currentEventData && isAggregationLayer(CurrentActiveLayer())){
+    <div [formGroup]="aggregationOverlayControls" class="dense-3">
+      <div formArrayName="individual" *ngFor="let aggregationForm of AggregationForms.controls; let i = index">
+        <mat-card>
+          <mat-card-header>
+            <p>
+              Animal: {{ aggregationForm.controls.currentIndividual.value }} And Path Layer.
+            </p>
+          </mat-card-header>
+
+          <mat-card-content>
+
+            <div [formGroupName]="i">
+              <!-- <label for="path-widthScale-{{i}}">Width</label> -->
+              <mat-form-field appearance="outline">
+                <mat-label>GroupName = {{i}}</mat-label>
+                <input matInput type="number" formControlName="widthScale">
+              </mat-form-field>
+            </div>
+
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+
+    }
+
+    @else {
+    <p>Default Case For Current Active Layer</p>
+    }
+
+    <!-- <mat-card> -->
+    <!--   <mat-card-header class="card-header"> -->
+    <!--     <mat-card-subtitle> -->
+    <!--       <!-- Animal: {{animal}} index: {{i}} -->
+    <!--     </mat-card-subtitle> -->
+    <!--   </mat-card-header> -->
+    <!---->
+    <!--   <mat-card-content class="dense-3" id="card-content"> -->
+
+    <!-- TODO:This could be rewritten as a formbuilder service to reduce this file size. -->
+    <!-- The following form needs to be tested with other layer types. -->
+
+    <!-- TODO: The correct approach is to wrap everything in a form element.
+              and then wrap each input element in a mat-form-field element.-->
+    <!--     @if (currentEventData && isPointLayer(CurrentActiveLayer())){ -->
+    <!--     <form [formGroup]="pointOverlayControls"> -->
+    <!---->
+    <!--       <div class="arrayControls" formArrayName="individual"> -->
+    <!---->
+    <!-- TODO:Make sure this group name is bound to the current index -->
+    <!--         <div formGroupName="i"> -->
+    <!-- TODO:Check if the matInput attribute is required for this element to be styled properly. -->
+    <!--           <div class="first-content-row"> -->
+    <!--             <mat-form-field formControlName="getRadius"> -->
+    <!--               <mat-label>Radius</mat-label> -->
+    <!--               <input type="text"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-slide-toggle formControlName="filled"> -->
+    <!--               Filled Outline -->
+    <!--             </mat-slide-toggle> -->
+    <!--             <mat-slide-toggle formControlName="autoHighlight"> -->
+    <!--               Auto-Highlight -->
+    <!--             </mat-slide-toggle> -->
+    <!--             <mat-form-field formControlName="opacity"> -->
+    <!--               <mat-label>Opacity</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--           </div> -->
+    <!--           <div class="second-row-content"> -->
+    <!--             <mat-form-field formControlName="radiusMinPixels"> -->
+    <!--               <mat-label>Radius Minimum Pixels</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="radiusMaxPixels"> -->
+    <!--               <mat-label>Radius Maximum Pixels</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="getFillColor"> -->
+    <!--               <mat-label>Fill Color</mat-label> -->
+    <!--               <input type="color"> -->
+    <!--             </mat-form-field> -->
+    <!-- TODO:This may not be applicable to arc layers. Check the documentation for details -->
+    <!--             <mat-form-field formControlName="getLineColor"> -->
+    <!--               <mat-label>Line Color</mat-label> -->
+    <!--               <input type="color"> -->
+    <!--             </mat-form-field> -->
+    <!--           </div> -->
+    <!--         </div> -->
+    <!--       </div> -->
+    <!--     </form> -->
+    <!--     } -->
+    <!--     @else if(currentEventData && isPathLayer(CurrentActiveLayer())){ -->
+    <!-- TODO: To cut down on the number of input form it may be better to -->
+    <!-- to remove the option to change the unit types -->
+    <!--     <form [formGroup]="pathOverlayControls"> -->
+    <!--       <div formArrayName="individual"> -->
+    <!--         <div formGroupName="i"> -->
+    <!--           <div class="first-row-content"> -->
+    <!--             <mat-form-field formControlName="widthScale"> -->
+    <!--               <mat-label>Line Radius</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="opacity"> -->
+    <!--               <mat-label>Opacity</mat-label> -->
+    <!--               <input matInput type="number"> -->
+    <!--             </mat-form-field> -->
+    <!-- NOTE:This section needs a tooltip to explain the following parameters. -->
+    <!--             <mat-form-field formControlName="widthMinPixels"> -->
+    <!--               <mat-label>Width Minimum Pixels</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="widthMaxPixels"> -->
+    <!--               <mat-label>Width Maximium Pixels</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--           </div> -->
+    <!--           <div class="second-content-row"> -->
+    <!--             <mat-form-field formControlName="getSourceColor"> -->
+    <!--               <mat-label> -->
+    <!--                 <!-- CASE 1: ArcLayer -->
+    <!--                 @if (currentActiveLayer() === 0){ -->
+    <!--                 Source Color -->
+    <!--                 } @else { -->
+    <!--                 Color -->
+    <!--                 } -->
+    <!--               </mat-label> -->
+    <!--               <input type="color"> -->
+    <!--             </mat-form-field> -->
+    <!---->
+    <!-- TODO:Test if this field is properly hidden when the current active layer is of type arc. -->
+    <!--             <mat-form-field [hidden]="CurrentActiveLayer() === 0" formControlName="getTargetColor"> -->
+    <!--               <mat-label> -->
+    <!--                 Target Color -->
+    <!--               </mat-label> -->
+    <!--               <input type="color"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="focusLevel"> -->
+    <!--               <mat-label>Focus Opacity</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--             <!-- TODO:Change this a slide toggle instead of a checkbox. -->
+    <!--             <mat-checkbox formControlName="AutoHighlight"> -->
+    <!--               Auto-Highlight -->
+    <!--             </mat-checkbox> -->
+    <!--           </div> -->
+    <!--           <!-- Current formGroupName = {{i}} Current Layer is of type path. -->
+    <!--         </div> -->
+    <!--       </div> -->
+    <!--     </form> -->
+    <!--     } -->
+    <!--     @else if (currentEventData && isAggregationLayer(CurrentActiveLayer())){ -->
+    <!--     <form [formGroup]="aggregationOverlayControls"> -->
+    <!--       <div formArrayName="individual"> -->
+    <!--         <div formGroupName="i"> -->
+    <!--           <div class="first-row-content"> -->
+    <!--             <mat-form-field formControlName="radius"> -->
+    <!--               <mat-label>Radius</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="elevationRange"> -->
+    <!--               <mat-label>Elevation Range</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="elevationScale"> -->
+    <!--               <mat-label>Elevation Scale</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="elevationLowerPercentile"> -->
+    <!--               <mat-label>Elevation Lower Percentile</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="elevationUpperPercentile"> -->
+    <!--               <mat-label>Elevation Upper Percentile</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--           </div> -->
+    <!--           <div class="second-row-content"> -->
+    <!--             <mat-form-field formControlName="elevationAggregration"> -->
+    <!--               <mat-label>Elevation Aggregation</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="colorScaleType"> -->
+    <!--               <mat-label>Color Scale Type</mat-label> -->
+    <!--               <input type="text"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="colorAggregation"> -->
+    <!--               <mat-label>Color Aggregation</mat-label> -->
+    <!--               <input type="text"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="colorWeight"> -->
+    <!--               <mat-label>Color Weight</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--             <mat-form-field formControlName="getElevationRange"> -->
+    <!--               <mat-label>Elevation Range</mat-label> -->
+    <!--               <input type="number"> -->
+    <!--             </mat-form-field> -->
+    <!--           </div> -->
+    <!--         </div> -->
+    <!--       </div> -->
+    <!--     </form> -->
+    <!--     } -->
+    <!--     <mat-divider></mat-divider> -->
+    <!--   </mat-card-content> -->
+    <!--   <mat-card-actions> -->
+    <!--     <button mat-button>Submit</button> -->
+    <!--   </mat-card-actions> -->
+    <!--   <mat-card-footer> -->
+    <!-- TODO: If events are still arriving from the stream then add a loading bar? -->
+    <!--   </mat-card-footer> -->
+    <!-- </mat-card> -->
+    <!-- <br> -->
+    <!-- } -->
 
   </mat-tab>
 </mat-tab-group>

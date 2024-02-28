@@ -1,5 +1,6 @@
 import { LayerTypes } from "./GoogleOverlay";
 
+
 export class LayerTypesHelper {
   static readonly pathTypeLayers = new Set<LayerTypes>([
     LayerTypes.PathLayer, LayerTypes.ArcLayer,
@@ -8,7 +9,7 @@ export class LayerTypesHelper {
 
   static readonly pointTypeLayers = new Set<LayerTypes>([
     LayerTypes.ScatterplotLayer,
-    // Could potentially include the geojson layer
+    // NOTE:Could potentially include the geojson layer
     // if only points are supplied
   ]);
 

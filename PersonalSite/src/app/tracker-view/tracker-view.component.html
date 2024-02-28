@@ -1,4 +1,16 @@
-<!-- <div class="main-content"> -->
+<!-- NOTE:Mobile devices cannot have this button on screen. The old open button can be used instead. -->
+<!-- If a extra small screem is detected then this button can be disable  -->
+@if (!(XSmallScreen$ | async)){
+<button mat-fab [hidden]="!mapLoaded()" class="left-toggle-button" (click)="toggleSearchNav()"
+  [@leftPanelOpened]="leftPanelOpened() ? true : false">
+  @if(leftPanelOpened()){
+  <mat-icon>chevron_left</mat-icon>
+  } @else {
+  <mat-icon>chevron_right</mat-icon>
+  }
+</button>
+}
+
 <mat-sidenav-container class="sidenav-container" [hasBackdrop]="false">
 
   <!-- NOTE: Change the opened state to false later. -->
@@ -9,7 +21,6 @@
 
     <div class="search-container">
 
-      <!-- BUG:Issues are being caused by some component. Conditionally remove the components until the issue goes away. -->
       @if(sidenav.opened || searchOpened()){
       <app-simple-search [hidden]="!searchOpened" [allStudies]="currentStudies" (closeComponent)="closeSearchNav()"
         (componentInitialized)="initializeSearchNav()"
@@ -23,8 +34,6 @@
     <!-- NOTE: This is another sidenav within the outer sidenav -->
     <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="over"
       [fixedInViewport]="true">
-      <!-- <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="side" -->
-      <!--   [fixedInViewport]="true"> -->
 
       <app-events #eventComponent (eventRequestEmitter)="updateCurrentEventRequest($event)"
         (closeRightNavEmitter)="closeRightNav()" [currentStudy]="currentStudy" [currentEventData]="currentChunkInfo"
@@ -36,42 +45,18 @@
     <mat-sidenav-content class="sidenav-content-right">
 
       @if(mapLoaded()){
+
+      <!-- TODO:This toolbar needs to be replaced with a div or other container. -->
+      <!-- Alternatively, the z-index of this element could be lowered or attributes could be set such as the width -->
       <mat-toolbar class="dense-3" id="toolbar">
-        <!-- <button mat-mini-fab color="primary" class="home-button"><mat-icon>home</mat-icon></button> -->
-        <!-- <button mat-mini-fab><mat-icon>menu</mat-icon></button> -->
 
-        <!-- <button mat-raised-button class="rounded"> -->
-        <!--   <mat-icon>layers</mat-icon>Layers -->
-        <!-- </button> -->
-
-        <!-- TODO:Make a custom toggle group. -->
-        <!-- <button mat-fab extended> -->
-        <!--   <span style="border-right-style:groove;">Map</span> -->
-        <!--   <span>Satellite</span> -->
-        <!-- </button> -->
-        <!-- <button mat-raised-button> -->
-        <!--   <span style="border-right-style:groove;">Map </span> -->
-        <!--   <span>Satellite</span> -->
-        <!-- </button> -->
-
-        <!-- <mat-button-toggle-group appearance="legacy" class="toggle-group"> -->
-        <!-- TODO:Include an options for the label being clicked. -->
-
-        <!-- <mat-chip-listbox class="chip-listbox" aria-label="Map Style"> -->
-        <!--   <mat-chip-option (click)="setMapType('roadmap')" color="primary" selected>Map</mat-chip-option> -->
-        <!--   <mat-chip-option (click)="setMapType('hybrid')" color="primary">Satellite</mat-chip-option> -->
-        <!--   <!-- <mat-chip-option color="accent">Satellite</mat-chip-option> -->
-        <!--   <!-- <mat-chip-option color="warn">Satellite</mat-chip-option> -->
-        <!-- </mat-chip-listbox> -->
-
-        <div class="toolbar-elements" [ngStyle]="(XSmallScreen$ | async) ? toolbarOffsetSmall : toolbarOffset">
+        <div class="toolbar-elements">
 
           @if (XSmallScreen$ | async){
           <button mat-mini-fab id="mini-fab-layer" class="extended-fab" [matMenuTriggerFor]="layerMenu">
             <mat-icon>layers</mat-icon>
           </button>
-          }
-          @else {
+          } @else {
           <button mat-fab extended matRipple class="extended-fab" [matMenuTriggerFor]="layerMenu">
             <mat-icon>layers</mat-icon>Layers
           </button>
@@ -80,7 +65,8 @@
           <mat-menu #layerMenu="matMenu" xPosition="after" yPosition="below">
             <mat-radio-group class="layer-radio-group">
               @for(layerOptions of layerMenuOptions; track layerOptions[0]){
-              <mat-radio-button [value]="layerOptions[1]" class="layer-radio-button">{{layerOptions[0]}}</mat-radio-button>
+              <mat-radio-button [value]="layerOptions[1]"
+                class="layer-radio-button">{{layerOptions[0]}}</mat-radio-button>
               }
             </mat-radio-group>
           </mat-menu>
@@ -107,26 +93,25 @@
             </mat-menu>
           </mat-button-toggle-group>
 
-          <!-- TODO:Finish this button for toggling all markers' visibility -->
-          <button mat-mini-fab matRipple class="marker-toggle" (click)="toggleMarkerVisibility()"
-            aria-label="test label">
+          <button mat-mini-fab matRipple class="marker-toggle" (click)="toggleMarkerVisibility()" color="primary">
             @if(!markersVisible()){
             <mat-icon>location_on</mat-icon>
             } @else {
             <mat-icon>location_off</mat-icon>
             }
           </button>
+
         </div>
 
       </mat-toolbar>
       }
 
-      @if (leftButtonFlag() === true){
+      <!-- TODO:I should write down in english what the conditions are for this flag to activate. -->
+      @if (leftButtonFlag() === true && (XSmallScreen$ | async)){
       <button mat-fab [hidden]="!leftButtonFlag()" @leftToggleClick (click)="openSearchNav()"
         class="toggle-button"><mat-icon>chevron_right</mat-icon></button>
       }
-      <!-- TODO: Move the toggle button belongs the search component -->
-      <!-- Fix the search component's spinner element position. -->
+
       @if (activeMap === "google"){
       <app-google-map [pathEventData$]="currentEventLineData$" (mapStateEmitter)="updateMapState($event)"
         (studiesEmitter)="updateCurrentStudies($event)" (studyEmitter)="updateCurrentStudy($event)"

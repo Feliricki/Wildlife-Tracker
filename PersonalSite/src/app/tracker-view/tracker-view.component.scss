@@ -30,6 +30,43 @@
   z-index: 3;
 }
 
+.left-toggle-button {
+  position: absolute;
+  z-index: 3;
+  top: 50vh;
+
+  // display: flex;
+  // align-items:center;
+  // justify-content: center;
+  // left: 400px;
+
+  // $size: 25px;
+  // width: $size;
+  // height: $size;
+  // margin: 0;
+  // padding: 0;
+  // right: calc($size / -2) - 2px + 100px;
+  // left: 400px + calc($size / -2) - 2px;
+
+  background-color: white;
+  color: black;
+
+
+  &.is-flipped {
+    transform: rotate(-180deg);
+  }
+
+  // &:hover {
+  //   border: 2px solid rgb(36, 81, 231);
+  // }
+
+  // mat-icon {
+  //  font-size: 1.5em;
+  //  width: fit-content;
+  //  height: fit-content;
+  // }
+}
+
 .expansion-panel-header {
   font-size:10px;
   background-color: green;
@@ -45,25 +82,15 @@
   z-index: 3;
 }
 
-/* NOTE:This setting is currently changed, */
 .right-sidenav {
   max-width: 800px;
-  // margin: 50px 50px 50px 50px;
 }
-
 
 .toolbar-elements {
   display: flex;
   flex-flow: row nowrap;
-  // justify-content:center;
-  // align-items: center;
-  // flex-basis: auto;
-  // flex-direction: row;
-  // align-items:center;
-  // justify-items: center;
 
   #mini-fab-layer {
-    // margin-left: 0em;
     margin-top: 1.75em;
     background-color: white;
     color:black;
@@ -84,7 +111,7 @@
     margin-top:1em;
 
     border-radius: 15px;
-    background-color: white;
+    // background-color: white;
     mat-button-toggle {
         font-style: normal;
     }
@@ -95,13 +122,14 @@
     margin-left: 0.5em;
     background-color: white;
     color: black;
+    // background-color: rgb(255, 100, 100);
+    // color: rgb(255, 100, 100);
   }
 }
 /* TODO: The toolbar is broken on mobile and
  blocks acess to button. */
 #toolbar {
   position: absolute;
-  // display: flex;
   justify-content: center;
   align-items: center;
 
@@ -124,13 +152,6 @@
   .extended-fab {
     height: 2.5em;
   }
-
-  // .rounded {
-  //   height: 2.5em;
-  //   padding-top: 1px;
-  //   padding-bottom: 1px;
-  //   border-radius: 25px;
-  // }
 }
 
 .layer-radio-group {

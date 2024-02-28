@@ -7,7 +7,7 @@ import { EventsComponent } from '../events/events.component';
 import { StudyDTO } from '../studies/study';
 import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
 import { MatIconModule } from '@angular/material/icon';
-import { animate, style, transition, trigger } from '@angular/animations';
+import { animate, style, transition, trigger, state } from '@angular/animations';
 import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/layout';
 import { Observable, firstValueFrom, map, tap } from 'rxjs';
 import { HttpResponse } from '@angular/common/http';
@@ -68,7 +68,23 @@ export type MapStyles =
         style({ transform: 'translateX(100%)' }),
         animate('.3s ease-in'),
       ]),
-    ])
+    ]),
+
+    trigger('leftPanelOpened', [
+
+      state('true', style({ left: 'calc(400px - 2em)' })),
+      state('false', style( { left: '0px' } )),
+
+      // TODO:The closing speed needs to be adjusted.
+      transition('true => false', [
+        animate('250ms', style({ transform: 'translate(-400px)' })),
+      ]),
+
+      transition('false => true', [
+        animate('250ms', style({ transform: 'translate(calc(400px - 2em))' })),
+      ]),
+
+    ]),
   ]
 })
 export class TrackerViewComponent implements OnInit, OnDestroy {
@@ -83,16 +99,18 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   mapLoaded: WritableSignal<boolean> = signal(false);
   searchOpened: WritableSignal<boolean> = signal(false);
 
+  // NOTE:This is currently unused
   currentEventLineData$?:
     Observable<HttpResponse<LineStringFeatureCollection<LineStringPropertiesV1>[] | null>>;
   currentEventRequest?: EventRequest;
 
   currentMarker?: bigint;
   currentStudies?: Map<bigint, StudyDTO>;
+
+  // This determines the currrent layer for google maps.
   currentMapType: MapStyles = "roadmap";
 
-  // currentLayer: LayerTypes = LayerTypes.ArcLayer;
-  currentLayer: WritableSignal<LayerTypes>  = signal(LayerTypes.ArcLayer);
+  currentLayer: WritableSignal<LayerTypes> = signal(LayerTypes.ArcLayer);
 
   displayedEvents?: EventJsonDTO[];
 
@@ -109,6 +127,8 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   leftButtonFlag: WritableSignal<boolean> = signal(false);
   rightButtonFlag: WritableSignal<boolean> = signal(true);
 
+  leftPanelOpened: WritableSignal<boolean> = signal(true);
+
   markersVisible: WritableSignal<boolean> = signal(true);
   // INFO:The following are dynamic styling which
   // changes depending on the current screen size.
@@ -121,26 +141,6 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   leftNavLargeStyle = {
     "width": "400px",
   }
-
-  toolbarOffset = {
-    // "margin-left": "400px"
-    // "margin-left": "45%"
-    // "margin-left": "40vw"
-    // "align-items": "center",
-    // "justify-content": "center"
-  }
-
-  toolbarOffsetSmall = {
-    // "left": "0px"
-    // "margin-top": "1.25em"
-  }
-
-  // miniFabLayerButton = {
-  //   "margin-top": "1.75em"
-  // }
-  // miniFabLayerButtonXSmall = {
-  //   "margin-top": "1.5em"
-  // }
 
   smallScreen$?: Observable<boolean>;
   XSmallScreen$?: Observable<boolean>;
@@ -174,6 +174,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     firstValueFrom(breakpointObserver).then(value => {
       if (value) {
         this.closeSearchNav();
+        this.leftPanelOpened.set(false);
       }
     });
 
@@ -300,12 +301,22 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   closeSearchNav(): void {
     this.sidenav.close();
     this.leftButtonFlag.set(true);
+    this.leftPanelOpened.set(false);
   }
 
   openSearchNav(): void {
+    this.leftPanelOpened.set(true);
     this.sidenav.open().then(() => {
       this.leftButtonFlag.set(false);
     });
+  }
+
+  toggleSearchNav(): void {
+    if (this.leftPanelOpened()){
+      this.closeSearchNav();
+    } else {
+      this.openSearchNav();
+    }
   }
 
   toggleMarkerVisibility(): boolean {
@@ -314,7 +325,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
 
   markerToggleLabel(): string {
-    if (this.markersVisible()){
+    if (this.markersVisible()) {
       return "Remove markers.";
     } else {
       return "Add markers.";

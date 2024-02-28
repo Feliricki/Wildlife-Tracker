@@ -4,41 +4,34 @@
   flex: 1 1 auto;
 }
 
-.first-row {
+.path-controls > .first-row {
   display: flex;
-  justify-content: left;
-  margin-left: 1em;
-  margin-right: 1em;
+  justify-content: space-between;
+  // margin-left: 1em;
+  // margin-right: 1em;
+  // mat-form-field {
+  //   font-size: 6px;
+  //   // width: 160px;
+  // }
 }
 
-.second-row {
+.path-controls > .second-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-}
 
-.slide-toggle {
-  // flex: 1 1 0;
-  margin-top: 20px;
-  margin-left: 1em;
-}
-
-.maxEventForm {
-  // flex: 1 1 20;
-  margin-right: 1em;
+  // mat-form-field {
+  //   width: 130px;
+  //   // background-color:lightpink;
+  // }
 }
 
 // This row contains the slider.
-.third-row {
+.path-controls > .third-row {
   display:flex;
-  justify-content: center;
-  flex: 1 1 0;
-}
-
-// NOTE: Alignment is changed dynamically.
-.fourth-row {
-  display: flex;
-  flex-wrap: wrap;
+  flex-wrap:wrap;
+  justify-content: space-between;
+  // flex: 1 1 0;
 }
 
 #table-container {
@@ -62,14 +55,17 @@ mat-card {
   margin: 10px 10px 30px 30px;
 }
 
-mat-form-field {
-  // width: 70px;
-  width: auto;
-  margin-right: 10px;
-}
+// mat-card-content {
+//   // width: 70px;
+//   width: auto;
+//   margin-right: 10px;
+// }
+
+
 
 .first-content-row {
   display: flex;
+  align-items:normal;
 }
 
 .second-content-row {
