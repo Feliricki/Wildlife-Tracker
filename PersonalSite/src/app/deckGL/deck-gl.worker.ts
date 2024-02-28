@@ -36,6 +36,9 @@ export async function setData(
     console.log(mainThread);
 
     streamSubscription?.dispose();
+
+    // INFO:The url needs to be remained fixed to work in a webworker.
+    // Relative addresses won't work but this url will be proxied.
     const connection: signalR.HubConnection =
       new signalR.HubConnectionBuilder()
         .configureLogging(signalR.LogLevel.Debug)
@@ -121,8 +124,8 @@ function parseMsgPackFeature(feature: Array<object>): LineStringFeature<LineStri
   return {
     type: "Feature",
     geometry: {
-      type : "LineString",
-      coordinates : coordinates,
+      type: "LineString",
+      coordinates: coordinates,
     },
     properties: {
       sourceTimestamp: properties[0],

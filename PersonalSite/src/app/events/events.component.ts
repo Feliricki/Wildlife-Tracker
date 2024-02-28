@@ -351,10 +351,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
           this.currentEventData = currentValue as EventMetaData;
           this.currentActiveLayer.set(this.currentEventData.layer);
 
-          // console.log(`pointFormValid = ${this.currentEventData !== undefined && this.isPointLayer(this.currentActiveLayer())}`);
-          // console.log(`pathFormValid = ${this.currentEventData !== undefined && this.isPathLayer(this.currentActiveLayer())}`);
-          // console.log(`aggregationFormValid = ${this.currentEventData !== undefined && this.isAggregationLayer(this.currentActiveLayer())}`);
-
           Array.from(this.currentEventData.currentIndividuals.values())
             .filter(elem => this.currentIndividuals().indexOf(elem) === -1)
             .forEach(elem => {
