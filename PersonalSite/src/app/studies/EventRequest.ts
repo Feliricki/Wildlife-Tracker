@@ -10,11 +10,3 @@ export interface EventRequest {
   GeometryType?: "point" | "linestring";
   Options: EventOptions;
 }
-
-// export interface EventOptions {
-//   maxEventsPerIndividual: number;
-//   timestampStart: bigint;
-//   timestampEnd: bigint;
-//   attributes: string;
-//   eventProfile: string;
-// }
