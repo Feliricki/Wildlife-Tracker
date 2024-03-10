@@ -1,0 +1,16 @@
+<div id="map">
+</div>
+
+@switch(currentMapState()){
+
+@case('loading'){
+<div class="spinner-container">
+  <mat-spinner id="spinner"></mat-spinner>
+</div>
+}
+
+@case('error'){
+<span>Error loading base map.</span>
+}
+
+}

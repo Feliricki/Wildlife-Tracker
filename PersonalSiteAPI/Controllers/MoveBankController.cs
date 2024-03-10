@@ -244,9 +244,11 @@ namespace PersonalSiteAPI.Controllers
             }
         }
 
+        // TODO:Include a parameters to format the data in geojson format.
+        // In this case, the return type is either StudyDTO[] or a FeatureCollection of type of points with the appropriate properties set.
         [HttpGet(Name = "GetAllStudies")]
         [ResponseCache(CacheProfileName = "Any-60")]
-        public async Task<ActionResult<StudyDTO[]>> GetAllStudies()
+        public async Task<IActionResult> GetAllStudies(bool geojsonFormat = false)
         {
             try
             {
@@ -260,30 +262,51 @@ namespace PersonalSiteAPI.Controllers
                     source = source
                       .Where(_validLicenseExp);
                 }
-
-                var cacheKey = $"GetAllStudies:{User.IsInRole(RoleNames.Administrator)}";
-                if (_memoryCache.TryGetValue<StudyDTO[]>(cacheKey, out var result))
+                
+                var cacheKey = $"GetAllStudies:{User.IsInRole(RoleNames.Administrator)}-{geojsonFormat}";
+                if (_memoryCache.TryGetValue<object>(cacheKey, out var result))
                 {
-                    Console.WriteLine("Cache hit on GetAllStudies");
-                    Console.WriteLine(result?[0].TimestampFirstDeployedLocation.ToString());
-                    return result ?? throw new Exception("Unexpected object placed in cache.");
+                    Console.WriteLine($"Cache hit on GetAllStudies with key {cacheKey}");
+                    return result != null ? Ok(result) : throw new Exception("Unexpected object placed in cache in GetAllStudies.");
                 }
-
+            
+                // In this case the return type will be of type StudyDTO[].
                 IQueryable<StudyDTO> dataSource = source.ProjectToType<StudyDTO>();
 
-                // TODO: refactor to use default cache options? 
-                var cacheOptions = new MemoryCacheEntryOptions()
+                if (geojsonFormat)
                 {
-                    Size = 1,
-                    SlidingExpiration = TimeSpan.FromMinutes(2),
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-                };
-                result = await dataSource.ToArrayAsync();
-                Console.WriteLine("Fetched result from GetAllStudies");
-                Console.WriteLine(result[0].TimestampFirstDeployedLocation.ToString());
-                _memoryCache.Set(cacheKey, result, cacheOptions);
+                    // TODO: The conversion that needs to take place is from IEnumerable<StudyDTO> to FeatureCollection.
+                    var studies = await dataSource.ToArrayAsync();
+                    var collection = PointFeatureCollection<StudyDTO>.CreateFromStudies(studies, Func);
 
-                return result;
+                    var cacheOptions = new MemoryCacheEntryOptions
+                    {
+                        Size = 1,
+                        SlidingExpiration = TimeSpan.FromMinutes(2),
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                    };
+                    _memoryCache.Set(cacheKey, collection, cacheOptions);
+                    // Console.WriteLine(JsonConvert.SerializeObject(collection));
+                    return Ok(collection);
+                }
+                else
+                {
+                    // TODO:Refactor to use default cache options? 
+                    var cacheOptions = new MemoryCacheEntryOptions
+                    {
+                        Size = 1,
+                        SlidingExpiration = TimeSpan.FromMinutes(2),
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                    };
+                    result = await dataSource.ToArrayAsync();
+                    // if (result is null)
+                    // {
+                    //     throw new Exception("Result from database is null");
+                    // }
+                    _memoryCache.Set(cacheKey, result, cacheOptions);
+                    return Ok(result);    
+                }
+                StudyDTO Func(StudyDTO study) => study;
             }
             catch (Exception error)
             {
@@ -482,13 +505,13 @@ namespace PersonalSiteAPI.Controllers
                 stopwatch = new Stopwatch();
                 stopwatch.Start();
 
-                var data = LineStringFeatureCollection<LineStringPropertiesV1>.RecordToEventJsonDTO(records, request.StudyId);
+                var data = LineStringFeatureCollection<LineStringPropertiesV1>.RecordToEventJsonDto(records, request.StudyId);
                 stopwatch.Stop();
 
                 Console.WriteLine($"Converted {records.Count} records to data with {data.IndividualEvents.Count} individuals and processed records to linestrings collections in {stopwatch.Elapsed / 1000} seconds.");
                 
                 if (data is null)
-                {
+          {
                     throw new Exception("Data was null");
                 }
                 if (request.GeometryType is null)

@@ -1,7 +1,7 @@
 import { CollectionViewer, DataSource, SelectionModel } from "@angular/cdk/collections";
 import { FormArray, FormControl } from "@angular/forms";
 import { StudyService } from "../studies/study.service";
-import { BehaviorSubject, Observable, catchError, finalize, forkJoin, map, of, tap } from "rxjs";
+import { BehaviorSubject, Observable, catchError, concat, finalize, map, of, tap } from "rxjs";
 import { IndividualJsonDTO } from "../studies/JsonResults/IndividualJsonDTO";
 import { Signal, WritableSignal, computed, signal } from "@angular/core";
 import { TagJsonDTO } from "../studies/JsonResults/TagJsonDTO";
@@ -59,36 +59,37 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     this.formArray().clear();
     this.selectionModel.clear();
     this.currentSource.set([]);
+    this.currentAnimals.set(new Map<string, IndividualJsonDTO>);
+    this.currentTaggedAnimals.set(new Map<string, TagJsonDTO>);
 
     this.hasValue.set(false);
     this.sourceSubject$.next(this.formArray());
 
     const individuals = this.studyService.jsonRequest("individual", studyId, sortOrder);
     const taggedAnimals = this.studyService.jsonRequest("tag", studyId, sortOrder);
+    const combined = concat(individuals, taggedAnimals);
 
-    const combined = forkJoin([individuals, taggedAnimals]) as Observable<[IndividualJsonDTO[], TagJsonDTO[]]>;
     combined.pipe(
-      map(tuple => {
-        // INFO: This is necessary since some studies will avoiding listing the same animal twice
-        // resulting in the individuals having no local identifier
-        const filtered1 = tuple[0]
+      map(jsonDtos => {
+
+        let animals = jsonDtos
+          .filter(val => val.type === "individual") as IndividualJsonDTO[];
+        animals = animals
           .filter(val => val.LocalIdentifier !== null && val.LocalIdentifier !== undefined)
           .filter(val => val.LocalIdentifier.length > 0);
 
-        const filtered2 = tuple[1]
+        let taggedAnimals = jsonDtos.filter(elem => elem.type === "tag") as TagJsonDTO[];
+        taggedAnimals = taggedAnimals
           .filter(val => val.LocalIdentifier !== null && val.LocalIdentifier !== undefined)
           .filter(val => val.LocalIdentifier.length > 0);
 
-        return [filtered1, filtered2] as [IndividualJsonDTO[], TagJsonDTO[]];
+        return [animals, taggedAnimals] as [IndividualJsonDTO[], TagJsonDTO[]];
       }),
 
       tap(tuple => {
 
-        const newAnimals = new Map<string, IndividualJsonDTO>();
-        const newTagged = new Map<string, TagJsonDTO>();
-
-        // this.currentIndividuals.set(tuple[0]);
-        // this.currentSource.set(tuple[1]);
+        const newAnimals = this.currentAnimals();
+        const newTagged = this.currentTaggedAnimals();
 
         tuple[0].forEach((individual) => {
           newAnimals.set(individual.LocalIdentifier, individual);
@@ -109,38 +110,21 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
         return of([[], []]) as Observable<[IndividualJsonDTO[], TagJsonDTO[]]>;
       }),
       map(tuple => {
+        // INFO:Currently this observable will release 2 outputs in the case where there is no error.
+        // The first output will contain individuals only and the second output will contain tagged individuals.
         // The current source has been updated to include tagged and untagged individuals
-        // BUG: New changes are untested.
-        this.currentSource.set([]);
         const formControls: FormControl<boolean>[] = [];
+        const newEntries = tuple[0].length + tuple[1].length;
 
-        tuple[1].forEach((tagged) => {
-
-          const control = new FormControl<boolean>(false, { nonNullable: true });
-          formControls.push(control);
-          this.currentSource.update(val => {
-            val.push(tagged);
-            return val;
-          });
-
+        this.currentSource.update(prev => {
+          const ret = prev.concat(tuple[0]).concat(tuple[1]);
+          return ret;
         });
 
-        tuple[0].forEach((individual) => {
-          if (this.currentTaggedAnimals().has(individual.LocalIdentifier) === false){
+        for (let i = 0; i < newEntries; i++) {
+          formControls.push(new FormControl<boolean>(false, { nonNullable: true }));
+        }
 
-            const control = new FormControl<boolean>(false, { nonNullable: true });
-            formControls.push(control);
-
-            this.currentSource.update(val => {
-              val.push(individual);
-              return val;
-            })
-          }
-        });
-
-        // return tuple[1].map(() => {
-        //   return new FormControl<boolean>(false, { nonNullable: true });
-        // });
         return formControls;
       }),
 
@@ -272,7 +256,9 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
   getIndividual(index: number): Signal<TagJsonDTO | IndividualJsonDTO | null> {
     return computed(() => {
       if (index < 0 || index >= this.currentSource().length) {
-        // console.log(this.currentIndividuals());
+        console.log(`index = ${index}`);
+        console.log(this.currentSource());
+
         console.error("Out of bounds error.");
         return null;
       }

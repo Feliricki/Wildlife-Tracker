@@ -2,7 +2,7 @@ import { Component, Injector } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { NavBarComponent } from './nav-bar/nav-bar.component';
 import { createCustomElement } from '@angular/elements';
-import { InfoWindowComponent } from './google-maps/info-window/info-window.component';
+import { InfoWindowComponent } from './base-maps/google maps/info-window/info-window.component';
 
 
 @Component({

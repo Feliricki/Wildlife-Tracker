@@ -3,28 +3,11 @@
   <!-- <mat-tab [label]="(screenChange | async) ? '' : 'Individuals'"> -->
   <mat-tab label="Animals" class="tab-1">
 
-    <!-- @switch (TableState()){ -->
-    <!-- @case ("initial"){ -->
-    <!-- <span>Initial State</span> -->
-    <!-- } -->
-    <!-- @case ("loading"){ -->
-    <!-- <span>Loading State</span> -->
-    <!-- } -->
-    <!-- @case ("error"){ -->
-    <!-- <span>Http Error</span> -->
-    <!-- } -->
-    <!-- } -->
-
     <button mat-icon-button (click)="closeRightNav()">
       <mat-icon>close</mat-icon>
     </button>
 
-    <br>
-    <!-- @if(extraSmallScreenChange | async){ -->
-    <!-- <span>Xtra Small Screen</span> -->
-    <!-- } -->
-    <br>
-
+    <!-- TODO: Set the margins for the elements rather than using <br> as I did before. -->
     <form [formGroup]="eventForm" #EventRef (ngSubmit)="submitForm()" class="event-form">
 
       <div class="dense-3" [ngStyle]="(screenChange | async) ? fourthRowSmall : fourthRowDefault">
@@ -76,9 +59,10 @@
       }
       @if (TableState() === "loading"){
       <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-      }@else{
-      <br>
       }
+      <!-- @else{ -->
+      <!-- <br> -->
+      <!-- } -->
       <!-- <div class="table-container"> -->
       <div class="dense-3" id="table-container">
         <table mat-table formArrayName="checkboxes" matSort matSortDisableClear matSortActive="name"
@@ -147,8 +131,10 @@
       <!-- <mat-paginator [length]="tableSource.FormArray().length" pageSize="5"></mat-paginator> -->
     </form>
     @if (TableState() === "loaded" && tableSource.TableSize() === 0){
-    <br>
-    <span id="no-animal-found">No Animals Found.</span>
+    <span id="no-animal-found" class="no-individuals">No Animals Found.</span>
+    }
+    @else if (TableState() === "error"){
+    <span id="error-retrieving-animals" class="no-individuals">Error Retrieving Animals.</span>
     }
 
   </mat-tab>
@@ -235,7 +221,9 @@
                   <mat-label>Width Maximum Pixels</mat-label>
                   <input matInput type="number" formControlName="widthMaxPixels">
                 </mat-form-field>
+
                 <!-- TODO:Include a field of some sort for autohighlighting -->
+                <!-- Also consider removing this option for now. -->
                 <!-- <mat-form-field appearance="outline"> -->
                 <!--   <mat-label>Auto-Highlight</mat-label> -->
                 <!--   <input matInput type="checkbox" formControlName="autoHighlight"> -->

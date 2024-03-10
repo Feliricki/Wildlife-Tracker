@@ -1,7 +1,9 @@
 ﻿using System.Text.Json.Serialization;
 using PersonalSiteAPI.DTO.MoveBankAttributes.JsonDTOs;
 using PersonalSiteAPI.Constants;
+using PersonalSiteAPI.DTO.MoveBankAttributes;
 using PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadRecords;
+using PersonalSiteAPI.Models;
 
 namespace PersonalSiteAPI.DTO.GeoJSON;
 
@@ -68,51 +70,56 @@ public record MetadataRecord
         [JsonPropertyName(name: "id")]
         public long? Id { get; set; }
 
-        private PointFeatureCollection(IndividualEventDTO? events, Func<LocationJsonDTO, TProp> propertyFunc)
+        public static PointFeatureCollection<TProp> CreateFromEvents(IndividualEventDTO? events, Func<LocationJsonDTO, TProp> propertyFunc)
         {
+            var collection = new PointFeatureCollection<TProp>();
             if (events is null)
             {
-                Features = new List<Feature<TProp, Point>>();
-                return;
+                collection.Features = [];
+                return collection;
             }
+
             foreach (var location in events.Locations)
             {
-                var point = new Point(new List<float> { location.LocationLong, location.LocationLat });
+                var point = new Point([location.LocationLong, location.LocationLat]);
                 var feature = new Feature<TProp, Point>
                 {
                     Geometry = point,
                     Properties = propertyFunc(location)
                 };
-                Features.Add(feature);
+                collection.Features.Add(feature);
             }
 
-            Metadata = new MetadataRecord()
+            collection.Metadata = new MetadataRecord()
             {
                 Count = events.Locations.Count,
             };
+
+            return collection;
         }
+
+        //public static PointFeatureCollection<TProp> CreatePoint
 
         public static PointFeatureCollection<TProp> Create(IndividualEventDTO events, Func<LocationJsonDTO, TProp> propertyFunc)
         {
-            return new PointFeatureCollection<TProp>(events, propertyFunc);
+            return CreateFromEvents(events, propertyFunc);
         }
 
         public static PointFeatureCollection<TProp> CombinePointFeatures(EventJsonDTO events, Func<LocationJsonDTO, TProp> propertyFunc)
         {
-            var pointCollection = new PointFeatureCollection<TProp>(null, propertyFunc)
+            var pointCollection = CreateFromEvents(null, propertyFunc);
+            pointCollection.Metadata = new MetadataRecord
             {
-                Metadata = new MetadataRecord
-                {
-                    Count = 0,
-                    BufferSizes = [],
-                    SensorsUsed = new HashSet<string>(),
-                    Taxon = new HashSet<string>(),
-                }
+                Count = 0,
+                BufferSizes = [],
+                SensorsUsed = [],
+                Taxon = []
             };
 
             foreach (var individuals in events.IndividualEvents)
             {
-                var collection = new PointFeatureCollection<TProp>(individuals, propertyFunc);
+                //var collection = new PointFeatureCollection<TProp>(individuals, propertyFunc);
+                var collection = CreateFromEvents(individuals, propertyFunc);
                 var newCount = collection.Features.Count;
 
                 pointCollection.Features.AddRange(collection.Features);
@@ -129,6 +136,28 @@ public record MetadataRecord
 
             return pointCollection;
         }
+
+        public static PointFeatureCollection<TProp> CreateFromStudies(IEnumerable<StudyDTO> studies, Func<StudyDTO, TProp> propertyFunc)
+        {
+            var collection = new PointFeatureCollection<TProp>();
+            foreach (var study in studies)
+            {
+                if (study.MainLocationLat is null || study.MainLocationLon is null)
+                {
+                    continue;
+                }
+
+                var point = new Point([study.MainLocationLon ?? 0, study.MainLocationLat ?? 0]);
+                var feature = new Feature<TProp, Point>
+                {
+                    Geometry = point,
+                    Properties = propertyFunc(study)
+                };
+                collection.Features.Add(feature);
+            }
+
+            return collection;
+        } 
     }
 
     // TODO: This entire class is in need of a refactors.
@@ -218,7 +247,7 @@ public record MetadataRecord
 
             collection.Metadata.Count = collection.Features.Count;
             ColorGradientGenerator.ColorGradientForLineString(totalDistance: totalDistance, collection.Features);
-
+            
             return collection;
         }
 
@@ -246,7 +275,7 @@ public record MetadataRecord
             return groups;
         }
 
-        public static EventJsonDTO RecordToEventJsonDTO(IEnumerable<EventRecord> records, long studyId)
+        public static EventJsonDTO RecordToEventJsonDto(IEnumerable<EventRecord> records, long studyId)
         {
             var eventDto = new EventJsonDTO();
             var groups = GroupRecordsByIndividual(records);

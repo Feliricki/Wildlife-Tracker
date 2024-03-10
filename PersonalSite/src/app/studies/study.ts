@@ -9,8 +9,8 @@ export interface StudyDTO {
 
   readonly id: bigint;
   readonly licenseType: string;
-  readonly mainLocationLat?: number;
-  readonly mainLocationLon?: number;
+  mainLocationLat?: number;
+  mainLocationLon?: number;
   readonly name: string;
 
   readonly numberOfDeployments: number;

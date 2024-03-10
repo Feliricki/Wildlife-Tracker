@@ -1,5 +1,9 @@
 @use '@angular/material' as mat;
 
+.spacer {
+  flex: 1 1 auto;
+}
+
 .sidenav-container {
     position:fixed;
     height: 100%;
@@ -14,11 +18,21 @@
 .sidenav-content {
   position: relative;
   /* background-color: lightblue; */
+  // justify-content: center;
+  // align-items: center;
+
   background-color: white;
   width: 100%;
   height: 100%;
   border: 1px solid rgba(0, 0, 0, 0.5);
   /* height: calc(100% - 3.5em); */
+}
+
+.toolbar-container {
+  display: flex;
+  justify-content: center;
+  // NOTE:This setting forces the items to aligned too close to the top.
+  // align-items: center;
 }
 
 /* NOTE: This section is used if the button is placed after the search compnent.*/
@@ -74,11 +88,12 @@
 
 .right-toggle-button {
   /* position: absolute; */
-  position: relative;
+  position: absolute;
   color: black;
   background-color: white;
-  margin-top: 50vh;
-  margin-left: calc(100vw - 4.25em);
+  top: 50vh;
+  left: calc(100vw - 4.25em);
+  // right: 4.25em;
   z-index: 3;
 }
 
@@ -89,6 +104,7 @@
 .toolbar-elements {
   display: flex;
   flex-flow: row nowrap;
+  // width: 500px;
 
   #mini-fab-layer {
     margin-top: 1.75em;
@@ -107,11 +123,10 @@
 
   .toggle-group {
     margin-left: 0.25em;
-    // margin-right:1em;
     margin-top:1em;
+    z-index: 3;
 
     border-radius: 15px;
-    // background-color: white;
     mat-button-toggle {
         font-style: normal;
     }
@@ -125,16 +140,32 @@
     // background-color: rgb(255, 100, 100);
     // color: rgb(255, 100, 100);
   }
+
 }
-/* TODO: The toolbar is broken on mobile and
- blocks acess to button. */
+
+.menu-button {
+  position: fixed;
+  left: 1.0em;
+  margin-top: 0.5em;
+}
+
+// NOTE:This button should always be present on screen.
+.settings-button {
+  position: fixed;
+  right: 1.0em;
+  margin-top: 0.5em;
+
+}
+
 #toolbar {
   position: absolute;
   justify-content: center;
   align-items: center;
 
-  z-index: 4;
+  z-index: 3;
+  // The toolbar is transparant.
   background-color:rgba(0, 0, 0, 0.0);
+  width: auto;
 
   .chip-listbox {
     position:relative;
@@ -157,10 +188,11 @@
 .layer-radio-group {
   display:flex;
   flex-direction: column;
-  // margin-right: 5px;
   align-content: flex-start;
+  // margin-right: 5px;
 
   .layer-radio-button {
     margin-right: 1em;
   }
 }
+

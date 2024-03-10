@@ -1,22 +1,22 @@
 import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, WritableSignal, signal, AfterViewInit, OnDestroy, ChangeDetectionStrategy, Injector, inject, Inject } from '@angular/core';
 import { distinctUntilChanged, forkJoin, from, Observable, skip, Subscription } from 'rxjs';
-import { StudyService } from '../studies/study.service';
-import { StudyDTO } from '../studies/study';
+import { StudyService } from '../../studies/study.service';
+import { StudyDTO } from '../../studies/study';
 import { Loader } from '@googlemaps/js-api-loader';
-import { NgIf, AsyncPipe } from '@angular/common';
+import { AsyncPipe } from '@angular/common';
 import { CustomRenderer1 } from './renderers';
 import { MarkerClusterer, SuperClusterAlgorithm, SuperClusterOptions } from '@googlemaps/markerclusterer';
-import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
+import { JsonResponseData } from '../../studies/JsonResults/JsonDataResponse';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NgElement, WithProperties } from '@angular/elements';
 import { InfoWindowComponent } from './info-window/info-window.component';
-import { GoogleMapOverlayController, LayerTypes, StreamStatus } from '../deckGL/GoogleOverlay';
+import { GoogleMapOverlayController, LayerTypes, StreamStatus } from '../../deckGL/GoogleOverlay';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpResponse } from '@angular/common/http';
-import { LineStringFeatureCollection, LineStringPropertiesV1 } from "../deckGL/GeoJsonTypes";
-import { EventRequest } from "../studies/EventRequest";
-import { MapStyles } from '../tracker-view/tracker-view.component';
+import { LineStringFeatureCollection, LineStringPropertiesV1 } from "../../deckGL/GeoJsonTypes";
+import { EventRequest } from "../../studies/EventRequest";
+import { MapStyles } from '../../tracker-view/tracker-view.component';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import {
@@ -27,7 +27,7 @@ import {
   MatSnackBarLabel,
   MatSnackBarRef,
 } from '@angular/material/snack-bar';
-import { EventMetaData } from '../events/EventsMetadata';
+import { EventMetaData } from '../../events/EventsMetadata';
 
 type MapState =
   'initial' |
@@ -43,6 +43,7 @@ type EventState =
   "time out" |
   "error";
 
+// NOTE: Unused type.
 export type EventResponse = Observable<HttpResponse<LineStringFeatureCollection<LineStringPropertiesV1>[] | null>>;
 
 @Component({
@@ -52,7 +53,7 @@ export type EventResponse = Observable<HttpResponse<LineStringFeatureCollection<
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    NgIf, AsyncPipe, MatButtonModule, MatProgressBarModule,
+    AsyncPipe, MatButtonModule, MatProgressBarModule,
     MatIconModule, MatProgressSpinnerModule,
   ]
 })
@@ -62,6 +63,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   eventState: WritableSignal<EventState> = signal("initial");
 
   @Input() focusedMarker?: bigint;
+  // This input is currently unused.
   @Input() pathEventData$?: EventResponse;
   @Input() eventRequest?: EventRequest;
 
@@ -72,10 +74,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   // INFO:Overlay controls
   @Input() selectedLayer: LayerTypes = LayerTypes.ArcLayer;
 
-  @Output() JsonDataEmitter = new EventEmitter<Observable<JsonResponseData[]>>();
-  @Output() componentInitialized = new EventEmitter<true>;
-  // INFO:This where event info. gets sent to the track and then the events component.
-  @Output() eventMetaData = new EventEmitter<EventMetaData>();
 
   defaultMapOptions: google.maps.MapOptions = {
     center: {
@@ -92,19 +90,16 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     radius: 150,
   }
 
-  defaultMarkerOptions: google.maps.MarkerOptions = {
-    clickable: true,
-  };
-
-  defaultPinOptions: google.maps.marker.PinElementOptions = {
-    scale: 1, // default = 1
-  }
-
-  defaultInfoWindowOptions: google.maps.InfoWindowOptions = {
-  };
-
-  defaultInfoWindowOpenOptions: google.maps.InfoWindowOpenOptions = {
-  };
+  // defaultMarkerOptions: google.maps.MarkerOptions = {
+  //   clickable: true,
+  // };
+  // defaultPinOptions: google.maps.marker.PinElementOptions = {
+  //   scale: 1, // default = 1
+  // }
+  // defaultInfoWindowOptions: google.maps.InfoWindowOptions = {
+  // };
+  // defaultInfoWindowOpenOptions: google.maps.InfoWindowOpenOptions = {
+  // };
 
   // this api key is restricted
   loader = new Loader({
@@ -125,6 +120,11 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   @Output() chunkInfoEmitter = new EventEmitter<EventMetaData>();
   @Output() streamStatusEmitter = new EventEmitter<StreamStatus>();
 
+  @Output() JsonDataEmitter = new EventEmitter<Observable<JsonResponseData[]>>();
+  @Output() componentInitialized = new EventEmitter<true>;
+  // INFO:This where event info. gets sent to the track and then the events component.
+  @Output() eventMetaData = new EventEmitter<EventMetaData>();
+
   markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> | undefined;
   mapCluster: MarkerClusterer | undefined;
 
@@ -142,9 +142,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   constructor(
     private studyService: StudyService,
     private snackbar: MatSnackBar,
-    private injector: Injector) {
-    // console.log("Constructing deckOverlayController.");
-  }
+    private injector: Injector) { }
 
   ngOnInit(): void {
     return;
@@ -175,7 +173,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         // This case sends a message that is received in the event component
         case "focusedMarker":
           console.log(`Panning to ${currentValue}`);
-          this.panToMarker(currentValue);
+          this.panToMarker(currentValue as bigint);
           break;
 
         case "eventRequest":
@@ -191,8 +189,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           this.map?.setMapTypeId(this.mapType);
           break;
 
-        // BUG:Not all markers get their visiblity toggled
-        // Recheck how the markers are instantiated and associated with the map clusterer.
         case "markersVisible":
           this.markersVisible = currentValue as boolean;
           this.toggleMarkerVisibility(this.markersVisible).then(() => console.log("Toggled markers asynchronously."));
@@ -202,7 +198,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         // INFO: Overlay controls sections
         case "selectedLayer":
           this.selectedLayer = currentValue as LayerTypes;
-          console.log(`Changing selected layer to ${this.selectedLayer}`);
+          console.log(`Changing selected layer to ${this.selectedLayer} in google maps component.`);
           this.deckOverlay?.changeActiveLayer(this.selectedLayer);
           break;
 
@@ -222,20 +218,16 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     this.chunkLoadSubscription?.unsubscribe();
   }
 
-  // TODO: this implemention may cause a memory leak if repeatly toggled.
+  // NOTE:This implemention may cause a memory leak if repeatly toggled.
   // Lookup if the documentation has a builtin way to
   // toggle visibility without wasting resources.
-  //BUG:Currently adding markers incur a significant performance penalty.
-  // Consider storing the marker in an array or otherwise toggle the visibility some other way.
   async toggleMarkerVisibility(visible: boolean): Promise<void> {
     if (!this.mapCluster) return;
     if (!this.markers) return;
 
     const cluster = this.mapCluster;
-    // console.log(this.mapCluster);
-    // console.log(`There are ${this.markers?.size ?? 0} elements in markers collection.`);
-
     const currentMarkers: google.maps.marker.AdvancedMarkerElement[] = [];
+
     for await (const marker of this.markers.values()) {
       marker.map = visible ? this.map : undefined;
       currentMarkers.push(marker);
@@ -254,7 +246,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   handleEventRequest(request: EventRequest) {
     if (!this.map) {
-      console.error("Map not set before setting overlay.");
+      console.error("Map not set before handling event request.");
       return;
     }
     this.deckOverlay?.loadData(request);
@@ -336,12 +328,21 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
         this.emitStudies(this.studies);
         const markers = new Map<bigint, google.maps.marker.AdvancedMarkerElement>();
-
+        const coordinates = new Set<string>();
         for (const studyDTO of this.studies.values()) {
 
           if (studyDTO.mainLocationLon === undefined || studyDTO.mainLocationLat === undefined) {
             continue;
           }
+
+          // INFO:Prevent markers from overlapping too much.
+          let key = `${studyDTO.mainLocationLon.toString()},${studyDTO.mainLocationLat.toString()}`;
+          while (coordinates.has(key)) {
+            // studyDTO.mainLocationLat += 0.01;
+            studyDTO.mainLocationLon += 0.002;
+            key = `${studyDTO.mainLocationLon.toString()},${studyDTO.mainLocationLat.toString()}`;
+          }
+          coordinates.add(key);
 
           const imageIcon = document.createElement('img');
           imageIcon.src = '../../assets/location-pin2-small.png';
@@ -408,17 +409,23 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           // }
         });
 
+        console.log(`Total number of coordinates: ${coordinates.size} Number of studies: ${this.studies.size}`)
+
         this.initializeDeckOverylay(this.map);
         this.mapState.set('loaded');
         this.sendMapState(true);
       },
-      error: err => console.error(err)
+      error: err => {
+        console.error(err);
+        this.mapState.set('error');
+      }
     });
     return true;
   }
 
 
   initializeDeckOverylay(map: google.maps.Map) {
+    console.log(`Initializing the deck overlay class  with selected layer ${this.selectedLayer}`);
     this.deckOverlay = new GoogleMapOverlayController(map, this.selectedLayer);
     this.streamStatus$ = toObservable(this.deckOverlay.StreamStatus, {
       injector: this.injector
@@ -427,7 +434,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     const onChunkLoad$ = toObservable(this.deckOverlay.currentMetaData,
       { injector: this.injector });
 
-    // TODO: This subcription responses to emitted chunks from the deck overlay class.
+    // TODO: This subscription responses to emitted chunks from the deck overlay class.
     onChunkLoad$.pipe(
       skip(1), // NOTE: A skip will result in the first loaded chunk being seen.
     ).
@@ -438,16 +445,13 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         error: err => console.error(err),
       });
 
-    // TODO: This subscription will response to the latest stream status of the signalr
-    // client.
+    // TODO: This subscription will response to the latest stream status of the signalr client.
     this.streamStatusSubscription = this.streamStatus$.pipe(
       skip(1),
       distinctUntilChanged()
     ).subscribe({
       next: (status: StreamStatus) => {
         // TODO: Finish this method and also remove the snack bar button.
-        // The toolbar in the tracker component should be a separate component.
-        // const numIndividuals = this.deckOverlay?.NumberofIndividuals() ?? 0;
         const numIndividuals = this.deckOverlay?.CurrentIndividuals().size ?? 0;
         switch (status) {
           case "standby":
@@ -493,30 +497,27 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     return infoWindowEl;
   }
 
+  // TODO:The component needs to deal with the case when retrieving the individuals results in an error.
   getJsonData(entityType: "study" | "individual" | "tag", studyId: bigint): Observable<JsonResponseData[]> {
     return this.studyService.jsonRequest(entityType, studyId);
   }
 
   //NOTE:The focusedMarker needs to be set before calling this function.
   panToCurrentMarker() {
-    if (this.focusedMarker === undefined) return;
+    if (!this.focusedMarker) return;
     this.panToMarker(this.focusedMarker);
   }
 
   // NOTE: This function only affects the map component
   panToMarker(studyId: bigint): void {
-    // console.log("Calling panToMarker in google maps component.");
     const curMarker = this.markers?.get(studyId);
-    if (curMarker === undefined || this.infoWindow === undefined) {
-      return;
-    }
-    const markerPos = curMarker.position;
+    if (!curMarker || !this.infoWindow || !this.map) return;
 
-    if (!markerPos) {
-      return;
-    }
-    this.map?.panTo(markerPos);
-    this.map?.setZoom(10);
+    const markerPos = curMarker.position;
+    if (!markerPos) return;
+
+    this.map.panTo(markerPos);
+    this.map.setZoom(10);
     google.maps.event.trigger(curMarker, "click");
   }
 

@@ -10,6 +10,9 @@ import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
 import { JsonResponseData } from './JsonResults/JsonDataResponse';
 import { EventRequest } from './EventRequest';
 
+type PointFeature<TProp> = GeoJSON.Feature<GeoJSON.Point, TProp>;
+type PointFeatureCollection<TProp> = GeoJSON.FeatureCollection<GeoJSON.Point, TProp>;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -57,6 +60,14 @@ export class StudyService {
     return this.httpClient.get<StudyDTO[]>(url);
   }
 
+  getAllStudiesGeoJSON<TProp>(): Observable<PointFeatureCollection<TProp>> {
+    const url = environment.baseUrl + "api/MoveBank/GetAllStudies";
+    const params = new HttpParams()
+      .set("geojsonFormat", "true");
+
+    return this.httpClient.get<PointFeatureCollection<TProp>>(url, { params: params });
+  }
+
   // TODO: Test this function
   jsonRequest(entityType: "study" | "tag" | "individual", studyId: bigint, sortOrder: "asc" | "desc" = "asc"):
     Observable<JsonResponseData[]> {
@@ -83,6 +94,9 @@ export class StudyService {
           return response.body as JsonResponseData[];
         }
         else {
+          // TODO:The way this is being handle will result in error being caught here
+          // which prevents the table state from being properly updating into the 'error' state.
+          // Find a way to capture 200 response from the server and also handle actual errors.
           console.log("unknown response from jsonRequest");
           return [];
         }
@@ -171,30 +185,30 @@ export class StudyService {
       })
     )
   }
-  // getGeoJsonEventData<TGeo extends GeoJSON.Geometry, TProp, TMeta>(request: EventRequest) {
-  //   const url = environment.baseUrl + "api/MoveBank/GetEventData";
-  //
-  //   const opts = {
-  //     observe: 'response' as const,
-  //     responseType: 'json' as const,
-  //     headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
-  //   };
-  //
-  //   const body = {
-  //     studyId: request.StudyId,
-  //     localIdentifiers: request.LocalIdentifiers,
-  //     sensorType: request.SensorType,
-  //     geometryType: request.GeometryType,
-  //     options: request.Options,
-  //   };
-  //
-  //   // NOTE: Error responses should be handled by the caller.
-  //   return this.httpClient
-  //     .post<Array<{ metadata: TMeta } & GeoJSON.FeatureCollection<TGeo, TProp>> | null>
-  //     (url, JSON.stringify(body), opts).pipe(
-  //       tap(res => console.log(res.url))
-  //     );
-  // }
+// getGeoJsonEventData<TGeo extends GeoJSON.Geometry, TProp, TMeta>(request: EventRequest) {
+//   const url = environment.baseUrl + "api/MoveBank/GetEventData";
+//
+//   const opts = {
+//     observe: 'response' as const,
+//     responseType: 'json' as const,
+//     headers: new HttpHeaders({ 'Content-Type': 'application/json' }),
+//   };
+//
+//   const body = {
+//     studyId: request.StudyId,
+//     localIdentifiers: request.LocalIdentifiers,
+//     sensorType: request.SensorType,
+//     geometryType: request.GeometryType,
+//     options: request.Options,
+//   };
+//
+//   // NOTE: Error responses should be handled by the caller.
+//   return this.httpClient
+//     .post<Array<{ metadata: TMeta } & GeoJSON.FeatureCollection<TGeo, TProp>> | null>
+//     (url, JSON.stringify(body), opts).pipe(
+//       tap(res => console.log(res.url))
+//     );
+// }
 
 
 }

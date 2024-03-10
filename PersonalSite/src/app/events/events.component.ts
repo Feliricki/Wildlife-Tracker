@@ -1,5 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, Signal, SimpleChanges, ViewChild, WritableSignal, computed, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { AfterViewInit, ChangeDetectionStrategy, Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, Signal, SimpleChanges, ViewChild, WritableSignal, computed, signal } from '@angular/core'; import { CommonModule } from '@angular/common';
 import { StudyDTO } from '../studies/study';
 import { StudyService } from '../studies/study.service';
 import { IndividualJsonDTO } from '../studies/JsonResults/IndividualJsonDTO';
@@ -73,15 +72,14 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   readonly MAX_EVENTS_LIMIT = MAX_EVENTS;
 
   toggledStudies?: Map<bigint, StudyDTO>;
-  // displayedColumns: string[] = ['name', 'select'];
   displayedColumns: string[] = ['select', 'name'];
   displayedColumnsWithExpanded: string[] = [...this.displayedColumns, 'expanded'];
 
   @Input() currentStudy?: StudyDTO;
 
   // INFO:This section contains metadata on events from the maps component.
-  // and the outputs from the wouldbe overlay controls
-  // Consider if the controls should be made into a proper reative form.
+  // and the outputs from the would be overlay controls
+  // Consider if the controls should be made into a proper reactive form.
   @Input() currentEventData?: EventMetaData;
   @Output() pathOverlayOptions = new EventEmitter<OverlayPathOptions>();
   @Output() pointOverlayOptions = new EventEmitter<OverlayPointOptions>();
@@ -264,18 +262,22 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
           case "loading":
             this.eventForm.disable();
             break;
+
           case "loaded":
             this.eventForm.markAsPristine();
             this.eventForm.enable();
             this.sensorForm.setValue(this.currentLocationSensors().at(0) ?? null);
             console.log("All individuals are loaded (tracker component)");
             break;
+
           case "error":
             this.eventForm.disable();
             break;
+
           case "initial":
             this.eventForm.disable();
             break;
+
           default:
             break;
 
@@ -331,8 +333,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
             case "standby":
               break;
             case "streaming":
-              // NOTE: This case refreshes the current individuals loaded
-              // by the stream.
+              // NOTE: This case refreshes the current individuals loaded by the stream.
               this.currentIndividuals.set([]);
               break;
             case "error":
@@ -760,13 +761,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
       Options: eventOptions,
     };
 
-    console.log(JSON.stringify(eventRequest));
-
-    // const request = this.studyService.
-    //   getGeoJsonEventData<GeoJSON.LineString, LineStringPropertiesV1, LineStringMetaData>
-    //   (eventRequest);
-    // const fetchRequest = this.studyService.getGeoJsonFetchRequest(eventRequest);
-    // this.sendEventMessage(request);
+    // console.log(JSON.stringify(eventRequest));
     this.sendFetchRequest(eventRequest);
     // TODO: Consider if an observable or the actual data should be sent to the current
   }

@@ -19,7 +19,6 @@ namespace PersonalSiteAPI.Mappings
                 .Map(studyDto => studyDto.TimestampLastDeployedLocation, source => source.TimeStampLastDeployedLocation);
 
             TypeAdapterConfig.GlobalSettings.Scan(Assembly.GetExecutingAssembly());
-
         }
 
         private static float? FloatParser(string? num)

@@ -28,7 +28,7 @@ export enum LayerTypes {
   ContourLayer,
   GeoJsonLayer,
   GPUGridLayer,
-  GridLayer, // TODO: try this out first then fallback to GPUgridlayer if it doesn't work.
+  GridLayer, // TODO: try this out first then fallback to GPUGrid layer if it doesn't work.
   HeatmapLayer,
   HexagonLayer,
   IconLayer,
