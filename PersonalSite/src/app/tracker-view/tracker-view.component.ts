@@ -20,7 +20,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
-import { LayerTypes, StreamStatus } from '../deckGL/GoogleOverlay';
+import { LayerTypes, StreamStatus } from '../deckGL/DeckOverlayController';
 import { MatRippleModule } from '@angular/material/core';
 import { EventMetaData } from '../events/EventsMetadata';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -229,6 +229,8 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
   // INFO:Overlay controls.
   selectedLayer(layer: LayerTypes) {
+    //TODO:Perhaps another value should be emitted to reset the currentValue in the recieving component.
+    // this.currentLayer.set(undefined);
     this.currentLayer.set(layer);
   }
 

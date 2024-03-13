@@ -1,4 +1,4 @@
-import { LayerTypes } from "./GoogleOverlay";
+import { LayerTypes } from "./DeckOverlayController";
 
 
 export class LayerTypesHelper {

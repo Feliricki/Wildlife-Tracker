@@ -32,7 +32,7 @@
   <mat-sidenav-content class="sidenav-content">
 
     <!-- NOTE: This is another sidenav within the outer sidenav -->
-    <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="side"
+    <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="over"
       [fixedInViewport]="true">
 
       <app-events #eventComponent (eventRequestEmitter)="updateCurrentEventRequest($event)"
@@ -180,7 +180,8 @@
 
       @case("mapbox") {
       <app-mapbox (mapStateEmitter)="updateMapState($event)" (studyEmitter)="updateCurrentStudy($event)"
-        [focusedPoint]="currentMarker">
+        [focusedPoint]="currentMarker" [eventRequest]="currentEventRequest" [selectedLayer]="currentLayer()"
+        [pointsVisible]="markersVisible()">
       </app-mapbox>
       }
 

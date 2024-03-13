@@ -1,4 +1,4 @@
-import { GoogleMapsOverlay as DeckOverlay } from '@deck.gl/google-maps/typed';
+import { GoogleMapsOverlay } from '@deck.gl/google-maps/typed';
 import { MapboxOverlay } from '@deck.gl/mapbox/typed';
 // import { TripsLayer } from '@deck.gl/geo-layers/typed';
 import { ArcLayer, LineLayer, ScatterplotLayer, PathLayer, ArcLayerProps, PathLayerProps, LineLayerProps, ScatterplotLayerProps } from '@deck.gl/layers/typed';
@@ -11,6 +11,7 @@ import { BinaryLineFeatures, BinaryPointFeatures, BinaryPolygonFeatures, BinaryA
 import { Signal, WritableSignal, computed, signal } from '@angular/core';
 import { HeatmapLayer, HeatmapLayerProps, HexagonLayer, HexagonLayerProps, ScreenGridLayer, ScreenGridLayerProps, GridLayer, GridLayerProps } from '@deck.gl/aggregation-layers/typed';
 import { EventMetaData } from '../events/EventsMetadata';
+import mapboxgl from 'mapbox-gl';
 
 // This is the type returned by the geoJsonToBinary function.
 type BinaryFeatureWithAttributes = {
@@ -18,6 +19,18 @@ type BinaryFeatureWithAttributes = {
   lines: BinaryLineFeatures & OptionalAttributes;
   polygons?: BinaryPolygonFeatures;
 };
+
+type GoogleBaseMap = {
+  type: "google";
+  map: google.maps.Map;
+}
+
+type MapboxBaseMap = {
+  type: "mapbox";
+  map: mapboxgl.Map;
+}
+
+type OverlayTypes = "google" | "mapbox" | "arcgis";
 
 // TODO:Agggregation layers are implemented incorrectly. Everything needs to be in a single layer.
 // Work out a user interface for showing layers within a certain timeframe.
@@ -90,9 +103,10 @@ export type OverlayAggregationOptions = {
 
 export type StreamStatus = "standby" | "streaming" | "error";
 
-export class GoogleMapOverlayController {
-  map: google.maps.Map;
-  deckOverlay?: DeckOverlay | MapboxOverlay;
+export class DeckOverlayController {
+  map: google.maps.Map | mapboxgl.Map;
+  deckOverlay?: GoogleMapsOverlay | MapboxOverlay;
+  currentActiveOverlay: WritableSignal<OverlayTypes> = signal("google");
   // NOTE: Not supported on older browsers.
   webWorker?: Worker;
 
@@ -115,8 +129,8 @@ export class GoogleMapOverlayController {
   textDecoder = new TextDecoder();
   textEncoder = new TextEncoder();
 
-  // TODO:Consider if recieved chunks can appended to their corresponding layer going by individual.
-  // If it's posibble to pull this off then I should consider making a layer for each individual
+  // TODO:Consider if received chunks can appended to their corresponding layer going by individual.
+  // If it's possible to pull this off then I should consider making a layer for each individual
   // and one large layer containing all the individual's event data.
   dataChunks: Array<BinaryFeatureWithAttributes> = [];
   contentArray: ArrayBufferLike[][] = [];
@@ -133,7 +147,6 @@ export class GoogleMapOverlayController {
     autoHighlight: false,
     transitions: {} // Consider using this down the line.
   }
-
 
   defaultPointOptions: Partial<ScatterplotLayerProps> = {
     radiusUnits: 'meters',
@@ -240,10 +253,10 @@ export class GoogleMapOverlayController {
   );
 
 
-  constructor(map: google.maps.Map, layer: LayerTypes) {
+  constructor(map: google.maps.Map | mapboxgl.Map, layer: LayerTypes) {
     this.map = map;
     this.currentLayer = layer;
-    console.log("About to start connection to signalr hub");
+    console.log(`Instantiated deckOverlay with layer ${this.currentLayer}`);
 
     if (typeof Worker !== 'undefined') {
       this.webWorker = new Worker(new URL('./deck-gl.worker', import.meta.url));
@@ -305,26 +318,76 @@ export class GoogleMapOverlayController {
   //   return;
   // }
 
-  loadData(request: EventRequest) {
-    console.log("Begun loading event data.");
-    // TODO: This needs to be refactored.
+  releaseResources(): void {
     this.dataChunks = [];
     this.contentArray = [];
     this.individualColors.clear();
     this.currentMetaData.set(structuredClone(this.MetadataDefaultOptions));
     this.currentIndividuals.set(new Set());
     this.deckOverlay?.finalize();
+    // this.streamStatus.set("standby");
+  }
+
+  createOverlay(overlayType: OverlayTypes): GoogleMapsOverlay | MapboxOverlay {
+    switch (overlayType){
+      case "google":
+        console.log(`Return google maps overlay.`);
+        return new GoogleMapsOverlay({
+          getTooltip: (data) => data.layer && this.renderBinaryTooltip(data),
+          _typedArrayManagerProps: {
+            overAlloc: 1,
+            poolSize: 0,
+          }
+        });
+
+      case "mapbox":
+        // NOTE:This overlay implement the IController class from the mapbox imports and must be added in the original mapbox component class.
+        console.log(`Returning mapboxOverlay`);
+        return new MapboxOverlay({
+          interleaved: false, //NOTE:Interleaved option is buggy as of now.
+          getTooltip: (data) => data.layer && this.renderBinaryTooltip(data),
+          _typedArrayManagerProps: {
+            overAlloc: 1,
+            poolSize: 0,
+          }
+        });
+      case "arcgis":
+        // TODO: This needs to be changed to the arcgis overlay later on.
+        console.log("Arcgis overlay in crateOverlay method.");
+        return new GoogleMapsOverlay({
+          getTooltip: (data) => data.layer && this.renderBinaryTooltip(data),
+          _typedArrayManagerProps: {
+            overAlloc: 1,
+            poolSize: 0,
+          }
+        });
+    }
+  }
+
+  changeOverlayType(overlay: OverlayTypes): void {
+    this.releaseResources();
+    if (overlay === this.currentActiveOverlay()) return;
+
+    this.currentActiveOverlay.set(overlay);
+  }
+
+  loadData(request: EventRequest, basemap: GoogleBaseMap | MapboxBaseMap):
+    GoogleMapsOverlay | MapboxOverlay | undefined {
+    // console.log(`Loading event request with basemap ${basemap.type}`);
+    this.releaseResources();
     this.streamStatus.set("streaming");
 
-    this.deckOverlay = new DeckOverlay({
-      getTooltip: (data) => data.layer && this.renderBinaryTooltip(data),
-      _typedArrayManagerProps: {
-        overAlloc: 1,
-        poolSize: 0,
-      }
-    });
-    this.deckOverlay.setMap(this.map);
-
+    // this.deckOverlay = this.createOverlay(this.currentActiveOverlay());
+    this.currentActiveOverlay.set(basemap.type);
+    if (basemap.type == "google"){
+      this.deckOverlay = this.createOverlay(this.currentActiveOverlay()) as GoogleMapsOverlay;
+      this.deckOverlay.setMap(basemap.map);
+    }
+    else if (basemap.type === "mapbox"){
+      // NOTE:MapboxOverlay implements the IControl interface used for custom controls for Mapbox's map.
+      this.deckOverlay = this.createOverlay(this.currentActiveOverlay()) as MapboxOverlay;
+      basemap.map.addControl(this.deckOverlay);
+    }
     const workerRequest: WorkerFetchRequest = {
       type: "FetchRequest",
       request: request,
@@ -334,15 +397,16 @@ export class GoogleMapOverlayController {
       this.webWorker.postMessage({ data: workerRequest, type: "FetchRequest" as const });
     }
     else {
-      // TODO:There need to be a fallback mechanism if webworker are not supported.
-      // setData(workerRequest, true);
+      // TODO: If webworkers are not suppported then simply alert the user.
+      alert("Your browser does not support webworkers.");
     }
+    return this.deckOverlay;
   }
 
   // TODO: This method needs to be refactored to display different information depending the currently active layer.
   renderBinaryTooltip(info: PickingInfo) {
     const index = info.index;
-    console.log(info);
+    // console.log(info);
     if (index === -1) {
       return null;
     }

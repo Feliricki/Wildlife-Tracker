@@ -1,13 +1,19 @@
-import { ChangeDetectionStrategy, Component, Output, EventEmitter, Input, OnInit, WritableSignal, signal, OnChanges, SimpleChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Output, EventEmitter, Input, OnInit, WritableSignal, signal, OnChanges, SimpleChanges, Injector } from '@angular/core';
 import { StudyDTO } from 'src/app/studies/study';
 import { AsyncPipe } from '@angular/common';
-import { LayerTypes } from 'src/app/deckGL/GoogleOverlay';
+import { DeckOverlayController, LayerTypes, StreamStatus } from 'src/app/deckGL/DeckOverlayController';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { StudyService } from 'src/app/studies/study.service';
 import mapboxgl, { GeoJSONSource, MapboxGeoJSONFeature } from 'mapbox-gl';
 import { InfoWindowComponent } from '../google maps/info-window/info-window.component';
 import { NgElement, WithProperties } from '@angular/elements';
-import { Subscription } from 'rxjs';
+import { Observable, Subscription, distinctUntilChanged, skip } from 'rxjs';
+import { EventRequest } from 'src/app/studies/EventRequest';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { EventMetaData } from 'src/app/events/EventsMetadata';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { SnackbarComponent } from '../snackbar.component';
+import { TestController } from './custom-controls';
 
 type MapState =
   'initial' |
@@ -58,15 +64,27 @@ export class MapboxComponent implements OnInit, OnChanges {
   // TODO:Right now I'm working on getting the pan to marker/point feature to work.
   @Input() selectedLayer: LayerTypes = LayerTypes.ArcLayer;
   @Input() focusedPoint?: bigint;
+  @Input() eventRequest?: EventRequest;
+  @Input() pointsVisible?: boolean;
 
   // INFO:This section is for data that is sent to the tracker component.
   @Output() studiesEmitter = new EventEmitter<Map<bigint, StudyDTO>>();
   @Output() mapStateEmitter = new EventEmitter<boolean>();
+  @Output() chunkInfoEmitter = new EventEmitter<EventMetaData>();
   @Output() studyEmitter = new EventEmitter<StudyDTO>();
+  @Output() streamStatusEmitter = new EventEmitter<StreamStatus>();
 
   map?: mapboxgl.Map;
 
-  constructor(private studyService: StudyService) {
+  deckOverlay?: DeckOverlayController;
+  streamStatus$?: Observable<StreamStatus>;
+  streamStatusSubscription?: Subscription;
+  chunkLoadSubscription?: Subscription;
+
+  constructor(
+    private studyService: StudyService,
+    private snackbar: MatSnackBar,
+    private injector: Injector) {
   }
 
   ngOnInit(): void {
@@ -88,17 +106,19 @@ export class MapboxComponent implements OnInit, OnChanges {
       mapboxgl.accessToken = this.mapboxToken;
       this.map = new mapboxgl.Map({
         container: 'map',
+        style: 'mapbox://styles/mapbox/light-v9',
         center: [0, 0],
         zoom: 5,
       });
 
       // TODO:Add some controls for resetting the position back to the default.
-      // And add some controls for changing the current layer.
+      // Add a custom controller for changing the style of the basemap.
       this.map
         .addControl(new mapboxgl.NavigationControl())
         .addControl(new mapboxgl.ScaleControl())
         .addControl(new mapboxgl.GeolocateControl())
-        .addControl(new mapboxgl.FullscreenControl());
+        .addControl(new mapboxgl.FullscreenControl())
+        .addControl(new TestController());
 
       this.map.on('load', () => {
         if (!this.map) {
@@ -137,8 +157,6 @@ export class MapboxComponent implements OnInit, OnChanges {
               coordinates.add(key);
               this.studies.set(feature.properties.id, feature.properties);
             }
-            // console.log(`Coordinates has ${coordinates.size} elements and collection has ${collection.features.length} features.`);
-            // console.log(this.studies);
 
             this.map.addSource('studies', {
               type: "geojson",
@@ -206,6 +224,7 @@ export class MapboxComponent implements OnInit, OnChanges {
                 'circle-stroke-color': '#fff' // white outline
               },
             });
+            this.initializeDeckOverlay(this.map);
 
             //INFO:This callback function inspect a cluster on click.
             this.map.on('click', 'clusters', (e) => {
@@ -281,9 +300,6 @@ export class MapboxComponent implements OnInit, OnChanges {
               this.map.getCanvas().style.cursor = '';
             });
 
-            // this.map.on('click', (e) => {
-            //   console.log(`Clicked on location: ${JSON.stringify(e.lngLat)}`);
-            // });
           },
           error: err => {
             console.error(err);
@@ -312,10 +328,104 @@ export class MapboxComponent implements OnInit, OnChanges {
           this.panToPoint(currentValue as bigint);
           break;
 
+        case "eventRequest":
+          this.eventRequest = currentValue as EventRequest;
+          this.handleEventRequest(currentValue as EventRequest);
+          break;
+
+        case "pointsVisible":
+          this.pointsVisible = currentValue as boolean;
+          console.log(`Setting point visibility to ${this.pointsVisible}`);
+          this.togglePointsVisibility(this.pointsVisible);
+          break;
+
+        // Deck Overlay Controls
+        case "selectedLayer":
+          this.selectedLayer = currentValue as LayerTypes;
+          this.deckOverlay?.changeActiveLayer(this.selectedLayer);
+          break;
+
         default:
           return;
       }
     }
+  }
+
+  initializeDeckOverlay(map: mapboxgl.Map) {
+    console.log(`Initializing the deck overlay controls for mapbox with layer ${this.selectedLayer}`);
+    this.deckOverlay = new DeckOverlayController(map, this.selectedLayer);
+    this.streamStatus$ = toObservable(this.deckOverlay.StreamStatus, {
+      injector: this.injector
+    });
+
+    const onChunkload$ = toObservable(this.deckOverlay.currentMetaData, {
+      injector: this.injector
+    });
+
+    onChunkload$.pipe(skip(1))
+      .subscribe({
+        next: this.emitChunkData,
+        error: err => console.error(err),
+      });
+
+    this.streamStatusSubscription = this.streamStatus$.pipe(
+      skip(1),
+      distinctUntilChanged(),
+    )
+      .subscribe({
+        next: (status: StreamStatus) => {
+          const numIndividuals = this.deckOverlay?.CurrentIndividuals().size ?? 0;
+          switch (status) {
+            case "standby":
+              this.emitStreamStatus("standby");
+              if (numIndividuals === 0) {
+                this.openSnackBar("No Events Found.");
+                break;
+              }
+              this.openSnackBar(`Events found for ${numIndividuals} animal(s).`);
+              break;
+
+            case "error":
+              this.emitStreamStatus("error");
+              // TODO:Snackbar needs to be opened
+              break;
+            case "streaming":
+              this.emitStreamStatus("streaming");
+              break;
+          }
+        },
+        error: err => console.error(err)
+      },
+      )
+  }
+
+  togglePointsVisibility(visible: boolean): void {
+    if (!this.map || !this.currentCollection) return;
+    const source = this.map.getSource("studies") as GeoJSONSource;
+    if (visible) {
+      source.setData(this.currentCollection);
+    } else {
+      source.setData({
+        type: "FeatureCollection",
+        features: [],
+      } as GeoJSON.FeatureCollection<GeoJSON.Point, object>);
+    }
+  }
+
+  handleEventRequest(request: EventRequest) {
+    if (!this.map) {
+      console.error("Map not set before receiving event request");
+      return;
+    }
+    if (!this.deckOverlay) {
+      console.error(`DeckOverlay not set before receiving event request.`);
+      return;
+    }
+    this.deckOverlay.loadData(request, { type: "mapbox", map: this.map });
+  }
+
+  openSnackBar(message: string, timeLimit: number = 2) {
+    this.snackbar.openFromComponent(SnackbarComponent, { duration: timeLimit * 1000, data: message });
   }
 
   panToPoint(studyId: bigint): void {
@@ -324,6 +434,7 @@ export class MapboxComponent implements OnInit, OnChanges {
     const study = this.studies.get(studyId);
     if (!study) return;
 
+    console.log(`Panning to point ${JSON.stringify(study)}`);
     this.movingToPoint.set(true);
     this.map.easeTo({
       center: [study.mainLocationLon ?? 0, study.mainLocationLat ?? 0],
@@ -366,4 +477,16 @@ export class MapboxComponent implements OnInit, OnChanges {
   emitStudy(study: StudyDTO): void {
     this.studyEmitter.emit(study);
   }
+
+  emitChunkData(chunkInfo: EventMetaData): void {
+    // this.chunkInfoEmitter.emit(chunkInfo);
+  }
+
+  emitStreamStatus(streamStatus: StreamStatus): void {
+    this.streamStatusEmitter.emit(streamStatus);
+  }
+}
+
+export class MapboxSnackbarComponent {
+
 }

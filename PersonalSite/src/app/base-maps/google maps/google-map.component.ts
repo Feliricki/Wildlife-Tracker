@@ -1,4 +1,4 @@
-import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, WritableSignal, signal, AfterViewInit, OnDestroy, ChangeDetectionStrategy, Injector, inject, Inject } from '@angular/core';
+import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, WritableSignal, signal, AfterViewInit, OnDestroy, ChangeDetectionStrategy, Injector } from '@angular/core';
 import { distinctUntilChanged, forkJoin, from, Observable, skip, Subscription } from 'rxjs';
 import { StudyService } from '../../studies/study.service';
 import { StudyDTO } from '../../studies/study';
@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NgElement, WithProperties } from '@angular/elements';
 import { InfoWindowComponent } from './info-window/info-window.component';
-import { GoogleMapOverlayController, LayerTypes, StreamStatus } from '../../deckGL/GoogleOverlay';
+import { DeckOverlayController, LayerTypes, StreamStatus } from '../../deckGL/DeckOverlayController';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpResponse } from '@angular/common/http';
 import { LineStringFeatureCollection, LineStringPropertiesV1 } from "../../deckGL/GeoJsonTypes";
@@ -19,15 +19,9 @@ import { EventRequest } from "../../studies/EventRequest";
 import { MapStyles } from '../../tracker-view/tracker-view.component';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import {
-  MAT_SNACK_BAR_DATA,
-  MatSnackBar,
-  MatSnackBarAction,
-  MatSnackBarActions,
-  MatSnackBarLabel,
-  MatSnackBarRef,
-} from '@angular/material/snack-bar';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { EventMetaData } from '../../events/EventsMetadata';
+import { SnackbarComponent } from '../snackbar.component';
 
 type MapState =
   'initial' |
@@ -130,7 +124,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   infoWindow: google.maps.InfoWindow | undefined;
 
-  deckOverlay?: GoogleMapOverlayController;
+  deckOverlay?: DeckOverlayController;
   streamStatus$?: Observable<StreamStatus>;
   streamStatusSubscription?: Subscription;
   chunkLoadSubscription?: Subscription;
@@ -249,7 +243,11 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
       console.error("Map not set before handling event request.");
       return;
     }
-    this.deckOverlay?.loadData(request);
+    if (!this.deckOverlay) {
+      console.error("DeckOverlay not instantiated before calling loadData method.");
+      return;
+    }
+    this.deckOverlay.loadData(request, { type: "google", map: this.map });
   }
 
   coordinateToLatLng(coordinates: GeoJSON.Position): google.maps.LatLng {
@@ -363,9 +361,8 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
             if (this.infoWindow === undefined) {
               return;
             }
-            // TODO:Remove this after debugging
-            console.log(`Clicked marker with id = ${studyDTO.id} Contained in markers = ${this.markers?.has(studyDTO.id)}`);
-            console.log(this.mapCluster);
+            // console.log(`Clicked marker with id = ${studyDTO.id} Contained in markers = ${this.markers?.has(studyDTO.id)}`);
+            // console.log(this.mapCluster);
             // NOTE: If a marker is clicked then close another instance of the info window component
             if (this.infoWindow.get("studyId") !== undefined
               && this.infoWindow.get("studyId") === studyDTO.id
@@ -411,7 +408,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
         console.log(`Total number of coordinates: ${coordinates.size} Number of studies: ${this.studies.size}`)
 
-        this.initializeDeckOverylay(this.map);
+        this.initializeDeckOverlay(this.map);
         this.mapState.set('loaded');
         this.sendMapState(true);
       },
@@ -424,9 +421,9 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   }
 
 
-  initializeDeckOverylay(map: google.maps.Map) {
+  initializeDeckOverlay(map: google.maps.Map) {
     console.log(`Initializing the deck overlay class  with selected layer ${this.selectedLayer}`);
-    this.deckOverlay = new GoogleMapOverlayController(map, this.selectedLayer);
+    this.deckOverlay = new DeckOverlayController(map, this.selectedLayer);
     this.streamStatus$ = toObservable(this.deckOverlay.StreamStatus, {
       injector: this.injector
     });
@@ -439,9 +436,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
       skip(1), // NOTE: A skip will result in the first loaded chunk being seen.
     ).
       subscribe({
-        next: res => {
-          this.emitChunkData(res);
-        },
+        next: this.emitChunkData,
         error: err => console.error(err),
       });
 
@@ -449,42 +444,43 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     this.streamStatusSubscription = this.streamStatus$.pipe(
       skip(1),
       distinctUntilChanged()
-    ).subscribe({
-      next: (status: StreamStatus) => {
-        // TODO: Finish this method and also remove the snack bar button.
-        const numIndividuals = this.deckOverlay?.CurrentIndividuals().size ?? 0;
-        switch (status) {
-          case "standby":
-            console.log("Google Maps Component: Instantiating signalr client or finished streaming events from a data source.");
-            this.emitStreamStatus("standby");
-            if (numIndividuals === 0) {
-              this.openSnackBar("No Events Found.");
+    )
+      .subscribe({
+        next: (status: StreamStatus) => {
+          // TODO: Finish this method and also remove the snack bar button.
+          const numIndividuals = this.deckOverlay?.CurrentIndividuals().size ?? 0;
+          switch (status) {
+            case "standby":
+              console.log("Google Maps Component: Instantiating signalr client or finished streaming events from a data source.");
+              this.emitStreamStatus("standby");
+              if (numIndividuals === 0) {
+                this.openSnackBar("No Events Found.");
+                break;
+              }
+              this.openSnackBar(`Events found for ${numIndividuals} animal(s).`);
               break;
-            }
-            this.openSnackBar(`Events found for ${numIndividuals} animal(s).`);
-            break;
 
-          case "error":
-            console.log("Google Map Component Overlay Status: Error");
-            this.emitStreamStatus("error");
-            this.openSnackBar("Error retrieving events.");
-            break;
+            case "error":
+              console.log("Google Map Component Overlay Status: Error");
+              this.emitStreamStatus("error");
+              this.openSnackBar("Error retrieving events.");
+              break;
 
-          case "streaming":
-            console.log("Google Map Component Overlay Status: Streaming");
-            this.emitStreamStatus("streaming");
-            break;
+            case "streaming":
+              console.log("Google Map Component Overlay Status: Streaming");
+              this.emitStreamStatus("streaming");
+              break;
 
-          default:
-            return;
-        }
-      },
-      error: err => console.error(err)
-    });
+            default:
+              return;
+          }
+        },
+        error: err => console.error(err)
+      });
   }
 
   openSnackBar(message: string, timeLimit: number = 2) {
-    this.snackbar.openFromComponent(GoogleMapsSnackbarComponent, { duration: timeLimit * 1000, data: message });
+    this.snackbar.openFromComponent(SnackbarComponent, { duration: timeLimit * 1000, data: message });
   }
 
   // NOTE: This function serves to create a dynamic button element every time the info window is opened
@@ -532,40 +528,11 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   }
 
   emitChunkData(chunkInfo: EventMetaData): void {
-    this.chunkInfoEmitter.emit(chunkInfo);
+    return;
+    // this.chunkInfoEmitter.emit(chunkInfo);
   }
 
   emitStreamStatus(streamStatus: StreamStatus): void {
     this.streamStatusEmitter.emit(streamStatus);
   }
-}
-
-@Component({
-  selector: "app-google-maps-snackbar",
-  template:
-    `<span class="snackbar-label" matSnackBarLabel>
-      {{data}}
-    </span>
-    <span class="dense-2" matSnackBarActions>
-      <button mat-button matSnackBarAction (click)="snackBarRef.dismissWithAction()">Dismiss</button>
-    </span>`,
-
-  styles: [`
-    :host {
-      display: flex;
-    }
-    .snackbar-label {
-      /* background-color: white; */
-      /* color: white; */
-    }
-    span {
-      /* color: white; */
-    }
-  `],
-  standalone: true,
-  imports: [MatButtonModule, MatSnackBarLabel, MatSnackBarActions, MatSnackBarAction]
-})
-export class GoogleMapsSnackbarComponent {
-  snackBarRef = inject(MatSnackBarRef);
-  constructor(@Inject(MAT_SNACK_BAR_DATA) public data: string) { }
 }

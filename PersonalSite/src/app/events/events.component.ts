@@ -36,7 +36,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { EventRequest } from '../studies/EventRequest';
 import { MatCardModule } from '@angular/material/card';
 import { MatBadgeModule } from '@angular/material/badge';
-import { LayerTypes, OverlayPathOptions, OverlayPointOptions, StreamStatus } from '../deckGL/GoogleOverlay';
+import { LayerTypes, OverlayPathOptions, OverlayPointOptions, StreamStatus } from '../deckGL/DeckOverlayController';
 import { EventMetaData } from './EventsMetadata';
 import { LayerTypesHelper } from '../deckGL/OverlayOption';
 import { AggregationOverlayOptions, PointOverlayOptions, PathOverlayOptions, PointForms, PathForms, AggregationForms } from '../tracker-view/OverlayOptions';

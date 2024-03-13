@@ -1,4 +1,4 @@
-import { LayerTypes } from "../deckGL/GoogleOverlay"
+import { LayerTypes } from "../deckGL/DeckOverlayController"
 // import { PathOverlayOptions, PointOverlayOptions, AggregationOverlayOptions } from "../tracker-view/OverlayOptions";
 
 type RGBA = [number, number, number, number];
