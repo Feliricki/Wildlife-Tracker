@@ -97,13 +97,25 @@
   z-index: 3;
 }
 
+// INFO:This determines the dimensions of the right sidenav.
+// Consider if the right margin needs to be set since it messes with the closing and opening
+// animations
 .right-sidenav {
-  max-width: 800px;
+  // max-width: 1000px;
+  max-width: 700px;
+  margin-top: 12em;
+  margin-bottom: 20em;
+  border-radius: 25px;
+  background-color: rgba(0,0,0,0);
+  // z-index: 1;
+  box-shadow: none;
 }
 
 .toolbar-elements {
   display: flex;
   flex-flow: row nowrap;
+  // justify-content: right;
+  // align-items: right;
   // width: 500px;
 
   #mini-fab-layer {
@@ -144,9 +156,11 @@
 }
 
 .menu-button {
-  position: fixed;
-  left: 1.0em;
+  position: absolute;
   margin-top: 0.5em;
+  z-index: 3;
+  background-color: white;
+  color: black;
 }
 
 // NOTE:This button should always be present on screen.
@@ -159,13 +173,17 @@
 
 #toolbar {
   position: absolute;
-  justify-content: center;
-  align-items: center;
+  // The following two settings
+  // are only necesasary if the width is set to auto
+  // justify-content: center;
+  // align-items: center;
 
-  z-index: 3;
+
+  z-index: 1;
   // The toolbar is transparant.
-  background-color:rgba(0, 0, 0, 0.0);
-  width: auto;
+  background-color: rgba(0, 0, 0, 0.0);
+  width: 100%;
+  // width: auto;
 
   .chip-listbox {
     position:relative;
@@ -186,7 +204,7 @@
 }
 
 .layer-radio-group {
-  display:flex;
+  display: flex;
   flex-direction: column;
   align-content: flex-start;
   // margin-right: 5px;

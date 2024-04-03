@@ -122,7 +122,8 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
         });
 
         for (let i = 0; i < newEntries; i++) {
-          formControls.push(new FormControl<boolean>(false, { nonNullable: true }));
+          const newFormControl = new FormControl<boolean>({ value: false, disabled: true }, { nonNullable: true });
+          formControls.push(newFormControl);
         }
 
         return formControls;
@@ -131,6 +132,9 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
       finalize(() => {
         this.dataState.set("loaded")
         this.dataState$.next("loaded");
+        this.formArray().controls.forEach(control => {
+          control.enable;
+        })
       })
 
     ).subscribe({
@@ -160,13 +164,13 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     for (let i = 0; i < this.TableSize(); i++) {
       this.selectionModel.select(i);
       const curForm = this.formArray().controls[i];
-      // this.setFormValue(curForm, this.selectonModel.isSelected(i));
       this.setFormValue(curForm, this.selectionModel.isSelected(i));
     }
     this.hasValue.set(this.selectionModel.hasValue());
     this.formArray.set(this.formArray());
   }
 
+  //TODO:This method is incomplete as it does not get aupdated correctly when new info is added.
   get IsAllSelected(): Signal<boolean> {
     return computed(() => this.FormArray().controls.length === this.selectionModel.selected.length);
   }

@@ -1,17 +1,36 @@
-import { GoogleMapsOverlay } from '@deck.gl/google-maps/typed';
-import { MapboxOverlay } from '@deck.gl/mapbox/typed';
+import {GoogleMapsOverlay} from '@deck.gl/google-maps/typed';
+import {MapboxOverlay} from '@deck.gl/mapbox/typed';
 // import { TripsLayer } from '@deck.gl/geo-layers/typed';
-import { ArcLayer, LineLayer, ScatterplotLayer, PathLayer, ArcLayerProps, PathLayerProps, LineLayerProps, ScatterplotLayerProps } from '@deck.gl/layers/typed';
-import { PickingInfo, Layer, Color, LayerProps } from '@deck.gl/core/typed';
-import { randomColor } from './deck-gl.worker';
-import { LineStringPropertiesV2 } from "./GeoJsonTypes";
-import { BinaryLineStringResponse, NumericPropsResponse, OptionalAttributes, WorkerFetchRequest } from "./MessageTypes";
-import { EventRequest } from "../studies/EventRequest";
-import { BinaryLineFeatures, BinaryPointFeatures, BinaryPolygonFeatures, BinaryAttribute } from '@loaders.gl/schema';
-import { Signal, WritableSignal, computed, signal } from '@angular/core';
-import { HeatmapLayer, HeatmapLayerProps, HexagonLayer, HexagonLayerProps, ScreenGridLayer, ScreenGridLayerProps, GridLayer, GridLayerProps } from '@deck.gl/aggregation-layers/typed';
-import { EventMetaData } from '../events/EventsMetadata';
+import {
+  ArcLayer,
+  ArcLayerProps,
+  LineLayer,
+  LineLayerProps,
+  PathLayer,
+  PathLayerProps,
+  ScatterplotLayer,
+  ScatterplotLayerProps
+} from '@deck.gl/layers/typed';
+import {Color, Layer, LayerProps, PickingInfo} from '@deck.gl/core/typed';
+import {randomColor} from './deck-gl.worker';
+import {LineStringPropertiesV2} from "./GeoJsonTypes";
+import {BinaryLineStringResponse, NumericPropsResponse, OptionalAttributes, WorkerFetchRequest} from "./MessageTypes";
+import {EventRequest} from "../studies/EventRequest";
+import {BinaryAttribute, BinaryLineFeatures, BinaryPointFeatures, BinaryPolygonFeatures} from '@loaders.gl/schema';
+import {computed, Signal, signal, WritableSignal} from '@angular/core';
+import {
+  GridLayer,
+  GridLayerProps,
+  HeatmapLayer,
+  HeatmapLayerProps,
+  HexagonLayer,
+  HexagonLayerProps,
+  ScreenGridLayer,
+  ScreenGridLayerProps
+} from '@deck.gl/aggregation-layers/typed';
+import {EventMetadata} from '../events/EventsMetadata';
 import mapboxgl from 'mapbox-gl';
+import {ControlChange} from '../events/events.component';
 
 // This is the type returned by the geoJsonToBinary function.
 type BinaryFeatureWithAttributes = {
@@ -61,6 +80,8 @@ export enum LayerTypes {
 
 // TODO:Write down the default options for each layer type.
 export type OverlayPathOptions = {
+  type: "path";
+
   getWidth: number;
   widthUnit: 'pixel' | 'meters' | 'common';
   widthScale: number;
@@ -75,6 +96,8 @@ export type OverlayPathOptions = {
 }
 
 export type OverlayPointOptions = {
+  type: "point";
+
   stroked: boolean;
   filled: boolean;
 
@@ -91,6 +114,8 @@ export type OverlayPointOptions = {
 
 // TODO: These options need to be compared to the other aggregation layers.
 export type OverlayAggregationOptions = {
+  type: "aggregation";
+
   getPosition: number;
   getWidth: number;
   radiusPixels: number;
@@ -133,6 +158,7 @@ export class DeckOverlayController {
   // If it's possible to pull this off then I should consider making a layer for each individual
   // and one large layer containing all the individual's event data.
   dataChunks: Array<BinaryFeatureWithAttributes> = [];
+  currentLayers: Array<Layer | null> = [];
   contentArray: ArrayBufferLike[][] = [];
 
   streamStatus: WritableSignal<StreamStatus> = signal("standby");
@@ -141,6 +167,11 @@ export class DeckOverlayController {
 
   currentLayer: LayerTypes = LayerTypes.ArcLayer;
   currentData: Array<BinaryLineFeatures & OptionalAttributes> = [];
+
+  // NOTE: The following stores the attribute set by the controls present on the event component.
+  pathAttributes = new Map<string, string>();
+  pointAttributes = new Map<string, string>();
+  aggregationAttributes = new Map<string, string>();
 
   // TODO:Test how these default settings function for the current layers.
   defaultBaseLayerOptions: Partial<LayerProps> = {
@@ -152,58 +183,59 @@ export class DeckOverlayController {
     radiusUnits: 'meters',
     radiusScale: 1,
     lineWidthUnits: 'meters',
-    lineWidthScale: 30,
-    stroked: false,
-    filled: true,
+    // lineWidthScale: 30,
+    // stroked: false,
+    // filled: true,
     autoHighlight: true,
     radiusMinPixels: 1.0,
-    radiusMaxPixels: Number.MAX_SAFE_INTEGER,
-    billboard: false,
-    antialiasing: false,
-    getRadius: 1,
-    opacity: 0.8,
-    getColor: undefined,
-    getFillColor: undefined,
-    getLineColor: undefined,
-    getLineWidth: 1,
+    // radiusMaxPixels: Number.MAX_SAFE_INTEGER,
+    // billboard: false,
+    // antialiasing: false,
+    // getRadius: 1,
+    // opacity: 0.8,
+    opacity: 1.0,
+    // getColor: undefined,
+    // getFillColor: undefined,
+    // getLineColor: undefined,
+    // getLineWidth: 1,
   }
 
   // TODO:Add the trips layer.
   defaultPathOptions: Partial<ArcLayerProps & LineLayerProps & PathLayerProps> = {
     // NOTE: Arc Layer Specific Options
-    numSegments: 50,
-    greatCircle: false,
-    getHeight: 1,
-
-    getSourceColor: undefined,
-    getTargetColor: undefined,
-
-    getSourcePosition: undefined,
-    getTargetPosition: undefined,
-
-    getTilt: 0, // -90 to 90
-
-    // NOTE:Path Layer Specific Options
-    getPath: undefined,
-    getColor: undefined,
-    capRounded: false,
-    billboard: false, // if true, the path always faces the screen.
-    miterLimit: 4, // Only applicable if roundedJoint = false.
-    _pathType: "open", // If loop or open then the overlay will skip normalization.
-
-    // NOTE:General Path Options
-    autoHighlight: true,
+    // numSegments: 50,
+    // greatCircle: false,
+    // getHeight: 1,
+    //
+    // getSourceColor: undefined,
+    // getTargetColor: undefined,
+    //
+    // getSourcePosition: undefined,
+    // getTargetPosition: undefined,
+    //
+    // getTilt: 0, // -90 to 90
+    //
+    // // NOTE:Path Layer Specific Options
+    // getPath: undefined,
+    // getColor: undefined,
+    // capRounded: false,
+    // billboard: false, // if true, the path always faces the screen.
+    // miterLimit: 4, // Only applicable if roundedJoint = false.
+    // _pathType: "open", // If loop or open then the overlay will skip normalization.
+    //
+    // // NOTE:General Path Options
+    // autoHighlight: true,
     widthUnits: "pixels",
     widthScale: 1,
-    getWidth: 3, // default = 1
-    widthMinPixels: 1, // default = 0
-    opacity: 0.8, // default = 1
+    getWidth: 1, // default = 1
+    // widthMinPixels: 1, // default = 0
+    opacity: 1.0, // default = 1
   }
 
   defaultAggregationOptions: Partial<HeatmapLayerProps & HexagonLayerProps & ScreenGridLayerProps & GridLayerProps> = {
-    // INFO:Hexagon specific options
+    // INFO: Hexagon specific options
     radius: 1000,
-    coverage: 1, // Hexagon radius multipier
+    coverage: 1,
 
     // INFO:Hexagon and Grid Layer Options
     elevationRange: [0, 1000],
@@ -230,22 +262,24 @@ export class DeckOverlayController {
     // colorRange: (default = colorbrewer - 6-class YlOrRd)
   }
 
-  readonly MetadataDefaultOptions: EventMetaData = {
+  readonly MetadataDefaultOptions: EventMetadata = {
     layer: this.currentLayer,
     numberOfEvents: 0,
     numberOfIndividuals: 0,
     currentIndividuals: new Set(),
+    focusedIndividual: "",
     pathWidth: 3,
     widthUnits: 'pixel',
     textLayer: false,
   };
 
-  currentMetaData: WritableSignal<EventMetaData> = signal(
+  currentMetaData: WritableSignal<EventMetadata> = signal(
     {
       layer: this.currentLayer,
       numberOfEvents: 0,
       numberOfIndividuals: 0,
       currentIndividuals: new Set(),
+      focusedIndividual: "",
       pathWidth: 3,
       widthUnits: 'pixel',
       textLayer: false,
@@ -298,42 +332,22 @@ export class DeckOverlayController {
     return this.currentIndividuals.asReadonly();
   }
 
-  // TODO: Finish this method. Create another enum type to hold all of the possible options.
-
-  // NOTE: The purpose of this method is to accept custom controls from the
-  // events component in order to change how events are displayed,filtered, transformed and so on.
-  // If a command/option is invalid for the current layer type then it should simply be
-  // ignored or disabled on the events component itself.
-  // setNewOptions(option: string) {
-  //   if (!this.deckOverlay) return;
-  //   if (this.pathLayers.has(this.currentLayer)) {
-  //     return;
-  //   }
-  //   else if (this.pointLayers.has(this.currentLayer)) {
-  //     return;
-  //   }
-  //   else if (this.aggregationLayers.has(this.currentLayer)) {
-  //     return;
-  //   }
-  //   return;
-  // }
-
   releaseResources(): void {
     this.dataChunks = [];
     this.contentArray = [];
+    this.currentLayers = [];
     this.individualColors.clear();
     this.currentMetaData.set(structuredClone(this.MetadataDefaultOptions));
     this.currentIndividuals.set(new Set());
     this.deckOverlay?.finalize();
-    // this.streamStatus.set("standby");
   }
 
   createOverlay(overlayType: OverlayTypes): GoogleMapsOverlay | MapboxOverlay {
-    switch (overlayType){
+    switch (overlayType) {
       case "google":
         console.log(`Return google maps overlay.`);
         return new GoogleMapsOverlay({
-          getTooltip: (data) => data.layer && this.renderBinaryTooltip(data),
+          getTooltip: (data) => data.layer && this.renderTooltip(data),
           _typedArrayManagerProps: {
             overAlloc: 1,
             poolSize: 0,
@@ -345,7 +359,7 @@ export class DeckOverlayController {
         console.log(`Returning mapboxOverlay`);
         return new MapboxOverlay({
           interleaved: false, //NOTE:Interleaved option is buggy as of now.
-          getTooltip: (data) => data.layer && this.renderBinaryTooltip(data),
+          getTooltip: (data) => data.layer && this.renderTooltip(data),
           _typedArrayManagerProps: {
             overAlloc: 1,
             poolSize: 0,
@@ -355,7 +369,7 @@ export class DeckOverlayController {
         // TODO: This needs to be changed to the arcgis overlay later on.
         console.log("Arcgis overlay in crateOverlay method.");
         return new GoogleMapsOverlay({
-          getTooltip: (data) => data.layer && this.renderBinaryTooltip(data),
+          getTooltip: (data) => data.layer && this.renderTooltip(data),
           _typedArrayManagerProps: {
             overAlloc: 1,
             poolSize: 0,
@@ -367,27 +381,58 @@ export class DeckOverlayController {
   changeOverlayType(overlay: OverlayTypes): void {
     this.releaseResources();
     if (overlay === this.currentActiveOverlay()) return;
-
     this.currentActiveOverlay.set(overlay);
+  }
+
+  //TODO: Test this method for point and aggregation layers.
+  setLayerAttributes(change: ControlChange): void {
+    switch (change.formType){
+      case "point":
+        this.defaultPointOptions[change.field as keyof Partial<ScatterplotLayerProps>] = change.change.value;
+        break;
+      case "path":
+        this.defaultPathOptions[change.field as keyof Partial<LineLayerProps & PathLayerProps & ArcLayerProps>] = change.change.value;
+        break;
+      case "aggregation":
+        this.defaultAggregationOptions[change.field as keyof Partial<HexagonLayerProps & ScreenGridLayerProps & GridLayerProps>] = change.change.value;
+        break;
+    }
+
+    const layers = this.currentLayers.map(layer => {
+      if (layer !== null) {
+        return this.setLayerAttributesHelper(change, layer);
+      }
+      return layer;
+    });
+
+    this.deckOverlay?.setProps({
+      layers: layers
+    });
+    this.currentLayers = layers;
+  }
+
+  setLayerAttributesHelper(change: ControlChange, layer: Layer): Layer {
+    return layer.clone({
+      [change.field]: change.change.value
+    });
   }
 
   loadData(request: EventRequest, basemap: GoogleBaseMap | MapboxBaseMap):
     GoogleMapsOverlay | MapboxOverlay | undefined {
-    // console.log(`Loading event request with basemap ${basemap.type}`);
     this.releaseResources();
     this.streamStatus.set("streaming");
 
-    // this.deckOverlay = this.createOverlay(this.currentActiveOverlay());
     this.currentActiveOverlay.set(basemap.type);
-    if (basemap.type == "google"){
+    if (basemap.type == "google") {
       this.deckOverlay = this.createOverlay(this.currentActiveOverlay()) as GoogleMapsOverlay;
       this.deckOverlay.setMap(basemap.map);
     }
-    else if (basemap.type === "mapbox"){
+    else if (basemap.type === "mapbox") {
       // NOTE:MapboxOverlay implements the IControl interface used for custom controls for Mapbox's map.
       this.deckOverlay = this.createOverlay(this.currentActiveOverlay()) as MapboxOverlay;
       basemap.map.addControl(this.deckOverlay);
     }
+
     const workerRequest: WorkerFetchRequest = {
       type: "FetchRequest",
       request: request,
@@ -404,9 +449,8 @@ export class DeckOverlayController {
   }
 
   // TODO: This method needs to be refactored to display different information depending the currently active layer.
-  renderBinaryTooltip(info: PickingInfo) {
+  renderTooltip(info: PickingInfo) {
     const index = info.index;
-    // console.log(info);
     if (index === -1) {
       return null;
     }
@@ -434,13 +478,14 @@ export class DeckOverlayController {
   // This render the latest options selected by the users.
   // Test if the updateTrigger attribute is actually doing something.
   changeActiveLayer(layer: LayerTypes): void {
-    // if (this.currentLayer === layer || this.dataChunks.length === 0) return;
     if (this.currentLayer === layer) return;
     this.currentLayer = layer;
     console.log(`Active layer is ${layer} in GoogleOverlay.`);
     if (this.dataChunks.length === 0) return;
 
-    const layers = this.dataChunks.map((chunk, index) => this.createActiveLayer(layer, chunk.lines, index));
+    const layers = this.dataChunks
+      .map((chunk, index) => this.createActiveLayer(layer, chunk.lines, index));
+    this.currentLayers = layers;
     this.deckOverlay?.setProps({ layers: layers });
   }
 
@@ -533,7 +578,7 @@ export class DeckOverlayController {
         pathWidth: prev.pathWidth,
         widthUnits: prev.widthUnits,
         textLayer: prev.textLayer,
-      } as EventMetaData;
+      } as EventMetadata;
     });
 
     // BUG:Aggregation layers needs to be all on the same layer to work properly.
@@ -542,6 +587,8 @@ export class DeckOverlayController {
     // If all user are toggled on then all individuals should belong to the same layer.
     // This will incur a signficant performance penalty on the main thread. This computation should be done on the webworker.
     const layers = this.dataChunks.map((chunk, index) => this.createActiveLayer(this.currentLayer, chunk.lines, index));
+    this.currentLayers = layers;
+
     console.log(`Overlay has ${this.dataChunks.length} layers with ${this.contentArray.reduce((acc, arr) => acc + arr.length, 0)} total elements.`);
     this.deckOverlay?.setProps({
       layers: layers
@@ -818,7 +865,6 @@ export class DeckOverlayController {
     })
   }
 
-
   createScreenGridLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
     const BYTE_SIZE = 4;
     const positions = binaryFeatures.positions;
@@ -857,39 +903,49 @@ export class DeckOverlayController {
     const entrySize = positionSize * 2 * BYTE_SIZE; // 2 positions *  2 coordinates * number of bytes.
     const colors = this.getColorHelper(binaryFeatures.individualLocalIdentifier);
 
-    return new LineLayer({
+    const lineLayerProps: LineLayerProps =
+    {
       id: `${LayerTypes.LineLayer}-${layerId}`,
-      data: {
-        length: binaryFeatures.length,
+        data: {
+      length: binaryFeatures.length,
         attributes: {
-          getSourcePosition: {
-            value: new Float32Array(positions.value),
+        getSourcePosition: {
+          value: new Float32Array(positions.value),
             size: positionSize,
             stride: entrySize,
             offset: 0
-          },
-          getTargetPosition: {
-            value: new Float32Array(positions.value),
+        },
+        getTargetPosition: {
+          value: new Float32Array(positions.value),
             size: positionSize,
             stride: entrySize,
             offset: entrySize / 2
-          },
-          individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier),
         },
+        individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier),
       },
+    },
       colorFormat: "RGBA",
-      pickable: this.currentLayer === LayerTypes.LineLayer,
+        pickable: this.currentLayer === LayerTypes.LineLayer,
       visible: this.currentLayer === LayerTypes.LineLayer,
       getColor: colors[0],
       autoHighlight: true,
-      opacity: .8,
-      getWidth: 3,
-      widthMinPixels: 1,
+      // opacity: .8,
+      // getWidth: 3,
+      // widthMinPixels: 1,
       updateTriggers: {
-        visible: this.currentLayer,
+      visible: this.currentLayer,
         pickable: this.currentLayer
       }
+    }
+
+    const entries = Object.entries(this.defaultPathOptions);
+    entries.forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        lineLayerProps[key as keyof LineLayerProps] = value;
+      }
     });
+
+    return new LineLayer(lineLayerProps);
   }
 
   getColorHelper(animal: string): [Color, Color] {
@@ -927,16 +983,4 @@ export class DeckOverlayController {
 //   })
 // }
 
-
-// renderTooltip(info: PickingInfo) {
-//   console.log("picking info for geojson hover event.");
-//   console.log(info);
-//   console.log(info.index);
-//   const el = document.getElementById("tooltip")!;
-//   el.innerText = `tooltip for ${info.index} with id = ${info.layer?.id}`;
-//   el.innerHTML = `<p>Some text</p>`;
-//   el.style.display = 'block';
-//   el.style.left = `${info.x} px`;
-//   el.style.top = `${info.y} px`;
-// }
 }

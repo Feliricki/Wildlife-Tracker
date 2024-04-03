@@ -10,7 +10,7 @@ type Position = [number, number, number]
 // The information sent using this type should contain
 // data on the current state of the specified layer.
 // Or should general information about all the layers be specified here.
-export type EventMetaData = {
+export type EventMetadata = {
   layer: LayerTypes;
   // INFO: The layer information  should only contain the types specified by
   // the layer field.
@@ -18,6 +18,7 @@ export type EventMetaData = {
   numberOfEvents: number;
   numberOfIndividuals: number;
   currentIndividuals: Set<string>; // TODO: These options are subject to change.
+  focusedIndividual: string;
   pathWidth: number;
   widthUnits: 'pixel' | 'meters' | 'common';
 

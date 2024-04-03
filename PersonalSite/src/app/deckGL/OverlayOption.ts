@@ -29,4 +29,37 @@ export class LayerTypesHelper {
   public static isAggregationLayer(layer: LayerTypes): boolean {
     return this.aggregationLayers.has(layer);
   }
+
+  public static layerToString(layer: LayerTypes): string {
+    switch (layer) {
+      case LayerTypes.ArcLayer:
+        return "arc";
+      case LayerTypes.LineLayer:
+        return "line";
+      case LayerTypes.TextLayer:
+        return "text";
+      case LayerTypes.TripsLayer:
+        return "trip";
+      case LayerTypes.GeoJsonLayer:
+        return "geojson";
+      case LayerTypes.ScreenGridLayer:
+        return "screen grid";
+      case LayerTypes.TileLayer:
+        return "tile";
+      case LayerTypes.GPUGridLayer:
+        return "gpu grid";
+      case LayerTypes.ScatterplotLayer:
+        return "scatterplot";
+      case LayerTypes.HeatmapLayer:
+        return "heatmap";
+      case LayerTypes.PathLayer:
+        return "path";
+      case LayerTypes.GridLayer:
+        return "grid";
+      case LayerTypes.HexagonLayer:
+        return "hexagon";
+      default:
+        return "no supported"
+    }
+  }
 }

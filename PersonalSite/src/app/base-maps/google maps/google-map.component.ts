@@ -16,12 +16,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { HttpResponse } from '@angular/common/http';
 import { LineStringFeatureCollection, LineStringPropertiesV1 } from "../../deckGL/GeoJsonTypes";
 import { EventRequest } from "../../studies/EventRequest";
-import { MapStyles } from '../../tracker-view/tracker-view.component';
+import { GoogleMapStyles } from '../../tracker-view/tracker-view.component';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { EventMetaData } from '../../events/EventsMetadata';
+import { EventMetadata } from '../../events/EventsMetadata';
 import { SnackbarComponent } from '../snackbar.component';
+import { ControlChange } from 'src/app/events/events.component';
 
 type MapState =
   'initial' |
@@ -62,11 +63,12 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   @Input() eventRequest?: EventRequest;
 
   // INFO:Map Controls
-  @Input() mapType: MapStyles = "roadmap";
+  @Input() mapType: GoogleMapStyles = "roadmap";
   @Input() markersVisible: boolean = true;
 
   // INFO:Overlay controls
   @Input() selectedLayer: LayerTypes = LayerTypes.ArcLayer;
+  @Input() deckOverlayControls?: ControlChange;
 
 
   defaultMapOptions: google.maps.MapOptions = {
@@ -111,13 +113,13 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   // INFO:Section for changing overlay display options;
   // Decide on a more specific type.
-  @Output() chunkInfoEmitter = new EventEmitter<EventMetaData>();
+  @Output() chunkInfoEmitter = new EventEmitter<EventMetadata>();
   @Output() streamStatusEmitter = new EventEmitter<StreamStatus>();
 
   @Output() JsonDataEmitter = new EventEmitter<Observable<JsonResponseData[]>>();
   @Output() componentInitialized = new EventEmitter<true>;
   // INFO:This where event info. gets sent to the track and then the events component.
-  @Output() eventMetaData = new EventEmitter<EventMetaData>();
+  @Output() eventMetaData = new EventEmitter<EventMetadata>();
 
   markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> | undefined;
   mapCluster: MarkerClusterer | undefined;
@@ -179,7 +181,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         // INFO: Map controls section.
         case "mapType":
           console.log(`Changing style into ${currentValue}`);
-          this.mapType = currentValue as MapStyles;
+          this.mapType = currentValue as GoogleMapStyles;
           this.map?.setMapTypeId(this.mapType);
           break;
 
@@ -197,7 +199,10 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           break;
 
         // TODO: Implement this.
-        case "overlayOptions":
+        case "deckOverlayControls":
+          this.deckOverlayControls = currentValue as ControlChange;
+          this.deckOverlay?.setLayerAttributes(this.deckOverlayControls);
+          console.log(this.deckOverlayControls);
           break;
 
         default:
@@ -336,7 +341,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           // INFO:Prevent markers from overlapping too much.
           let key = `${studyDTO.mainLocationLon.toString()},${studyDTO.mainLocationLat.toString()}`;
           while (coordinates.has(key)) {
-            // studyDTO.mainLocationLat += 0.01;
             studyDTO.mainLocationLon += 0.002;
             key = `${studyDTO.mainLocationLon.toString()},${studyDTO.mainLocationLat.toString()}`;
           }
@@ -436,7 +440,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
       skip(1), // NOTE: A skip will result in the first loaded chunk being seen.
     ).
       subscribe({
-        next: this.emitChunkData,
+        next: chunk => this.emitChunkData(chunk),
         error: err => console.error(err),
       });
 
@@ -527,9 +531,8 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     this.studiesEmitter.emit(studies);
   }
 
-  emitChunkData(chunkInfo: EventMetaData): void {
-    return;
-    // this.chunkInfoEmitter.emit(chunkInfo);
+  emitChunkData(chunkInfo: EventMetadata): void {
+    this.chunkInfoEmitter.emit(chunkInfo);
   }
 
   emitStreamStatus(streamStatus: StreamStatus): void {

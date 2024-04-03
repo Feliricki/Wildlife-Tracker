@@ -10,10 +10,11 @@ import { NgElement, WithProperties } from '@angular/elements';
 import { Observable, Subscription, distinctUntilChanged, skip } from 'rxjs';
 import { EventRequest } from 'src/app/studies/EventRequest';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { EventMetaData } from 'src/app/events/EventsMetadata';
+import { EventMetadata } from 'src/app/events/EventsMetadata';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { SnackbarComponent } from '../snackbar.component';
-import { TestController } from './custom-controls';
+import { LayerControl, setSourceLayers } from './layer-controls';
+import { ControlChange } from 'src/app/events/events.component';
 
 type MapState =
   'initial' |
@@ -60,21 +61,23 @@ export class MapboxComponent implements OnInit, OnChanges {
   currentMarker?: bigint;
 
   movingToPoint: WritableSignal<boolean> = signal(false);
+
   // INFO:Overlay Controls
-  // TODO:Right now I'm working on getting the pan to marker/point feature to work.
   @Input() selectedLayer: LayerTypes = LayerTypes.ArcLayer;
   @Input() focusedPoint?: bigint;
   @Input() eventRequest?: EventRequest;
   @Input() pointsVisible?: boolean;
+  @Input() deckOverlayControls?: ControlChange;
 
   // INFO:This section is for data that is sent to the tracker component.
   @Output() studiesEmitter = new EventEmitter<Map<bigint, StudyDTO>>();
   @Output() mapStateEmitter = new EventEmitter<boolean>();
-  @Output() chunkInfoEmitter = new EventEmitter<EventMetaData>();
+  @Output() chunkInfoEmitter = new EventEmitter<EventMetadata>();
   @Output() studyEmitter = new EventEmitter<StudyDTO>();
   @Output() streamStatusEmitter = new EventEmitter<StreamStatus>();
 
   map?: mapboxgl.Map;
+  layerControl?: LayerControl;
 
   deckOverlay?: DeckOverlayController;
   streamStatus$?: Observable<StreamStatus>;
@@ -106,7 +109,7 @@ export class MapboxComponent implements OnInit, OnChanges {
       mapboxgl.accessToken = this.mapboxToken;
       this.map = new mapboxgl.Map({
         container: 'map',
-        style: 'mapbox://styles/mapbox/light-v9',
+        style: "mapbox://styles/feliricki/cltqf12yx00p301p5dq5hcmiv",
         center: [0, 0],
         zoom: 5,
       });
@@ -118,7 +121,6 @@ export class MapboxComponent implements OnInit, OnChanges {
         .addControl(new mapboxgl.ScaleControl())
         .addControl(new mapboxgl.GeolocateControl())
         .addControl(new mapboxgl.FullscreenControl())
-        .addControl(new TestController());
 
       this.map.on('load', () => {
         if (!this.map) {
@@ -136,18 +138,18 @@ export class MapboxComponent implements OnInit, OnChanges {
               return;
             }
 
+            this.layerControl = new LayerControl(collection);
+            this.map = this.map.addControl(this.layerControl, "bottom-left");
+
             this.currentCollection = collection;
             this.studies = new Map<bigint, StudyDTO>();
-            // The purpose of this set is to prevent points from overlapping completely.
+            //INFO:The purpose of this set is to prevent points from overlapping completely.
             const coordinates = new Set<string>();
             for (const feature of this.currentCollection.features.values()) {
               if (feature.properties.mainLocationLon == undefined || feature.properties.mainLocationLat === undefined) {
-                console.log('Skipping the following feature.');
-                console.log(feature);
                 continue;
               }
 
-              // BUG:The map will pan to the incorrect point if they overlap.
               let key = `${feature.properties.mainLocationLon.toString()},${feature.properties.mainLocationLat.toString()}`;
               while (coordinates.has(key)) {
                 feature.properties.mainLocationLon += 0.002;
@@ -158,77 +160,12 @@ export class MapboxComponent implements OnInit, OnChanges {
               this.studies.set(feature.properties.id, feature.properties);
             }
 
-            this.map.addSource('studies', {
-              type: "geojson",
-              data: collection,
-              cluster: true,
-              clusterMinPoints: 2, // Default is 2
-              clusterMaxZoom: 10,
-              clusterRadius: 50,
-            });
-
-            this.map.addLayer({
-              id: "clusters",
-              type: "circle",
-              source: "studies",
-              filter: ['has', 'point_count'],
-              paint: {
-                // TODO: Change the threshold values.
-                // Use step expressions (https://docs.mapbox.com/style-spec/reference/expressions/#step)
-                // with three steps to implement three types of circles:
-                //   * Blue, 20px circles when point count is less than 50
-                //   * Yellow, 30px circles when point count is between 50 and 100
-                //   * Pink, 40px circles when point count is greater than or equal to 100
-                'circle-color': [
-                  'step',
-                  ['get', 'point_count'],
-                  '#51bbd6',
-                  50,
-                  '#f1f075',
-                  100,
-                  '#f28cb1'
-                ],
-                'circle-radius': [
-                  'step',
-                  ['get', 'point_count'],
-                  20,
-                  50,
-                  30,
-                  100,
-                  40
-                ]
-              }
-            });
-
-            this.map.addLayer({
-              id: "cluster-count",
-              type: "symbol",
-              source: "studies",
-              filter: ['has', "point_count"],
-              layout: {
-                'text-field': ['get', 'point_count_abbreviated'],
-                'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-                'text-size': 12,
-              }
-            });
-
-            this.map.addLayer({
-              id: "unclustered-point",
-              type: "circle",
-              source: "studies",
-              filter: ["!", ["has", "point_count"]],
-              paint: {
-                'circle-color': '#11b4da',
-                'circle-radius': 8,
-                'circle-stroke-width': 2,
-                'circle-stroke-color': '#fff' // white outline
-              },
-            });
+            this.emitStudies(this.studies);
+            // NOTE:This function is used in the controller component and here hence the import
+            setSourceLayers(this.map, collection, "studies");
             this.initializeDeckOverlay(this.map);
 
-            //INFO:This callback function inspect a cluster on click.
             this.map.on('click', 'clusters', (e) => {
-              console.log(e);
               if (!this.map) return;
 
               const features = this.map.queryRenderedFeatures(e.point, {
@@ -250,6 +187,12 @@ export class MapboxComponent implements OnInit, OnChanges {
               );
             });
 
+            // NOTE:Globe view kicks in at zoom level 6.
+            // this.map.on('click', (e) => {
+            //   // console.log(e);
+            //   console.log(`Current zoom: ${JSON.stringify(this.map?.getZoom())}`)
+            // });
+
             this.map.on('click', 'unclustered-point', (e) => {
               console.log(e);
               if (!this.map) return;
@@ -259,6 +202,7 @@ export class MapboxComponent implements OnInit, OnChanges {
 
               const study = features[0].properties;
 
+              // TODO:Include a button to change this style dynamically.
               // while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
               //   coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
               // }
@@ -267,6 +211,9 @@ export class MapboxComponent implements OnInit, OnChanges {
                 .setLngLat(coordinates)
                 .setDOMContent(this.createPopupContent(study))
                 .addTo(this.map);
+
+              //NOTE:The GeoJSON sources need to be set again if the style ever changes.
+              // this.map.setStyle("mapbox://styles/feliricki/cltqf12yx00p301p5dq5hcmiv");
             });
 
             this.map.on('moveend', () => {
@@ -275,7 +222,6 @@ export class MapboxComponent implements OnInit, OnChanges {
               }
 
               this.map.fire('click', this.map.getCenter());
-              // const source = this.map.getSource('studies') as GeoJSONSource;
               console.log(`clicked on location ${this.map.getCenter()}`);
               this.movingToPoint.set(false);
             })
@@ -295,7 +241,7 @@ export class MapboxComponent implements OnInit, OnChanges {
               this.map.getCanvas().style.cursor = 'pointer';
             });
 
-            this.map.on('mouseleave', 'unclustered-point', () => {
+           this.map.on('mouseleave', 'unclustered-point', () => {
               if (!this.map) return;
               this.map.getCanvas().style.cursor = '';
             });
@@ -336,13 +282,21 @@ export class MapboxComponent implements OnInit, OnChanges {
         case "pointsVisible":
           this.pointsVisible = currentValue as boolean;
           console.log(`Setting point visibility to ${this.pointsVisible}`);
+          this.layerControl?.setStudiesVisibility(this.pointsVisible);
           this.togglePointsVisibility(this.pointsVisible);
           break;
 
-        // Deck Overlay Controls
+        // INFO:Deck Overlay Controls
         case "selectedLayer":
           this.selectedLayer = currentValue as LayerTypes;
           this.deckOverlay?.changeActiveLayer(this.selectedLayer);
+          break;
+
+        case "deckOverlayControls":
+          this.deckOverlayControls = currentValue as ControlChange;
+          this.deckOverlay?.setLayerAttributes(this.deckOverlayControls);
+          console.log(`Updated overlay controls with`);
+          console.log(this.deckOverlayControls);
           break;
 
         default:
@@ -364,7 +318,7 @@ export class MapboxComponent implements OnInit, OnChanges {
 
     onChunkload$.pipe(skip(1))
       .subscribe({
-        next: this.emitChunkData,
+        next: chunk => this.emitChunkData(chunk),
         error: err => console.error(err),
       });
 
@@ -401,7 +355,15 @@ export class MapboxComponent implements OnInit, OnChanges {
 
   togglePointsVisibility(visible: boolean): void {
     if (!this.map || !this.currentCollection) return;
-    const source = this.map.getSource("studies") as GeoJSONSource;
+    let source = this.map.getSource("studies") as GeoJSONSource;
+    if (!source){
+      setSourceLayers(
+        this.map,
+        this.currentCollection,
+        'studies');
+      source = this.map.getSource('studies') as GeoJSONSource;
+    }
+
     if (visible) {
       source.setData(this.currentCollection);
     } else {
@@ -478,8 +440,12 @@ export class MapboxComponent implements OnInit, OnChanges {
     this.studyEmitter.emit(study);
   }
 
-  emitChunkData(chunkInfo: EventMetaData): void {
-    // this.chunkInfoEmitter.emit(chunkInfo);
+  emitStudies(studies: Map<bigint, StudyDTO>): void {
+    this.studiesEmitter.emit(studies);
+  }
+
+  emitChunkData(chunkInfo: EventMetadata): void {
+    this.chunkInfoEmitter.emit(chunkInfo);
   }
 
   emitStreamStatus(streamStatus: StreamStatus): void {

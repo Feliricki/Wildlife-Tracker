@@ -3,7 +3,7 @@ import { MapComponent } from '../base-maps/google maps/google-map.component';
 import { SimpleSearchComponent } from '../simple-search/simple-search.component';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
-import { EventsComponent } from '../events/events.component';
+import { ControlChange, EventsComponent } from '../events/events.component';
 import { StudyDTO } from '../studies/study';
 import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
 import { MatIconModule } from '@angular/material/icon';
@@ -22,13 +22,13 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatCheckboxChange, MatCheckboxModule } from '@angular/material/checkbox';
 import { LayerTypes, StreamStatus } from '../deckGL/DeckOverlayController';
 import { MatRippleModule } from '@angular/material/core';
-import { EventMetaData } from '../events/EventsMetadata';
+import { EventMetadata } from '../events/EventsMetadata';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
 import { FormsModule } from '@angular/forms';
 import { MapboxComponent } from '../base-maps/mapbox/mapbox.component';
 
-export type MapStyles =
+export type GoogleMapStyles =
   "roadmap" | "terrain" | "hybrid" | "satellite";
 
 type BaseMaps = 'google' | 'mapbox' | 'arcgis';
@@ -103,9 +103,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     top: 0
   };
 
-  // TODO:Consider adding arcgis as a basemap.
-  // activeMap: 'google' | 'mapbox' = 'google';
-  activeMap: WritableSignal<BaseMaps> = signal('google');
+  activeMap: WritableSignal<BaseMaps> = signal('mapbox');
 
   mapLoaded: WritableSignal<boolean> = signal(false);
   searchOpened: WritableSignal<boolean> = signal(false);
@@ -119,18 +117,17 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   currentMarker?: bigint;
   currentStudies?: Map<bigint, StudyDTO>;
 
-  // This determines the currrent layer for google maps.
-  currentMapType: MapStyles = "roadmap";
+  currentMapType: GoogleMapStyles = "roadmap";
 
   currentLayer: WritableSignal<LayerTypes> = signal(LayerTypes.ArcLayer);
-
   displayedEvents?: EventJsonDTO[];
 
   currentStudy?: StudyDTO;
   studyEventMessage?: StudyDTO;
 
-  currentChunkInfo?: EventMetaData;
+  currentChunkInfo?: EventMetadata;
   currentStreamStatus?: StreamStatus;
+  currentControlOptions?: ControlChange;
 
   @ViewChild('sidenav', { static: true }) sidenav!: MatSidenav;
   @ViewChild('rightSidenav', { static: true }) rightNav!: MatSidenav;
@@ -153,6 +150,19 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   leftNavLargeStyle = {
     "width": "400px",
+  }
+
+  //TODO: For now, experiment with the styling for the xtra small menu.
+  menuXSmallStyle = {
+    // "position": "relative",
+    "margin-top": "1.5em",
+    "margin-right": "0.5em"
+  }
+
+  menuNormalStyle = {
+    "position": "fixed",
+    "left": "1em",
+    "margin-top": "0.5em"
   }
 
   smallScreen$?: Observable<boolean>;
@@ -213,7 +223,6 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   loadMap(): void {
     if (this.mapLoaded()) return;
-
     switch (this.activeMap()) {
       case "google":
         break;
@@ -227,10 +236,9 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     const selectedLayer = option.value as LayerTypes;
     this.selectedLayer(selectedLayer);
   }
+
   // INFO:Overlay controls.
   selectedLayer(layer: LayerTypes) {
-    //TODO:Perhaps another value should be emitted to reset the currentValue in the recieving component.
-    // this.currentLayer.set(undefined);
     this.currentLayer.set(layer);
   }
 
@@ -276,8 +284,8 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     this.currentMarker = studyId;
   }
 
-  updateChunkMetadata(chunkInfo: EventMetaData) {
-    // console.log(chunkInfo);
+  updateChunkMetadata(chunkInfo: EventMetadata) {
+    console.log(chunkInfo);
     this.currentChunkInfo = chunkInfo;
   }
 
@@ -286,7 +294,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
 
   // INFO: Map Controls
-  setMapTypeGoogle(mapStyle: MapStyles) {
+  setMapTypeGoogle(mapStyle: GoogleMapStyles) {
     if ((mapStyle === "roadmap" || mapStyle == "terrain") && (this.currentMapType == "terrain" || this.currentMapType == "roadmap")) {
       return;
     }
@@ -310,6 +318,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     this.activeMap.set(basemap);
     // NOTE:Certain other flags such as the rightButtonFlag and leftButtonFlag will need
     // to be looked at again to check if they do not break.
+    this.markersVisible.set(true);
     this.mapLoaded.set(false);
   }
 
@@ -318,7 +327,6 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
 
   // INFO: Left and right sidenav controls.
-
   closeRightNav(): void {
     this.rightNav.close();
     this.rightButtonFlag.set(true);
@@ -365,6 +373,10 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     } else {
       return "Add markers.";
     }
+  }
+
+  updateControlChanges(change: ControlChange): void {
+    this.currentControlOptions = change;
   }
 
 }

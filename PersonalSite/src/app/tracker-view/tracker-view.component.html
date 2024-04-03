@@ -1,5 +1,4 @@
-<!-- NOTE:Mobile devices cannot have this button on screen. The old open button can be used instead. -->
-<!-- If a extra small screem is detected then this button can be disable  -->
+<!--NOTE:On small screens this button is disabled.-->
 @if (!(XSmallScreen$ | async)){
 <button mat-fab [hidden]="!mapLoaded()" class="left-toggle-button" (click)="toggleSearchNav()"
   [@leftPanelOpened]="leftPanelOpened() ? true : false">
@@ -37,7 +36,8 @@
 
       <app-events #eventComponent (eventRequestEmitter)="updateCurrentEventRequest($event)"
         (closeRightNavEmitter)="closeRightNav()" [currentStudy]="currentStudy" [currentEventData]="currentChunkInfo"
-        [streamStatus]="currentStreamStatus"></app-events>
+        [streamStatus]="currentStreamStatus" [currentSelectedLayer]="currentLayer()"
+      (controlOptionsEmitter)="updateControlChanges($event)"></app-events>
 
     </mat-sidenav>
 
@@ -46,17 +46,25 @@
 
       @if(mapLoaded()){
 
-      <!-- TODO:This toolbar needs to be replaced with a div or other container. -->
-      <!-- Alternatively, the z-index of this element could be lowered or attributes could be set such as the width -->
       <div class="toolbar-container">
 
+        <!-- TODO:Change the color of this button and change to a mini fab on smaller screens. -->
         <mat-toolbar class="dense-3" id="toolbar">
 
-          <div class="toolbar-elements">
+          @if (XSmallScreen$ | async){
+          <button mat-mini-fab [ngStyle]="menuXSmallStyle" class="menu-button" [matMenuTriggerFor]="mainMenu">
+            <mat-icon>menu</mat-icon>
+          </button>
+          } @else {
+          <button mat-fab class="menu-button" [ngStyle]="menuNormalStyle" [matMenuTriggerFor]="mainMenu">
+            <mat-icon>menu</mat-icon>
+          </button>
+          }
+          <span class="spacer"></span>
 
-            <button mat-fab class="menu-button" color="primary" [matMenuTriggerFor]="mainMenu">
-              <mat-icon>menu</mat-icon>
-            </button>
+          <!-- INFO:This is the beginning of the flex container. -->
+          <!-- The spacer does not work since the width is not fixed. -->
+          <div class="toolbar-elements">
 
             <!-- INFO:Main menu section-->
             <mat-menu #mainMenu="matMenu" xPosition="after" yPosition="below">
@@ -95,6 +103,8 @@
               </mat-radio-group>
             </mat-menu>
 
+
+            @if (activeMap() === 'google'){
             <mat-button-toggle-group class="toggle-group">
 
               <mat-button-toggle (click)="setMapTypeGoogle(checkboxMap.checked ? 'terrain' : 'roadmap')"
@@ -127,6 +137,8 @@
                 </button>
               </mat-menu>
             </mat-button-toggle-group>
+            }
+
 
             <button mat-mini-fab matRipple class="marker-toggle" (click)="toggleMarkerVisibility()" color="primary">
               @if(!markersVisible()){
@@ -137,23 +149,9 @@
             </button>
           </div>
 
+          <span class="spacer"></span>
+
         </mat-toolbar>
-
-        <!-- NOTE: Inside the 'toolbar-container' div element -->
-        <!-- <span class="spacer"></span> -->
-        <!-- <button mat-icon-button class="settings-button"> -->
-        <!--   <mat-icon>settings</mat-icon> -->
-        <!-- </button> -->
-
-        <!-- <button mat-fab class="settings-button" color="primary" [matMenuTriggerFor]="settingsMenu"> -->
-        <!--   <mat-icon>settings</mat-icon> -->
-        <!-- </button> -->
-        <!-- TODO: Embed another menu within this menu to select a base map. In total include the follwoing options -->
-        <!-- 1) Base maps (change these options depending on what is rate limited) -->
-        <!-- <mat-menu #settingsMenu="matMenu" xPosition="before" yPosition="below"> -->
-        <!--   <button mat-menu-item [matMenuTriggerFor]="basemaps">Base Maps</button> -->
-        <!-- </mat-menu> -->
-
 
       </div>
       }
@@ -174,14 +172,16 @@
         (studiesEmitter)="updateCurrentStudies($event)" (studyEmitter)="updateCurrentStudy($event)"
         [focusedMarker]="currentMarker" [eventRequest]="currentEventRequest" [mapType]="currentMapType"
         [selectedLayer]="currentLayer()" (chunkInfoEmitter)="updateChunkMetadata($event)"
-        (streamStatusEmitter)="updateStreamState($event)" [markersVisible]="markersVisible()">
+        (streamStatusEmitter)="updateStreamState($event)" [markersVisible]="markersVisible()"
+        [deckOverlayControls]="currentControlOptions">
       </app-google-map>
       }
 
       @case("mapbox") {
       <app-mapbox (mapStateEmitter)="updateMapState($event)" (studyEmitter)="updateCurrentStudy($event)"
+        (studiesEmitter)="updateCurrentStudies($event)" (chunkInfoEmitter)="updateChunkMetadata($event)"
         [focusedPoint]="currentMarker" [eventRequest]="currentEventRequest" [selectedLayer]="currentLayer()"
-        [pointsVisible]="markersVisible()">
+        [pointsVisible]="markersVisible()" [deckOverlayControls]="currentControlOptions">
       </app-mapbox>
       }
 

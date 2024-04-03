@@ -11,7 +11,7 @@ describe('MapboxComponent', () => {
       imports: [MapboxComponent]
     })
     .compileComponents();
-    
+
     fixture = TestBed.createComponent(MapboxComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();

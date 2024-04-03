@@ -1,0 +1,28 @@
+<!-- TODO:Multiple button need to be displayed in a row. -->
+<div class="mapboxgl-ctrl" id="toggles">
+  <button (click)="toggleTerrain()">
+    @if(terrainEnabled){
+    Disable Terrain
+    } @else {
+    Enable Terrain
+    }
+  </button>
+  <button (click)="toggleLabel()">
+    @if (labelEnabled){
+    Disable Labels
+    } @else {
+    Enable Labels
+    }
+  </button>
+</div>
+<div class="mapboxgl-ctrl" id="button-container">
+  <button (click)="selectLayer('standard')">
+    Standard
+  </button>
+  <button (click)="selectLayer('outdoors')">
+    Outdoors
+  </button>
+  <button (click)="selectLayer('satellite')">
+    Satellite
+  </button>
+</div>

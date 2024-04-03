@@ -1,480 +1,224 @@
-<mat-tab-group class="tab-group" preserveContent animationDuration="0ms"
-  [ngStyle]="(screenChange | async) ? smallTabSize : largeTabSize">
-  <!-- <mat-tab [label]="(screenChange | async) ? '' : 'Individuals'"> -->
-  <mat-tab label="Animals" class="tab-1">
+<!-- <button mat-icon-button class="close-button" (click)="closeRightNav()"> -->
+<!--   <mat-icon>close</mat-icon> -->
+<!-- </button> -->
 
-    <button mat-icon-button (click)="closeRightNav()">
-      <mat-icon>close</mat-icon>
-    </button>
+<!-- @if (TableState() === "loaded" && tableSource.TableSize() === 0){ -->
+<!-- <span id="no-animal-found" class="no-individuals">No Animals Found.</span> -->
+<!-- } -->
+<!-- @else if (TableState() === "error"){ -->
+<!-- <span id="error-retrieving-animals" class="no-individuals">Error Retrieving Animals.</span> -->
+<!-- } -->
 
-    <!-- TODO: Set the margins for the elements rather than using <br> as I did before. -->
-    <form [formGroup]="eventForm" #EventRef (ngSubmit)="submitForm()" class="event-form">
+<mat-grid-list class="grid-list" cols="5" rowHeight="4em">
+  @for (tile of tiles;track tile;let i = $index) {
+    <!-- <mat-grid-tile [colspan]="tile.cols" [rowspan]="tile.rows" [style.background]="tile.color"> -->
+    <mat-grid-tile [colspan]="tile.cols" [rowspan]="tile.rows">
+      <!-- TODO:For now I'm testing how the table fits into the grid. -->
+      @if (i == 0) {
+        <mat-card class="table-card">
+          <form [formGroup]="eventForm" class="grid-table-form" (ngSubmit)="submitForm()">
 
-      <div class="dense-3" [ngStyle]="(screenChange | async) ? fourthRowSmall : fourthRowDefault">
-        <mat-form-field class="reduction-profile-form">
-          <!-- <mat-label>Event Reduction Profile</mat-label> -->
-          <!-- <mat-label>Placeholder</mat-label> -->
-          <mat-select formControlName="eventProfiles" placeholder="Reduction Profiles"
-            matTooltip="Limit the number of events to improve performance and reduce clutter.">
+            <div class="dense-3" id="input-container"
+                 [ngStyle]="(screenChange | async) ? fourthRowSmall : fourthRowDefault">
+              <mat-form-field class="reduction-profile-form">
+                <!--TODO:Change this to a more compact input type in order to reduce the size of the whole sidenav. -->
+                <mat-select formControlName="eventProfiles" placeholder="Reduction Profiles"
+                            matTooltip="Limit the number of events to improve performance and reduce clutter.">
 
-            <mat-option value="EURING_01">24 hours between events.</mat-option>
-            <mat-divider></mat-divider>
-            <mat-option value="EURING_02">50 kilometers between events.</mat-option>
-            <mat-divider></mat-divider>
-            <mat-option value="EURING_03">Last 30 days.</mat-option>
-            <mat-divider></mat-divider>
-            <mat-option value="EURING_04">0.25 degrees movement.</mat-option>
-            <mat-divider></mat-divider>
-            <mat-option [value]="null">None</mat-option>
+                  <mat-option value="EURING_01">24 hours between events.</mat-option>
+                  <mat-divider></mat-divider>
+                  <mat-option value="EURING_02">50 kilometers between events.</mat-option>
+                  <mat-divider></mat-divider>
+                  <mat-option value="EURING_03">Last 30 days.</mat-option>
+                  <mat-divider></mat-divider>
+                  <mat-option value="EURING_04">0.25 degrees movement.</mat-option>
+                  <mat-divider></mat-divider>
+                  <mat-option [value]="null">None</mat-option>
 
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field class="sensor-form">
-
-          <!-- <mat-label>Sensor Type</mat-label> -->
-          <mat-select formControlName="sensorForm" placeholder="Sensors" matTooltip="Select a sensor type.">
-            <!-- <mat-option [value]="null">-</mat-option> -->
-            <!-- <mat-option [value]="null">Any Sensor Type</mat-option> -->
-            @for (option of currentLocationSensors(); track option){
-            <mat-divider></mat-divider>
-            <mat-option [value]="option">{{option}}</mat-option>
-            }
-            @empty {
-            <mat-option [value]="null">-</mat-option>
-            }
-
-          </mat-select>
-
-          @if(eventForm.dirty && eventForm.hasError("noSensorSelected")){
-          <mat-error>No Sensor Selected.</mat-error>
-          }
-        </mat-form-field>
-
-      </div>
-
-      <!-- TODO: Finalize using the formArray as the input source. -->
-      <!-- This error warning should only display if individuals have loaded in. -->
-      @if (eventForm.dirty && eventForm.hasError("noOptionSelected")){
-      <mat-error>No Option Selected.</mat-error>
-      }
-      @if (TableState() === "loading"){
-      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-      }
-      <!-- @else{ -->
-      <!-- <br> -->
-      <!-- } -->
-      <!-- <div class="table-container"> -->
-      <div class="dense-3" id="table-container">
-        <table mat-table formArrayName="checkboxes" matSort matSortDisableClear matSortActive="name"
-          matSortDirection="asc" [dataSource]="tableSource" #Table [trackBy]="trackById" class="animal-table">
-
-          <!-- Checkbox Column -->
-          <ng-container matColumnDef="select">
-
-            <th mat-header-cell *matHeaderCellDef>
-              <mat-checkbox [checked]="hasValue() && isAllSelected()" [indeterminate]="hasValue() && !isAllSelected()"
-                (change)="$event ? toggleAllRows() : null"></mat-checkbox>
-            </th>
-
-            <!-- TODO: Decide if a form needs to be used or if a request can be made with the selectionModel only -->
-            <!-- And set the aria-label -->
-            <td mat-cell *matCellDef="let control; let j = index;" class="checkbox-header-cell">
-              <mat-checkbox [formControlName]="j" (click)="$event.stopPropagation()" (change)="toggleRow(j)"
-                [id]="j"></mat-checkbox>
-
-            </td>
-
-            <td mat-footer-cell *matFooterCellDef>
-              <!-- <mat-divider></mat-divider> -->
-              <button mat-raised-button [disabled]="TableState() !== 'loaded' || eventForm.invalid" color="primary"
-                type="submit">
-                Submit
-              </button>
-            </td>
-
-            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-          </ng-container>
-
-
-          <ng-container matColumnDef="name" class="ng-container">
-
-            <th mat-header-cell class="animal-header-cell" *matHeaderCellDef mat-sort-header
-              sortActionDescription="Sort by name">
-              <div class="animal-header-content">
-                <span>Animals</span>
-                <mat-icon
-                  matTooltip="Each animal is assigned a unique individual identifier provided by the owner of the study."
-                  aria-label="false" fontIcon="info"></mat-icon>
-              </div>
-            </th>
-
-            <!-- TODO: Set the value attribute to the local identifier. -->
-            <!-- INFO: This the templating for the individual local identifiers -->
-            <td mat-cell *matCellDef="let control; let j = index;" class="individual-header-cell">
-              <p>{{ getIndividual(j)()?.LocalIdentifier ?? "N/A" }}</p>
-            </td>
-
-            <td mat-footer-cell *matFooterCellDef>
-              <!-- <p>Footer content for name column.</p> -->
-            </td>
-
-          </ng-container>
-
-          <!-- <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky:true"></tr> -->
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; let i = index; columns:displayedColumns;"></tr>
-          <tr mat-footer-row *matFooterRowDef="displayedColumns; sticky: true">
-
-        </table>
-
-      </div>
-      <!-- <mat-paginator [length]="tableSource.FormArray().length" pageSize="5"></mat-paginator> -->
-    </form>
-    @if (TableState() === "loaded" && tableSource.TableSize() === 0){
-    <span id="no-animal-found" class="no-individuals">No Animals Found.</span>
-    }
-    @else if (TableState() === "error"){
-    <span id="error-retrieving-animals" class="no-individuals">Error Retrieving Animals.</span>
-    }
-
-  </mat-tab>
-
-  <mat-tab #EventsTab label="Events" [matBadge]="1" [matBadgeHidden]="badgeHidden">
-
-    <!--TODO:Rewrite this for loop to iterate over the current number
-      of overlay controls of the correct type which is initially zero.-->
-    <!-- @for (animal of currentIndividuals; track animal; let i = $index){ -->
-
-    <!-- @switch(isPathLayer(CurrentActiveLayer())){ -->
-    <!-- @case (true){ -->
-    <!-- <p>Path layer is active.</p> -->
-    <!-- } -->
-    <!-- @default{ -->
-    <!-- <p>Default case for path layer check.</p> -->
-    <!-- } -->
-    <!-- } -->
-
-    @if (currentEventData && isPointLayer(CurrentActiveLayer())){
-    <div [formGroup]="pointOverlayControls" class="dense-3">
-      <div formArrayName="individual" *ngFor="let pointForm of PointForms.controls; let i = index">
-        <mat-card>
-          <mat-card-header>
-            <p>
-              Animal: {{ pointForm.controls.currentIndividual.value }} And Path Layer.
-            </p>
-          </mat-card-header>
-
-          <mat-card-content>
-
-            <div class="first-row-content">
-
-            </div>
-            <div [formGroupName]="i">
-              <mat-form-field appearance="outline">
-                <mat-label>Width Scale</mat-label>
-                <input matInput type="number" formControlName="widthScale">
+                </mat-select>
               </mat-form-field>
-            </div>
+              <mat-form-field class="sensor-form">
 
-          </mat-card-content>
-        </mat-card>
-      </div>
-    </div>
-    }
+                <mat-select formControlName="sensorForm" placeholder="Sensors" matTooltip="Select a sensor type.">
+                  @for (option of currentLocationSensors();track option) {
+                    <mat-divider></mat-divider>
+                    <mat-option [value]="option">{{ option }}</mat-option>
+                  } @empty {
+                    <mat-option [value]="null">-</mat-option>
+                  }
+                </mat-select>
 
-    @else if (currentEventData && isPathLayer(CurrentActiveLayer())){
-    <div [formGroup]="pathOverlayControls" class="dense-3">
-      <div formArrayName="individual" *ngFor="let pathForm of PathForms.controls; let i = index">
-        <mat-card>
-          <mat-card-header>
-            <p>
-              Animal: {{ pathForm.controls.currentIndividual.value }} And Path Layer.
-            </p>
-          </mat-card-header>
-
-          <mat-card-content>
-
-            <!-- TODO:Test different form types such as checkboxes -->
-            <!-- and sliders to test if the different input types can be reduced in size. -->
-            <div [formGroupName]="i" class="path-controls">
-              <div class="first-row">
-                <mat-form-field appearance="outline">
-                  <mat-label>Width</mat-label>
-                  <input matInput type="number" formControlName="widthScale">
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>Opacity</mat-label>
-                  <input matInput type="number" formControlName="opacity">
-                </mat-form-field>
-
-              </div>
-
-              <div class="second-row">
-
-                <mat-form-field appearance="outline">
-                  <mat-label>Width Minimum Pixels</mat-label>
-                  <input matInput type="number" formControlName="widthMinPixels">
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>Width Maximum Pixels</mat-label>
-                  <input matInput type="number" formControlName="widthMaxPixels">
-                </mat-form-field>
-
-                <!-- TODO:Include a field of some sort for autohighlighting -->
-                <!-- Also consider removing this option for now. -->
-                <!-- <mat-form-field appearance="outline"> -->
-                <!--   <mat-label>Auto-Highlight</mat-label> -->
-                <!--   <input matInput type="checkbox" formControlName="autoHighlight"> -->
-                <!-- </mat-form-field> -->
-              </div>
-
-              <mat-form-field appearance="outline">
-                @if(currentActiveLayer() === 0){
-                <mat-label>Source Color</mat-label>
-                } @else {
-                <mat-label>Color</mat-label>
+                @if (eventForm.dirty && eventForm.hasError("noSensorSelected")) {
+                  <mat-error>No Sensor Selected.</mat-error>
                 }
-                <input matInput type="color" formControlName="getSourceColor">
               </mat-form-field>
 
-
-              <div class="third-row">
-                @if(currentActiveLayer() === 0){
-                <mat-form-field appearance="outline">
-                  <mat-label>Target Color</mat-label>
-                  <input matInput type="color" formControlName="getTargetColor">
-                </mat-form-field>
-                }
-
-                <!-- <mat-form-field appearance="outline"> -->
-                <!--   <mat-label>Focus Opacity</mat-label> -->
-                <!--   <input matInput type="number" formControlName="focusLevel"> -->
-                <!-- </mat-form-field> -->
-              </div>
             </div>
-
-          </mat-card-content>
+            <!-- @if (eventForm.dirty && eventForm.hasError("noOptionSelected")){ -->
+            <!-- <mat-error>No Option Selected.</mat-error> -->
+            <!-- } -->
+            <!-- @if (TableState() === "loading"){ -->
+            <!-- <mat-progress-bar mode="indeterminate"></mat-progress-bar> -->
+            <!-- } -->
+            <table mat-table formArrayName="checkboxes" matSort matSortDisableClear matSortActive="name"
+                   matSortDirection="asc" [dataSource]="tableSource" #Table [trackBy]="trackById" class="animal-table">
+              Checkbox Column
+              <ng-container matColumnDef="select">
+                <th mat-header-cell *matHeaderCellDef>
+                  <mat-checkbox [checked]="hasValue() && isAllSelected()"
+                                [disabled]="TableState() !== 'loaded'"
+                                [indeterminate]="hasValue() && !isAllSelected()"
+                                (change)="$event ? toggleAllRows() : null"></mat-checkbox>
+                </th>
+                <td mat-cell *matCellDef="let control; let j = index;" class="checkbox-header-cell">
+                  <mat-checkbox [formControlName]="j"
+                                (click)="$event.stopPropagation()" (change)="toggleRow(j)"
+                                [id]="j"></mat-checkbox>
+                </td>
+                <td mat-footer-cell *matFooterCellDef>
+                  <button mat-raised-button class="submit-button"
+                          [disabled]="TableState() !== 'loaded' || eventForm.invalid" color="primary" type="submit">
+                    Submit
+                  </button>
+                </td>
+                <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+              </ng-container>
+              <ng-container matColumnDef="name" class="ng-container">
+                <th mat-header-cell class="animal-header-cell" *matHeaderCellDef mat-sort-header
+                    sortActionDescription="Sort by name">
+                  <div class="animal-header-content">
+                    <span>Animals</span>
+                    <mat-icon
+                      matTooltip="Each animal is assigned a unique individual identifier provided by the owner of the study."
+                      aria-label="false" fontIcon="info"></mat-icon>
+                  </div>
+                </th>
+                <td mat-cell *matCellDef="let control; let j = index;" class="individual-header-cell">
+                  <p>{{ getIndividual(j)()?.LocalIdentifier ?? "N/A" }}</p>
+                </td>
+                <td mat-footer-cell *matFooterCellDef>
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky:true"></tr>
+              <tr mat-row *matRowDef="let row; let i = index; columns:displayedColumns;"></tr>
+              <tr mat-footer-row *matFooterRowDef="displayedColumns; sticky: true">
+            </table>
+          </form>
         </mat-card>
-      </div>
-    </div>
-    }
-
-    @else if (currentEventData && isAggregationLayer(CurrentActiveLayer())){
-    <div [formGroup]="aggregationOverlayControls" class="dense-3">
-      <div formArrayName="individual" *ngFor="let aggregationForm of AggregationForms.controls; let i = index">
-        <mat-card>
+      } @else if (i === 1) {
+        <mat-card class="card-controls">
+          <!-- @if (currentEventData){ -->
           <mat-card-header>
-            <p>
-              Animal: {{ aggregationForm.controls.currentIndividual.value }} And Path Layer.
-            </p>
+            <h4>Control Panel</h4>
           </mat-card-header>
-
           <mat-card-content>
+            @switch (currentActiveForms()) {
+              @case ("path") {
 
-            <div [formGroupName]="i">
-              <!-- <label for="path-widthScale-{{i}}">Width</label> -->
-              <mat-form-field appearance="outline">
-                <mat-label>GroupName = {{i}}</mat-label>
-                <input matInput type="number" formControlName="widthScale">
-              </mat-form-field>
-            </div>
+                <div class="label-container">
+                  <!--          <label for="path-units">Units:</label>-->
+                  <!-- FIELD Name: widthUnits-->
 
+                  <!--          <select name="units" id="path-units">-->
+                  <!--            <option value="pixels">pixels</option>-->
+                  <!--            <option value="meters">meters</option>-->
+                  <!--            <option value="common">common</option>-->
+                  <!--          </select>-->
+
+                  <!--          <span>Units:</span>-->
+                  <mat-form-field class="dense-3" id="dropdown-path-1">
+                    <mat-label>Units</mat-label>
+                    <mat-select placeholder="Units" (valueChange)="pathControlChange($event, 'widthUnits')">
+                      <mat-option value="pixels">pixels</mat-option>
+                      <mat-option value="common">common</mat-option>
+                      <mat-option value="meters">meters</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field class="dense-3" id="dropdown-path-2">
+                    <mat-label>placeholder</mat-label>
+                    <mat-select placeholder="placeholder2">
+                      <mat-option></mat-option>
+                      <mat-option>Option 1</mat-option>
+                      <mat-option>Option 2</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                </div>
+
+                <div class="label-container">
+                  <span>Width:</span>
+                  <span>{{ pathForms.value.widthScale }}</span>
+                </div>
+
+                <mat-slider min="0" max="20" [disabled]="currentEventData === undefined">
+                  <input matSliderThumb (valueChange)="pathControlChange($event, 'widthScale')">
+                </mat-slider>
+
+                <div class="label-container">
+                  <span>Minimum Width:</span>
+                  <span>{{ pathForms.value.widthMinPixels }}</span>
+                </div>
+
+                <mat-slider min="0" max="20" [disabled]="currentEventData === undefined">
+                  <input matSliderThumb (valueChange)="pathControlChange($event, 'widthMinPixels')">
+                </mat-slider>
+
+                <div class="label-container">
+                  <span>Opacity:</span>
+                  <span>{{ pathForms.value.opacity }}</span>
+                </div>
+
+                <mat-slider min="0" max="1" step="0.01" [disabled]="currentEventData === undefined">
+                  <input matSliderThumb (valueChange)="pathControlChange($event, 'opacity')">
+                </mat-slider>
+              }
+              @case ("point") {
+
+                <div class="label-container">
+                  <span>Radius:</span>
+                  <span>{{ pathForms.value.opacity }}</span>
+                </div>
+
+                <mat-slider min="0" max="1000">
+                  <input matSliderThumb (valueChange)="pointControlChange($event, 'getRadius')">
+                </mat-slider>
+
+                <div class="label-container">
+                  <span>Opacity:</span>
+                  <span>{{ pathForms.value.opacity }}</span>
+                </div>
+
+                <mat-slider min="0" max="1" step="0.01">
+                  <input matSliderThumb (valueChange)="pointControlChange($event, 'opacity')">
+                </mat-slider>
+
+              }
+              @case ("aggregation") {
+                <!-- TODO:Decide on what options to include -->
+                  <!-- <div class="label-container"> -->
+                  <!--   <label>Opacity:</label> -->
+                  <!--   <label>{{pathForms.value.opacity}}</label> -->
+                  <!-- </div> -->
+                  <!---->
+                  <!-- <mat-slider min="0" max="1000"> -->
+                  <!--   <input matSliderThumb [(ngModel)]="pointForms.value.opacity"> -->
+                  <!-- </mat-slider> -->
+              }
+            }
           </mat-card-content>
         </mat-card>
-      </div>
-    </div>
-
-    }
-
-    @else {
-    <p>Default Case For Current Active Layer</p>
-    }
-
-    <!-- <mat-card> -->
-    <!--   <mat-card-header class="card-header"> -->
-    <!--     <mat-card-subtitle> -->
-    <!--        Animal: {{animal}} index: {{i}} -->
-    <!--     </mat-card-subtitle> -->
-    <!--   </mat-card-header> -->
-    <!---->
-    <!--   <mat-card-content class="dense-3" id="card-content"> -->
-
-    <!-- TODO:This could be rewritten as a formbuilder service to reduce this file size. -->
-    <!-- The following form needs to be tested with other layer types. -->
-
-    <!-- TODO: The correct approach is to wrap everything in a form element.
-              and then wrap each input element in a mat-form-field element.-->
-    <!--     @if (currentEventData && isPointLayer(CurrentActiveLayer())){ -->
-    <!--     <form [formGroup]="pointOverlayControls"> -->
-    <!---->
-    <!--       <div class="arrayControls" formArrayName="individual"> -->
-    <!---->
-    <!-- TODO:Make sure this group name is bound to the current index -->
-    <!--         <div formGroupName="i"> -->
-    <!-- TODO:Check if the matInput attribute is required for this element to be styled properly. -->
-    <!--           <div class="first-content-row"> -->
-    <!--             <mat-form-field formControlName="getRadius"> -->
-    <!--               <mat-label>Radius</mat-label> -->
-    <!--               <input type="text"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-slide-toggle formControlName="filled"> -->
-    <!--               Filled Outline -->
-    <!--             </mat-slide-toggle> -->
-    <!--             <mat-slide-toggle formControlName="autoHighlight"> -->
-    <!--               Auto-Highlight -->
-    <!--             </mat-slide-toggle> -->
-    <!--             <mat-form-field formControlName="opacity"> -->
-    <!--               <mat-label>Opacity</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--           </div> -->
-    <!--           <div class="second-row-content"> -->
-    <!--             <mat-form-field formControlName="radiusMinPixels"> -->
-    <!--               <mat-label>Radius Minimum Pixels</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="radiusMaxPixels"> -->
-    <!--               <mat-label>Radius Maximum Pixels</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="getFillColor"> -->
-    <!--               <mat-label>Fill Color</mat-label> -->
-    <!--               <input type="color"> -->
-    <!--             </mat-form-field> -->
-    <!-- TODO:This may not be applicable to arc layers. Check the documentation for details -->
-    <!--             <mat-form-field formControlName="getLineColor"> -->
-    <!--               <mat-label>Line Color</mat-label> -->
-    <!--               <input type="color"> -->
-    <!--             </mat-form-field> -->
-    <!--           </div> -->
-    <!--         </div> -->
-    <!--       </div> -->
-    <!--     </form> -->
-    <!--     } -->
-    <!--     @else if(currentEventData && isPathLayer(CurrentActiveLayer())){ -->
-    <!-- TODO: To cut down on the number of input form it may be better to -->
-    <!-- to remove the option to change the unit types -->
-    <!--     <form [formGroup]="pathOverlayControls"> -->
-    <!--       <div formArrayName="individual"> -->
-    <!--         <div formGroupName="i"> -->
-    <!--           <div class="first-row-content"> -->
-    <!--             <mat-form-field formControlName="widthScale"> -->
-    <!--               <mat-label>Line Radius</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="opacity"> -->
-    <!--               <mat-label>Opacity</mat-label> -->
-    <!--               <input matInput type="number"> -->
-    <!--             </mat-form-field> -->
-    <!-- NOTE:This section needs a tooltip to explain the following parameters. -->
-    <!--             <mat-form-field formControlName="widthMinPixels"> -->
-    <!--               <mat-label>Width Minimum Pixels</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="widthMaxPixels"> -->
-    <!--               <mat-label>Width Maximium Pixels</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--           </div> -->
-    <!--           <div class="second-content-row"> -->
-    <!--             <mat-form-field formControlName="getSourceColor"> -->
-    <!--               <mat-label> -->
-    <!--                  CASE 1: ArcLayer -->
-    <!--                 @if (currentActiveLayer() === 0){ -->
-    <!--                 Source Color -->
-    <!--                 } @else { -->
-    <!--                 Color -->
-    <!--                 } -->
-    <!--               </mat-label> -->
-    <!--               <input type="color"> -->
-    <!--             </mat-form-field> -->
-    <!---->
-    <!-- TODO:Test if this field is properly hidden when the current active layer is of type arc. -->
-    <!--             <mat-form-field [hidden]="CurrentActiveLayer() === 0" formControlName="getTargetColor"> -->
-    <!--               <mat-label> -->
-    <!--                 Target Color -->
-    <!--               </mat-label> -->
-    <!--               <input type="color"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="focusLevel"> -->
-    <!--               <mat-label>Focus Opacity</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--              TODO:Change this a slide toggle instead of a checkbox. -->
-    <!--             <mat-checkbox formControlName="AutoHighlight"> -->
-    <!--               Auto-Highlight -->
-    <!--             </mat-checkbox> -->
-    <!--           </div> -->
-    <!--            Current formGroupName = {{i}} Current Layer is of type path. -->
-    <!--         </div> -->
-    <!--       </div> -->
-    <!--     </form> -->
-    <!--     } -->
-    <!--     @else if (currentEventData && isAggregationLayer(CurrentActiveLayer())){ -->
-    <!--     <form [formGroup]="aggregationOverlayControls"> -->
-    <!--       <div formArrayName="individual"> -->
-    <!--         <div formGroupName="i"> -->
-    <!--           <div class="first-row-content"> -->
-    <!--             <mat-form-field formControlName="radius"> -->
-    <!--               <mat-label>Radius</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="elevationRange"> -->
-    <!--               <mat-label>Elevation Range</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="elevationScale"> -->
-    <!--               <mat-label>Elevation Scale</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="elevationLowerPercentile"> -->
-    <!--               <mat-label>Elevation Lower Percentile</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="elevationUpperPercentile"> -->
-    <!--               <mat-label>Elevation Upper Percentile</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--           </div> -->
-    <!--           <div class="second-row-content"> -->
-    <!--             <mat-form-field formControlName="elevationAggregration"> -->
-    <!--               <mat-label>Elevation Aggregation</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="colorScaleType"> -->
-    <!--               <mat-label>Color Scale Type</mat-label> -->
-    <!--               <input type="text"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="colorAggregation"> -->
-    <!--               <mat-label>Color Aggregation</mat-label> -->
-    <!--               <input type="text"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="colorWeight"> -->
-    <!--               <mat-label>Color Weight</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--             <mat-form-field formControlName="getElevationRange"> -->
-    <!--               <mat-label>Elevation Range</mat-label> -->
-    <!--               <input type="number"> -->
-    <!--             </mat-form-field> -->
-    <!--           </div> -->
-    <!--         </div> -->
-    <!--       </div> -->
-    <!--     </form> -->
-    <!--     } -->
-    <!--     <mat-divider></mat-divider> -->
-    <!--   </mat-card-content> -->
-    <!--   <mat-card-actions> -->
-    <!--     <button mat-button>Submit</button> -->
-    <!--   </mat-card-actions> -->
-    <!--   <mat-card-footer> -->
-    <!-- TODO: If events are still arriving from the stream then add a loading bar? -->
-    <!--   </mat-card-footer> -->
-    <!-- </mat-card> -->
-    <!-- <br> -->
-    <!-- } -->
-
-  </mat-tab>
-</mat-tab-group>
+        <!-- <mat-card> -->
+          <!--   @if (currentFocusedIndividual && currentEventData){ -->
+          <!--   <mat-card-header> -->
+          <!--     Animal: {{currentFocusedIndividual}} -->
+          <!--   </mat-card-header> -->
+          <!--   <mat-card-content> -->
+          <!--     Placeholder -->
+          <!--   </mat-card-content> -->
+          <!--   } -->
+          <!-- </mat-card> -->
+      }
+    </mat-grid-tile>
+  }
+</mat-grid-list>
