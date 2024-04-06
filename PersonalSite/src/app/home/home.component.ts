@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { TrackerViewComponent } from '../tracker-view/tracker-view.component';
+// import {RouterOutlet} from "@angular/router";
 
 @Component({
   selector: 'app-home',

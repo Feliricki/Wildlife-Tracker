@@ -13,8 +13,6 @@ export class LayerControl implements IControl {
   }
 
   onAdd(map: mapboxgl.Map): HTMLElement {
-    console.log("Adding custom controls to mapbox overlay.");
-
     const container = document.createElement('custom-button-el') as NgElement & WithProperties<CustomButtonComponent>;
     container.map = map;
     container.collection = this.collection;
@@ -32,13 +30,8 @@ export class LayerControl implements IControl {
     this._map = undefined;
   }
 
-  // toggleStudiesVisibility(): void {
-  //   this._container?.toggleStudiesVisibility();
-  // }
-
   setStudiesVisibility(visibility: boolean): void {
     if (this._container) {
-      console.log(`Setting studies visibility to ${visibility}`);
       this._container.studiesVisible = visibility;
     }
   }
@@ -60,13 +53,7 @@ export function setSourceLayers(
 
   const prevSource = map.getSource(source) as GeoJSONSource;
   if (prevSource) {
-    console.log(`PrevSource was set and setSourceData = ${setSourceData}`);
     prevSource.setData(setSourceData ? collection : emptyFeatureCollection());
-    // map.getStyle().layers.forEach(layer => {
-    //   if (layer.id === 'cluster-count'){
-    //     map.setLayoutProperty(layer.id, "visibility", setSourceData ? "visible" : "none");
-    //   }
-    // });
     return;
   }
 

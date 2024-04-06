@@ -179,7 +179,7 @@ namespace PersonalSiteAPI.Controllers
                 bool authorized = true;
                 if (!User.IsInRole(RoleNames.Administrator))
                 {
-                    Console.WriteLine("User is not authorized.");
+                    //Console.WriteLine("User is not authorized.");
                     // Valid Licenses are: "CC_0", "CC_BY", "CC_BY_NC"                    
                     source = source.Where(_validLicenseExp);
                     authorized = false;
@@ -189,8 +189,8 @@ namespace PersonalSiteAPI.Controllers
                 var cacheKey = $"GetStudies: {authorized}-{pageIndex}-{pageSize}-{sortColumn}-{sortOrder}-{filterColumn}-{filterQuery}";
                 if (_memoryCache.TryGetValue<ApiResult<StudyDTO>>(cacheKey, out var storedResult))
                 {
-                    Console.WriteLine("Using cached result in GetStudies");
-                    Console.WriteLine(storedResult?.Data[0].TimestampFirstDeployedLocation.ToString());
+                    //Console.WriteLine("Using cached result in GetStudies");
+                    //Console.WriteLine(storedResult?.Data[0].TimestampFirstDeployedLocation.ToString());
                     return storedResult ?? throw new Exception("Invalid object placed in cache.");
                 }
 
@@ -239,7 +239,7 @@ namespace PersonalSiteAPI.Controllers
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                //Console.WriteLine(e.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
@@ -258,7 +258,7 @@ namespace PersonalSiteAPI.Controllers
 
                 if (!User.IsInRole(RoleNames.Administrator))
                 {
-                    Console.WriteLine("User is not authorized");
+                    //Console.WriteLine("User is not authorized");
                     source = source
                       .Where(_validLicenseExp);
                 }
@@ -310,7 +310,7 @@ namespace PersonalSiteAPI.Controllers
             }
             catch (Exception error)
             {
-                Console.WriteLine(error.Message);
+                //Console.WriteLine(error.Message);
                 return StatusCode(StatusCodes.Status503ServiceUnavailable);
             }
         }
@@ -345,7 +345,7 @@ namespace PersonalSiteAPI.Controllers
 
                 if (response is null)
                 {
-                    Console.WriteLine("null response in jsonRequest");
+                    //Console.WriteLine("null response in jsonRequest");
                     throw new Exception("Json request yielded a null response");
                 }
 
@@ -353,7 +353,7 @@ namespace PersonalSiteAPI.Controllers
                 byte[] responseContentArray = await response.Content.ReadAsByteArrayAsync();
                 if (responseContentArray.Length == 0)
                 {
-                    Console.WriteLine("Sending a csv request in GetJsonData");
+                    //Console.WriteLine("Sending a csv request in GetJsonData");
                     response = await _moveBankService.DirectRequest(
                         studyId: studyId,
                         entityType: entityType,

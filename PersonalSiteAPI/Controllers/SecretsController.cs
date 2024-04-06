@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Amazon.S3;
 using PersonalSiteAPI.Services;
 using Amazon;
+using Microsoft.AspNetCore.Authorization;
+using PersonalSiteAPI.Constants;
 
 namespace PersonalSiteAPI.Controllers
 {
@@ -25,6 +27,7 @@ namespace PersonalSiteAPI.Controllers
         }
 
         [HttpGet(Name = "GetSecrets")]
+        [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
         public async Task<IActionResult> GetSecret()
         {
             try

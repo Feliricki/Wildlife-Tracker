@@ -9,7 +9,7 @@ import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
 import { MatIconModule } from '@angular/material/icon';
 import { animate, style, transition, trigger, state } from '@angular/animations';
 import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/layout';
-import { Observable, firstValueFrom, map, tap } from 'rxjs';
+import { Observable, firstValueFrom, map } from 'rxjs';
 import { HttpResponse } from '@angular/common/http';
 import { LineStringFeatureCollection, LineStringPropertiesV1 } from "../deckGL/GeoJsonTypes";
 import { EventRequest } from "../studies/EventRequest";
@@ -27,6 +27,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
 import { FormsModule } from '@angular/forms';
 import { MapboxComponent } from '../base-maps/mapbox/mapbox.component';
+import { Router } from '@angular/router';
 
 export type GoogleMapStyles =
   "roadmap" | "terrain" | "hybrid" | "satellite";
@@ -78,22 +79,32 @@ type BaseMaps = 'google' | 'mapbox' | 'arcgis';
 
     trigger('leftPanelOpened', [
 
-      state('true', style({ left: 'calc(400px - 2em)' })),
-      state('false', style({ left: '0px' })),
+      state('true', style({ left: 'calc(400px - 1.5em)' })),
+      state('false', style({ left: '.3em' })),
 
       // INFO:Animation used on the toggling button for the left sidenav.
       transition('true => false', [
-        animate('300ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(-400px + 2em))' })),
+        animate('300ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(-400px + 1.5em + .3em))' })),
       ]),
 
       // NOTE:This transition is used when opening the left sidenav.
       // Uses standard easing according to material design specs`
       // old cubic-bezier value is cubic-bezier(0.2, 0, 0, 1)
       transition('false => true', [
-        animate('325ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(400px - 2em))' })),
+        animate('325ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(400px - 1.5em - .3em))' })),
       ]),
-
     ]),
+
+    trigger('rightPanelOpened', [
+      state('true', style({ left: 'calc(100vw - 47.75em)' })),
+      state('false', style({ left: 'calc(100vw - 3.265em)' })),
+      transition('true => false', [
+        animate('300ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(44.485em))' }))
+      ]),
+      transition('false => true', [
+        animate('325ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(-44.485em))' }))
+      ]),
+    ])
   ]
 })
 export class TrackerViewComponent implements OnInit, OnDestroy {
@@ -137,6 +148,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   rightButtonFlag: WritableSignal<boolean> = signal(true);
 
   leftPanelOpened: WritableSignal<boolean> = signal(true);
+  rightPanelOpened: WritableSignal<boolean> = signal(false);
 
   radioGroupInitialized: WritableSignal<boolean> = signal(false);
   markersVisible: WritableSignal<boolean> = signal(true);
@@ -174,15 +186,17 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     ["Arc Layer", LayerTypes.ArcLayer],
     ["Line Layer", LayerTypes.LineLayer],
     // ["Path Layer", LayerTypes.PathLayer], // Having both the line and path layer is redundant.
-    ["Hexagon Layer", LayerTypes.HexagonLayer],
+    // ["Hexagon Layer", LayerTypes.HexagonLayer],
     ["Scatterplot Layer", LayerTypes.ScatterplotLayer],
-    ["Screen Grid Layer", LayerTypes.ScreenGridLayer],
-    ["Grid Layer", LayerTypes.GridLayer],
+    // ["Screen Grid Layer", LayerTypes.ScreenGridLayer],
+    // ["Grid Layer", LayerTypes.GridLayer],
     // INFO:Currrently the heatmap layer uses the cpu for aggregation causing lag
     // ["Heatmap Layer", LayerTypes.HeatmapLayer],
   ] as Array<[string, LayerTypes]>;
 
-  constructor(private breakpointObserver: BreakpointObserver) { }
+  constructor(
+    private breakpointObserver: BreakpointObserver,
+    private router: Router) { }
 
   // TODO:
   // 1) Fix the event forms. Or rewrite them scratch if its not possible to resize the input elements.
@@ -212,13 +226,16 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     this.XSmallScreen$ = this.breakpointObserver
       .observe([Breakpoints.XSmall]).pipe(
         map((state: BreakpointState) => state.matches),
-        tap(value => console.log(`Current state ${value} in track view component.`)),
       );
 
   }
 
   ngOnDestroy(): void {
     return;
+  }
+
+  gotoReferences(): void {
+    this.router.navigate(['/references']);
   }
 
   loadMap(): void {
@@ -244,7 +261,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   // INFO:Map and component state.
   updateMapState(state: boolean): void {
-    console.log(`Setting map loaded state to ${state}`);
+    // console.log(`Setting map loaded state to ${state}`);
     this.mapLoaded.set(state);
   }
 
@@ -259,7 +276,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
 
   updateCurrentEventRequest(request: EventRequest): void {
-    console.log("Updating the fetch request in tracker view");
+    // console.log("Updating the fetch request in tracker view");
     this.currentEventRequest = request;
   }
 
@@ -285,7 +302,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
 
   updateChunkMetadata(chunkInfo: EventMetadata) {
-    console.log(chunkInfo);
+    // console.log(chunkInfo);
     this.currentChunkInfo = chunkInfo;
   }
 
@@ -330,12 +347,14 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   closeRightNav(): void {
     this.rightNav.close();
     this.rightButtonFlag.set(true);
+    this.rightPanelOpened.set(false);
   }
 
   openRightNav(): void {
     if (this.rightNav.opened) {
       return;
     }
+    this.rightPanelOpened.set(true);
     this.rightNav.open().then(() => {
       this.rightButtonFlag.set(false);
     });
@@ -359,6 +378,14 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
       this.closeSearchNav();
     } else {
       this.openSearchNav();
+    }
+  }
+
+  toggleEventNav(): void {
+    if (this.rightPanelOpened()) {
+      this.closeRightNav();
+    } else {
+      this.openRightNav();
     }
   }
 

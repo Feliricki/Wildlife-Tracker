@@ -41,22 +41,18 @@ import { EventMetadata } from './EventsMetadata';
 import { LayerTypesHelper } from '../deckGL/OverlayOption';
 import { AggregationOverlayOptions, PointOverlayOptions, PathOverlayOptions, PointForms, PathForms, AggregationForms } from '../tracker-view/OverlayOptions';
 import { MatGridListModule } from '@angular/material/grid-list';
+import { MtxColorpickerModule } from '@ng-matero/extensions/colorpicker';
 
 export type RGBAColor = [number, number, number, number];
 export type ActiveForm = "point" | "path" | "aggregation";
 export type FormTypes = PointForms | PathForms | AggregationForms;
 export type OverlayTypes = FormGroup<PointForms> | FormGroup<PathForms> | FormGroup<AggregationForms>;
+
 export interface Tile {
   color: string;
   cols: number;
   rows: number;
 }
-
-export type ColorChange = {
-  type: "color";
-  value: RGBAColor;
-}
-
 export type NumberChange = {
   type: "number";
   value: number;
@@ -65,6 +61,11 @@ export type NumberChange = {
 export type StringChange = {
   type: "string";
   value: string;
+}
+
+export type ColorChange = {
+  type: "color";
+  value: RGBAColor;
 }
 
 export interface ControlChange {
@@ -85,7 +86,7 @@ export interface ControlChange {
     MatDividerModule, MatDatepickerModule, MatBadgeModule,
     MatSlideToggleModule, MatSliderModule, MatProgressBarModule,
     MatCardModule, MatCheckboxModule, MatFormFieldModule,
-    MatInputModule, MatGridListModule
+    MatInputModule, MatGridListModule, MtxColorpickerModule,
   ],
   templateUrl: './events.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -121,8 +122,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   currentActiveForms: WritableSignal<ActiveForm> = signal("path");
   currentActiveLayer: WritableSignal<LayerTypes> = signal(LayerTypes.ArcLayer);
 
-
-  // NOTE: currentEventData is only not undefined when an event has been recieved meaning that
+  // NOTE: currentEventData is only not undefined when an event has been received meaning that
   // forms can only be switched out when at least one event has been received.
   pointFormValid: Signal<boolean> = computed(() => {
     const newLayer = this.currentActiveLayer();
@@ -161,6 +161,8 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   pointForms = this.formBuilder.nonNullable.group({
     getRadius: this.formBuilder.nonNullable.control(1),
     opacity: this.formBuilder.nonNullable.control(1),
+    getFillColor: this.formBuilder.nonNullable.control(null as string | null),
+    radiusMinPixels: this.formBuilder.nonNullable.control(0),
   });
 
   aggregationForms = this.formBuilder.nonNullable.group({
@@ -282,7 +284,8 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     return this.aggregationOverlayControls.controls.individual;
   }
 
-  controlChangeHelper(value: number | string, option: string, formType: ActiveForm): void {
+  // TODO:Handle color input - Convert to rgba quadtuple.
+  controlChangeHelper(value: number | string | RGBAColor, option: string, formType: ActiveForm): void {
     if (typeof (value) === "string") {
       this.emitControlChanges({
         change: {
@@ -293,7 +296,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
         formType: formType
       });
     }
-    else {
+    else if (typeof (value) === "number") {
       this.emitControlChanges({
         change: {
           type: "number",
@@ -302,10 +305,30 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
         field: option,
         formType: formType
       });
+
+    }
+    else {
+      this.emitControlChanges({
+        change: {
+          type:"color",
+          value: value,
+        },
+        field: option,
+        formType: formType
+      });
     }
   }
 
-  pointControlChange(value: number | string, option: string): void {
+  pointControlChange(value: number | string | null, option: string, colorChange: boolean = false): void {
+    if (value === null) return;
+    if (colorChange) {
+      const color = value as string;
+      const rgbaColor = this.hexToRgba(color);
+      // console.log(`Color: ${color} rgbaColor: ${JSON.stringify(rgbaColor)}`);
+      this.pointForms.get(option)?.setValue(value);
+      this.controlChangeHelper(rgbaColor, option, "point");
+      return;
+    }
     this.pointForms.get(option)?.setValue(value);
     this.controlChangeHelper(value, option, "point");
   }
@@ -326,7 +349,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     const blue = color[2].toString(16);
 
     const ret = '#' + red + green + blue;
-    console.log(`ret = ${ret}`);
+    // console.log(`ret = ${ret}`);
     return ret;
   }
 
@@ -345,7 +368,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     const blueValue = this.normalizeColorValue(parseInt(blueHex, 16));
 
     const ret = [redValue, greenValue, blueValue, 255] as RGBAColor;
-    console.log(`Converted string ${color} to ${ret.join()}`);
+    // console.log(`Converted string ${color} to ${ret.join()}`);
     return ret;
   }
 
@@ -355,13 +378,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
 
   ngOnInit(): void {
     this.eventForm.disable();
-    this.pointForms.valueChanges.subscribe({
-      next: value => console.log(value)
-    });
-
-    this.pathForms.controls.opacity.valueChanges.subscribe({
-      next: value => console.log(value)
-    });
 
     this.tableState$ = this.tableSource.DataStateAsObservable.pipe(
       distinctUntilChanged(),
@@ -376,7 +392,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
             this.eventForm.markAsPristine();
             this.eventForm.enable();
             this.sensorForm.setValue(this.currentLocationSensors().at(0) ?? null);
-            console.log("All individuals are loaded (tracker component)");
+            // console.log("All individuals are loaded (tracker component)");
             break;
 
           case "error":
@@ -433,7 +449,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
 
         case "streamStatus":
           this.streamStatus = currentValue as StreamStatus;
-          console.log(`Streaming status is ${this.streamStatus} in events component.`);
+          // console.log(`Streaming status is ${this.streamStatus} in events component.`);
 
           switch (this.streamStatus) {
             case "standby":
@@ -450,8 +466,8 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
           break;
 
         case "currentEventData":
-          console.log(`Received new chunk in events component:`);
-          console.log(currentValue);
+          // console.log(`Received new chunk in events component:`);
+          // console.log(currentValue);
 
           // TODO:New forms should be added to the list of form groups.
           // Also continue testing by logging the output from the CurrrentActiveLayer signal.
@@ -472,8 +488,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
               .sort()
           );
 
-          // this.currentActiveForms.set(this.getActiveForm(this.currentActiveLayer()));
-          console.log(`Updating current active form type to ${this.currentActiveForms()}`);
           this.badgeHidden = true;
           break;
 
@@ -485,7 +499,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
         case "currentSelectedLayer":
           this.currentSelectedLayer = currentValue as LayerTypes;
           this.currentActiveForms.set(this.getActiveForm(this.currentSelectedLayer));
-          console.log(`Updated current active form to ${this.currentActiveForms()}`);
           break;
 
         default:
@@ -539,7 +552,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   }
 
   addForms(individual: string) {
-    console.log(`Adding for individual: ${individual}`);
 
     const pointForm = this.formBuilder.group({
       currentIndividual: new FormControl(individual),
@@ -606,8 +618,8 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     this.pathOverlayControls.controls.individual.controls.sort(this.sortControlByIndividual);
     this.aggregationOverlayControls.controls.individual.controls.sort(this.sortControlByIndividual);
 
-    console.log("Current status of path forms.");
-    console.log(this.PathForms);
+    // console.log("Current status of path forms.");
+    // console.log(this.PathForms);
   }
 
   sortControlByIndividual(a: OverlayTypes, b: OverlayTypes) {
@@ -889,7 +901,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
       Options: eventOptions,
     };
 
-    // console.log(JSON.stringify(eventRequest));
     this.sendFetchRequest(eventRequest);
     // TODO: Consider if an observable or the actual data should be sent to the current
   }

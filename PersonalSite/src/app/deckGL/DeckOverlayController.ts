@@ -1,5 +1,5 @@
-import {GoogleMapsOverlay} from '@deck.gl/google-maps/typed';
-import {MapboxOverlay} from '@deck.gl/mapbox/typed';
+import { GoogleMapsOverlay } from '@deck.gl/google-maps/typed';
+import { MapboxOverlay } from '@deck.gl/mapbox/typed';
 // import { TripsLayer } from '@deck.gl/geo-layers/typed';
 import {
   ArcLayer,
@@ -11,13 +11,13 @@ import {
   ScatterplotLayer,
   ScatterplotLayerProps
 } from '@deck.gl/layers/typed';
-import {Color, Layer, LayerProps, PickingInfo} from '@deck.gl/core/typed';
-import {randomColor} from './deck-gl.worker';
-import {LineStringPropertiesV2} from "./GeoJsonTypes";
-import {BinaryLineStringResponse, NumericPropsResponse, OptionalAttributes, WorkerFetchRequest} from "./MessageTypes";
-import {EventRequest} from "../studies/EventRequest";
-import {BinaryAttribute, BinaryLineFeatures, BinaryPointFeatures, BinaryPolygonFeatures} from '@loaders.gl/schema';
-import {computed, Signal, signal, WritableSignal} from '@angular/core';
+import { Color, Layer, LayerProps, PickingInfo } from '@deck.gl/core/typed';
+import { randomColor } from './deck-gl.worker';
+import { LineStringPropertiesV2 } from "./GeoJsonTypes";
+import { BinaryLineStringResponse, NumericPropsResponse, OptionalAttributes, WorkerFetchRequest } from "./MessageTypes";
+import { EventRequest } from "../studies/EventRequest";
+import { BinaryAttribute, BinaryLineFeatures, BinaryPointFeatures, BinaryPolygonFeatures } from '@loaders.gl/schema';
+import { computed, Signal, signal, WritableSignal } from '@angular/core';
 import {
   GridLayer,
   GridLayerProps,
@@ -28,9 +28,9 @@ import {
   ScreenGridLayer,
   ScreenGridLayerProps
 } from '@deck.gl/aggregation-layers/typed';
-import {EventMetadata} from '../events/EventsMetadata';
+import { EventMetadata } from '../events/EventsMetadata';
 import mapboxgl from 'mapbox-gl';
-import {ControlChange} from '../events/events.component';
+import { ControlChange } from '../events/events.component';
 
 // This is the type returned by the geoJsonToBinary function.
 type BinaryFeatureWithAttributes = {
@@ -48,6 +48,10 @@ type MapboxBaseMap = {
   type: "mapbox";
   map: mapboxgl.Map;
 }
+
+type PointLayerProps = Partial<ScatterplotLayerProps>;
+type PathLikeLayerProps = Partial<PathLayerProps & LineLayerProps & ArcLayerProps>;
+type AggregationLayerProps = Partial<HexagonLayerProps & ScreenGridLayerProps & GridLayerProps>;
 
 type OverlayTypes = "google" | "mapbox" | "arcgis";
 
@@ -290,7 +294,7 @@ export class DeckOverlayController {
   constructor(map: google.maps.Map | mapboxgl.Map, layer: LayerTypes) {
     this.map = map;
     this.currentLayer = layer;
-    console.log(`Instantiated deckOverlay with layer ${this.currentLayer}`);
+    // console.log(`Instantiated deckOverlay with layer ${this.currentLayer}`);
 
     if (typeof Worker !== 'undefined') {
       this.webWorker = new Worker(new URL('./deck-gl.worker', import.meta.url));
@@ -345,7 +349,6 @@ export class DeckOverlayController {
   createOverlay(overlayType: OverlayTypes): GoogleMapsOverlay | MapboxOverlay {
     switch (overlayType) {
       case "google":
-        console.log(`Return google maps overlay.`);
         return new GoogleMapsOverlay({
           getTooltip: (data) => data.layer && this.renderTooltip(data),
           _typedArrayManagerProps: {
@@ -356,7 +359,6 @@ export class DeckOverlayController {
 
       case "mapbox":
         // NOTE:This overlay implement the IController class from the mapbox imports and must be added in the original mapbox component class.
-        console.log(`Returning mapboxOverlay`);
         return new MapboxOverlay({
           interleaved: false, //NOTE:Interleaved option is buggy as of now.
           getTooltip: (data) => data.layer && this.renderTooltip(data),
@@ -367,7 +369,6 @@ export class DeckOverlayController {
         });
       case "arcgis":
         // TODO: This needs to be changed to the arcgis overlay later on.
-        console.log("Arcgis overlay in crateOverlay method.");
         return new GoogleMapsOverlay({
           getTooltip: (data) => data.layer && this.renderTooltip(data),
           _typedArrayManagerProps: {
@@ -386,15 +387,15 @@ export class DeckOverlayController {
 
   //TODO: Test this method for point and aggregation layers.
   setLayerAttributes(change: ControlChange): void {
-    switch (change.formType){
+    switch (change.formType) {
       case "point":
-        this.defaultPointOptions[change.field as keyof Partial<ScatterplotLayerProps>] = change.change.value;
+        this.defaultPointOptions[change.field as keyof PointLayerProps] = change.change.value;
         break;
       case "path":
-        this.defaultPathOptions[change.field as keyof Partial<LineLayerProps & PathLayerProps & ArcLayerProps>] = change.change.value;
+        this.defaultPathOptions[change.field as keyof PathLikeLayerProps] = change.change.value;
         break;
       case "aggregation":
-        this.defaultAggregationOptions[change.field as keyof Partial<HexagonLayerProps & ScreenGridLayerProps & GridLayerProps>] = change.change.value;
+        this.defaultAggregationOptions[change.field as keyof AggregationLayerProps] = change.change.value;
         break;
     }
 
@@ -442,7 +443,6 @@ export class DeckOverlayController {
       this.webWorker.postMessage({ data: workerRequest, type: "FetchRequest" as const });
     }
     else {
-      // TODO: If webworkers are not suppported then simply alert the user.
       alert("Your browser does not support webworkers.");
     }
     return this.deckOverlay;
@@ -646,14 +646,41 @@ export class DeckOverlayController {
     ];
   }
 
+  setOptionsHelper(props: LayerProps, layerType: "point" | "path" | "aggregation") {
+
+    let entries = Object.entries(this.defaultPathOptions);
+    if (layerType === "point"){
+      entries = Object.entries(this.defaultPointOptions);
+    } else if (layerType === "path"){
+      entries = Object.entries(this.defaultPathOptions);
+    }else {
+      entries = Object.entries(this.defaultAggregationOptions);
+    }
+    entries.forEach(([key, value]) => {
+      if (layerType === "path") {
+        const casted = props as PathLikeLayerProps;
+        casted[key as keyof PathLikeLayerProps] = value;
+      }
+      else if (layerType === "point") {
+        const casted = props as PointLayerProps;
+        casted[key as keyof PointLayerProps] = value;
+      }
+      else {
+        const casted = props as AggregationLayerProps;
+        casted[key as keyof AggregationLayerProps] = value;
+      }
+    });
+  }
+
   createArcLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
     const BYTE_SIZE = 4;
     const positions = binaryFeatures.positions;
     const positionSize = positions.size;
     const entrySize = positionSize * 2 * BYTE_SIZE;
-
     const colors = this.getColorHelper(binaryFeatures.individualLocalIdentifier);
-    return new ArcLayer({
+
+    const arcLayerProps: ArcLayerProps =
+    {
       id: `${LayerTypes.ArcLayer}-${layerId}`,
       data: {
         length: binaryFeatures.length,
@@ -679,13 +706,16 @@ export class DeckOverlayController {
       colorFormat: "RGBA",
       pickable: this.currentLayer === LayerTypes.ArcLayer,
       visible: this.currentLayer === LayerTypes.ArcLayer,
-      getWidth: 3,
-      widthMinPixels: 1,
+      // getWidth: 3,
+      // widthMinPixels: 1,
       updateTriggers: {
         visible: this.currentLayer,
         pickable: this.currentLayer
       }
-    });
+    }
+
+    this.setOptionsHelper(arcLayerProps, "path");
+    return new ArcLayer(arcLayerProps);
   }
   // TODO: This layer needs to have the start vertices specified.
   createPathLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
@@ -701,7 +731,7 @@ export class DeckOverlayController {
       startIndices.push(lastIndex);
     }
 
-    return new PathLayer({
+    const pathLayerProps = {
       id: `${LayerTypes.PathLayer}-${layerId}`,
       data: {
         length: binaryFeatures.length,
@@ -729,7 +759,10 @@ export class DeckOverlayController {
         visible: this.currentLayer,
         pickable: this.currentLayer,
       },
-    });
+    };
+    this.setOptionsHelper(pathLayerProps as PathLayerProps, "path");
+
+    return new PathLayer();
   }
   // This layer needs an adjustable radius, color, and opacity.
   createScatterplotLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
@@ -738,7 +771,7 @@ export class DeckOverlayController {
     const positionSize = positions.size;
     const entrySize = positionSize * 2 * BYTE_SIZE;
 
-    return new ScatterplotLayer({
+    const scatterplotProps: ScatterplotLayerProps = {
       id: `${LayerTypes.ScatterplotLayer}-${layerId}`,
       data: {
         length: binaryFeatures.length,
@@ -764,7 +797,9 @@ export class DeckOverlayController {
         visible: this.currentLayer,
         pickable: this.currentLayer
       },
-    });
+    };
+    this.setOptionsHelper(scatterplotProps, "point");
+    return new ScatterplotLayer(scatterplotProps);
   }
 
   // BUG:This layer currently always fallbacks to CPU aggregation slowing down the UI.
@@ -774,7 +809,7 @@ export class DeckOverlayController {
     const positionSize = positions.size;
     const entrySize = positionSize * 2 * BYTE_SIZE;
 
-    return new HeatmapLayer({
+    const heatmapProps = {
       id: `${LayerTypes.HeatmapLayer}-${layerId}`,
       data: {
         length: binaryFeatures.length,
@@ -790,7 +825,7 @@ export class DeckOverlayController {
       },
       // pickable: this.currentLayer === LayerTypes.HeatmapLayer,
       pickable: false,
-      aggregation: "SUM",
+      aggregation: "SUM" as const,
       radiusPixels: 15,
       intensity: 1,
       threshold: 0.5,
@@ -802,7 +837,9 @@ export class DeckOverlayController {
         visible: this.currentLayer,
         pickable: this.currentLayer
       },
-    });
+    };
+
+    return new HeatmapLayer(heatmapProps);
   }
 
   // TODO: Include adjustable settings for max elevation, colors, and hexagon dimensions such as width.
@@ -812,7 +849,7 @@ export class DeckOverlayController {
     const positionSize = positions.size;
     const entrySize = positionSize * 2 * BYTE_SIZE;
 
-    return new HexagonLayer({
+    const hexagonLayerProps = {
       id: `${LayerTypes.HexagonLayer}-${layerId}`,
       data: {
         length: binaryFeatures.length,
@@ -834,7 +871,9 @@ export class DeckOverlayController {
         visible: this.currentLayer,
         pickable: this.currentLayer
       },
-    });
+    };
+    this.setOptionsHelper(hexagonLayerProps, "aggregation");
+    return new HexagonLayer(hexagonLayerProps);
   }
 
   createGridLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
@@ -842,7 +881,8 @@ export class DeckOverlayController {
     const positions = binaryFeatures.positions;
     const positionSize = positions.size;
     const entrySize = positionSize * 2 * BYTE_SIZE;
-    return new GridLayer({
+
+    const gridProps = {
       id: `${LayerTypes.GridLayer}-${layerId}`,
       data: {
         length: binaryFeatures.length,
@@ -862,7 +902,9 @@ export class DeckOverlayController {
         visible: this.currentLayer,
         pickable: this.currentLayer,
       },
-    })
+    };
+    this.setOptionsHelper(gridProps, "aggregation");
+    return new GridLayer(gridProps);
   }
 
   createScreenGridLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
@@ -871,7 +913,7 @@ export class DeckOverlayController {
     const positionSize = positions.size;
     const entrySize = positionSize * 2 * BYTE_SIZE;
 
-    return new ScreenGridLayer({
+    const screengridProps = {
       id: `${LayerTypes.ScreenGridLayer}-${layerId}`,
       data: {
         length: binaryFeatures.length,
@@ -893,7 +935,10 @@ export class DeckOverlayController {
         visible: this.currentLayer,
         pickable: this.currentLayer,
       }
-    });
+    };
+
+    this.setOptionsHelper(screengridProps, "aggregation");
+    return new ScreenGridLayer(screengridProps);
   }
 
   createLineLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
@@ -906,45 +951,36 @@ export class DeckOverlayController {
     const lineLayerProps: LineLayerProps =
     {
       id: `${LayerTypes.LineLayer}-${layerId}`,
-        data: {
-      length: binaryFeatures.length,
+      data: {
+        length: binaryFeatures.length,
         attributes: {
-        getSourcePosition: {
-          value: new Float32Array(positions.value),
+          getSourcePosition: {
+            value: new Float32Array(positions.value),
             size: positionSize,
             stride: entrySize,
             offset: 0
-        },
-        getTargetPosition: {
-          value: new Float32Array(positions.value),
+          },
+          getTargetPosition: {
+            value: new Float32Array(positions.value),
             size: positionSize,
             stride: entrySize,
             offset: entrySize / 2
+          },
+          individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier),
         },
-        individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier),
       },
-    },
       colorFormat: "RGBA",
-        pickable: this.currentLayer === LayerTypes.LineLayer,
+      pickable: this.currentLayer === LayerTypes.LineLayer,
       visible: this.currentLayer === LayerTypes.LineLayer,
       getColor: colors[0],
       autoHighlight: true,
-      // opacity: .8,
-      // getWidth: 3,
-      // widthMinPixels: 1,
       updateTriggers: {
-      visible: this.currentLayer,
+        visible: this.currentLayer,
         pickable: this.currentLayer
       }
     }
 
-    const entries = Object.entries(this.defaultPathOptions);
-    entries.forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        lineLayerProps[key as keyof LineLayerProps] = value;
-      }
-    });
-
+    this.setOptionsHelper(lineLayerProps, "aggregation");
     return new LineLayer(lineLayerProps);
   }
 
@@ -982,5 +1018,4 @@ export class DeckOverlayController {
 //     }
 //   })
 // }
-
 }

@@ -194,7 +194,6 @@ export class MapboxComponent implements OnInit, OnChanges {
             // });
 
             this.map.on('click', 'unclustered-point', (e) => {
-              console.log(e);
               if (!this.map) return;
 
               const features = e.features as Array<MapboxGeoJSONFeature & GeoJSON.Feature<GeoJSON.Point, StudyDTO>>;
@@ -221,8 +220,9 @@ export class MapboxComponent implements OnInit, OnChanges {
                 return;
               }
 
+              // TODO:Remove this line if it causes issues.
               this.map.fire('click', this.map.getCenter());
-              console.log(`clicked on location ${this.map.getCenter()}`);
+              // console.log(`clicked on location ${this.map.getCenter()}`);
               this.movingToPoint.set(false);
             })
 
@@ -269,7 +269,6 @@ export class MapboxComponent implements OnInit, OnChanges {
 
       switch (propertyName) {
         case "focusedPoint":
-          console.log(`focusedPoint = ${currentValue as bigint}`);
           this.focusedPoint = currentValue as bigint;
           this.panToPoint(currentValue as bigint);
           break;
@@ -281,7 +280,6 @@ export class MapboxComponent implements OnInit, OnChanges {
 
         case "pointsVisible":
           this.pointsVisible = currentValue as boolean;
-          console.log(`Setting point visibility to ${this.pointsVisible}`);
           this.layerControl?.setStudiesVisibility(this.pointsVisible);
           this.togglePointsVisibility(this.pointsVisible);
           break;
@@ -295,8 +293,6 @@ export class MapboxComponent implements OnInit, OnChanges {
         case "deckOverlayControls":
           this.deckOverlayControls = currentValue as ControlChange;
           this.deckOverlay?.setLayerAttributes(this.deckOverlayControls);
-          console.log(`Updated overlay controls with`);
-          console.log(this.deckOverlayControls);
           break;
 
         default:
@@ -306,7 +302,7 @@ export class MapboxComponent implements OnInit, OnChanges {
   }
 
   initializeDeckOverlay(map: mapboxgl.Map) {
-    console.log(`Initializing the deck overlay controls for mapbox with layer ${this.selectedLayer}`);
+    // console.log(`Initializing the deck overlay controls for mapbox with layer ${this.selectedLayer}`);
     this.deckOverlay = new DeckOverlayController(map, this.selectedLayer);
     this.streamStatus$ = toObservable(this.deckOverlay.StreamStatus, {
       injector: this.injector
@@ -390,6 +386,7 @@ export class MapboxComponent implements OnInit, OnChanges {
     this.snackbar.openFromComponent(SnackbarComponent, { duration: timeLimit * 1000, data: message });
   }
 
+  // BUG:This will sometimes glitch the map resulting in repeated button presses.
   panToPoint(studyId: bigint): void {
     if (!this.map || !this.studies) return;
     // NOTE:In this method I would want the coordinates of the study's location.

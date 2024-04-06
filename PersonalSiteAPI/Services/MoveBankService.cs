@@ -14,8 +14,6 @@ using Microsoft.EntityFrameworkCore;
 using Mapster;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using EventRequest = PersonalSiteAPI.DTO.MoveBankAttributes.EventRequest;
-using PersonalSiteAPI.DTO.MoveBankAttributes;
-using Newtonsoft.Json;
 
 namespace PersonalSiteAPI.Services
 {
@@ -24,16 +22,6 @@ namespace PersonalSiteAPI.Services
         Task<ApiTokenResultDTO?> GetApiToken();
         Task<List<string>> GetWordsWithPrefix(string prefix, long? maxCount = null, bool allowRestricted= false);
         DateTime? GetDateTime(string? dateString);
-        // Direct and Json request must specify an entity_type
-        // Some entities are "individual, tag_type ,study"
-
-        //Task<HttpResponseMessage?> DirectRequestEvents(
-        //    long studyId,
-        //    string[] individualLocalIdentifiers,
-        //    string? sensorType = null,
-        //    Dictionary<string, string?>? parameters = null,
-        //    (string, string)[]? headers = null,
-        //    bool authorizedUser = false);
 
         Task<HttpResponseMessage?> DirectRequestEvents(EventRequest request);
 
@@ -247,8 +235,6 @@ namespace PersonalSiteAPI.Services
                 uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
             }
 
-            Console.WriteLine($"Request uri = {uri}");
-            
             using var request = new HttpRequestMessage()
             {
                 RequestUri = new Uri(uri),
@@ -284,14 +270,14 @@ namespace PersonalSiteAPI.Services
             // INFO: In this case, the another request is sent asking for permission and the study is stored in my database to credit at another time.                
             response = await GetPermissionForDirectRead(request, response);
             var study = await _context.Studies.AsNoTracking().Where(s => s.Id == studyId).FirstOrDefaultAsync();
-            if (await SaveStudy(study))
-            {
-                Console.WriteLine("Successfully saved study to RequestPermission table");
-            }
-            else
-            {
-                Console.WriteLine("Did not save study to database.");
-            }
+            //if (await SaveStudy(study))
+            //{
+            //    Console.WriteLine("Successfully saved study to RequestPermission table");
+            //}
+            //else
+            //{
+            //    Console.WriteLine("Did not save study to database.");
+            //}
                          
             return response;
         }

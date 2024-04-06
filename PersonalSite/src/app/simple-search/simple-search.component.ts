@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, signal, WritableSignal, Output, EventEmitter, Input, OnChanges, SimpleChanges, AfterViewInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
-import { Observable, Subject, reduce, distinctUntilChanged, debounceTime, map, catchError, of, concat, EMPTY, tap } from 'rxjs';
+import { Observable, Subject, reduce, distinctUntilChanged, debounceTime, map, catchError, of, concat, EMPTY } from 'rxjs';
 import { FormGroup, FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatPaginator, PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { MatRadioModule } from '@angular/material/radio';
@@ -10,7 +10,6 @@ import { ENAAPIService } from '../ENA-API/ena-api.service';
 import { WikipediaSearchService } from '../wikipedia/wikipedia-search.service';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatOptionModule } from '@angular/material/core';
-// import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { NgIf, NgFor, AsyncPipe, DatePipe, NgStyle } from '@angular/common';
@@ -22,7 +21,6 @@ import { AutoComplete } from '../auto-complete/auto-complete';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/layout';
-// import { OverlayModule } from '@angular/cdk/overlay';
 
 
 interface WikiLinks {
@@ -130,7 +128,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
           this.breakpointMatches.set(state.matches)
           return state.matches;
         }),
-        tap(val => console.log(`Small screen size = ${val}`))
+        // tap(val => console.log(`Small screen size = ${val}`))
       );
   }
 

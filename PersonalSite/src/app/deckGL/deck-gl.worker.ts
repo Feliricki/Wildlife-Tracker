@@ -13,6 +13,7 @@ import * as msgPack from '@msgpack/msgpack';
 
 
 let streamSubscription: signalR.ISubscription<LineStringFeature<LineStringPropertiesV2>> | null = null;
+// let allEventData: LineStringFEatureCollection
 
 addEventListener('message', ({ data }) => {
 
@@ -30,10 +31,9 @@ addEventListener('message', ({ data }) => {
 // TODO:Use the fetch api in browser that do not support webworkers.
 export async function setData(
   fetchRequest: WorkerFetchRequest,
-  mainThread: boolean = false) {
+  ) {
   try {
 
-    console.log(mainThread);
 
     streamSubscription?.dispose();
 
@@ -48,7 +48,6 @@ export async function setData(
         .build();
 
     await connection.start();
-
     console.log("SignalR connection made in web worker.");
 
     const streamResponse =
@@ -82,7 +81,7 @@ export async function setData(
 // async function handleFeatures(featuresRes: LineStringFeatures<LineStringPropertiesV2>) {
 async function handleFeatures(binaryRes: TypedArray) {
 
-  console.log("Handling new feature in web worker.");
+  // console.log("Handling new feature in web worker.");
   const decoded = msgPack.decode(binaryRes) as Array<number | string | unknown[]>;
   const featuresRes = parseMsgPackResponse(decoded);
   if (featuresRes.count === 0) return;

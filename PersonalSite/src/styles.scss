@@ -14,6 +14,10 @@
   @include mat.all-component-densities(-3);
 }
 
+.select-3 {
+    @include mat.select-density(-3);
+}
+
 html, body {
   // height: 900px;
   width: 100%;

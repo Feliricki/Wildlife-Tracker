@@ -13,8 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Linq.Expressions;
 using System.Linq.Dynamic.Core;
-using System.Linq;
-using Amazon.Runtime.Internal.Transform;
 using Mapster;
 
 namespace PersonalSiteAPI.Controllers
@@ -240,43 +238,6 @@ namespace PersonalSiteAPI.Controllers
                 Console.WriteLine($"{dbChanges} total database changes");
                 _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies OFF");
                 transaction.Commit();
-
-                //foreach(KeyValuePair<long,Studies> newStudy in newStudies)
-                //{
-                //    if (!existingStudies.ContainsKey(newStudy.Key))
-                //    {
-                //        _context.Add(newStudy);
-                //        rowsAdded++;
-                //    }
-                //}
-
-                //Console.WriteLine("Commiting new rows to the database.");
-                //using var transaction2 = _context.Database.BeginTransaction();
-                //_context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies ON");
-                //dbChanges = await _context.SaveChangesAsync();
-                //Console.WriteLine($"{dbChanges} total database changes");
-                //_context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT Studies OFF");
-                //transaction2.Commit();
-
-                // The following studies are no longer publically available.
-                //IEnumerable<long> toRemove = existingStudies
-                //    .Where(s => !newStudies.ContainsKey(s.Key))
-                //    .Select(s => s.Key);
-
-                //foreach (long studyId in toRemove)
-                //{
-                //    if (existingStudies.TryGetValue(studyId, out var foundStudy))
-                //    {
-                //        Console.WriteLine($"Removing study with title: {foundStudy.Name}\n");
-                //        _context.Studies.Remove(foundStudy);
-                //        rowsRemoved++;
-                //    }
-                //    else
-                //    {
-                //        Console.WriteLine("Error while attempting to delete entry from the database.\n");
-                //        continue;
-                //    }
-                //}
 
                 var savedChanges = await _context.SaveChangesAsync();
                 Console.WriteLine($"savedChanges = {savedChanges}");

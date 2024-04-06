@@ -74,6 +74,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
 
         let animals = jsonDtos
           .filter(val => val.type === "individual") as IndividualJsonDTO[];
+
         animals = animals
           .filter(val => val.LocalIdentifier !== null && val.LocalIdentifier !== undefined)
           .filter(val => val.LocalIdentifier.length > 0);

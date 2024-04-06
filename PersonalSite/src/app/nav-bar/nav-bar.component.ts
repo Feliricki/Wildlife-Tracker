@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { MatToolbarModule } from '@angular/material/toolbar'
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink } from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 
 @Component({
@@ -13,4 +13,13 @@ import { MatButtonModule } from '@angular/material/button';
 })
 export class NavBarComponent {
 
+  constructor(private activatedRoute: ActivatedRoute){
+    const childComponents: ActivatedRoute[] = activatedRoute.children;
+    console.log(activatedRoute.snapshot);
+    console.log(activatedRoute.firstChild);
+  }
+
+  matchRoute(route: string): boolean {
+    return this.activatedRoute.component !== null && this.activatedRoute.component !== undefined && this.activatedRoute.component.name === route;
+  }
 }
