@@ -1,0 +1,40 @@
+<br>
+<br>
+<br>
+<div class="form-container">
+
+  <h1>Suggest Improvements</h1>
+  <form [formGroup]="suggestionsForm" (ngSubmit)="onSubmit()">
+
+    <div class="first-row">
+      <mat-form-field>
+
+        <mat-label>Email</mat-label>
+        <input matInput formControlName="email" required type="email">
+        @if (hasEmailError()){
+        <mat-error>Invalid Email</mat-error>
+        }
+      </mat-form-field>
+    </div>
+
+    <div class="second-row">
+      <mat-form-field>
+
+        <mat-label>Content</mat-label>
+        <textarea matInput rows="4" formControlName="content"></textarea>
+        @if (hasContentError()){
+        <mat-error>
+          This field cannot be empty
+        </mat-error>
+        }
+
+      </mat-form-field>
+    </div>
+
+    <button [disabled]="suggestionsForm.invalid" class="submit-button" mat-flat-button color="primary" type="submit">
+      Submit
+    </button>
+
+  </form>
+
+</div>

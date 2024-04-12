@@ -15,6 +15,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { SnackbarComponent } from '../snackbar.component';
 import { LayerControl, setSourceLayers } from './layer-controls';
 import { ControlChange } from 'src/app/events/events.component';
+import { MatButtonModule } from '@angular/material/button';
 
 type MapState =
   'initial' |
@@ -36,7 +37,7 @@ type EventState =
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    AsyncPipe, MatProgressSpinnerModule
+    AsyncPipe, MatProgressSpinnerModule, MatButtonModule,
   ],
   templateUrl: './mapbox.component.html',
   styleUrl: './mapbox.component.css'
@@ -91,7 +92,8 @@ export class MapboxComponent implements OnInit, OnChanges {
   }
 
   ngOnInit(): void {
-    this.initializeMap();
+    // this.initializeMap();
+    return;
   }
 
   initializeMap(): void {
@@ -161,7 +163,6 @@ export class MapboxComponent implements OnInit, OnChanges {
             }
 
             this.emitStudies(this.studies);
-            // NOTE:This function is used in the controller component and here hence the import
             setSourceLayers(this.map, collection, "studies");
             this.initializeDeckOverlay(this.map);
 
@@ -221,8 +222,7 @@ export class MapboxComponent implements OnInit, OnChanges {
               }
 
               // TODO:Remove this line if it causes issues.
-              this.map.fire('click', this.map.getCenter());
-              // console.log(`clicked on location ${this.map.getCenter()}`);
+              // this.map.fire('click', this.map.getCenter());
               this.movingToPoint.set(false);
             })
 
@@ -302,7 +302,6 @@ export class MapboxComponent implements OnInit, OnChanges {
   }
 
   initializeDeckOverlay(map: mapboxgl.Map) {
-    // console.log(`Initializing the deck overlay controls for mapbox with layer ${this.selectedLayer}`);
     this.deckOverlay = new DeckOverlayController(map, this.selectedLayer);
     this.streamStatus$ = toObservable(this.deckOverlay.StreamStatus, {
       injector: this.injector
@@ -393,7 +392,6 @@ export class MapboxComponent implements OnInit, OnChanges {
     const study = this.studies.get(studyId);
     if (!study) return;
 
-    console.log(`Panning to point ${JSON.stringify(study)}`);
     this.movingToPoint.set(true);
     this.map.easeTo({
       center: [study.mainLocationLon ?? 0, study.mainLocationLat ?? 0],

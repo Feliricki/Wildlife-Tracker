@@ -67,7 +67,7 @@ export class CustomButtonComponent {
   initializedCallback: boolean = false;
   togglingLabels: boolean = false;
 
-  constructor() { }
+  constructor() {}
 
   initializeMapCallback(): void {
     if (this.initializedCallback || !this.map) return;
@@ -102,6 +102,7 @@ export class CustomButtonComponent {
       });
 
       // NOTE:This sets the studies source and layers.
+      // console.log(`About to set source layers in style loaded callback function.`);
       setSourceLayers(this.map, this.collection, "studies", this.studiesVisible);
     });
 
@@ -138,6 +139,7 @@ export class CustomButtonComponent {
 
   selectLayer(layer: MapLayers) {
     if (!this.collection || !this.map) return;
+    this.initializeMapCallback();
     let collection: MapStyles[] = [];
     switch (layer) {
       case "standard":
@@ -157,7 +159,7 @@ export class CustomButtonComponent {
       this.currentMapStyle = newStyle;
       this.currentLayerType = layer;
       this.map.setStyle(this.currentMapStyle);
-      setSourceLayers(this.map, this.collection, 'studies', this.studiesVisible);
+      // setSourceLayers(this.map, this.collection, 'studies', this.studiesVisible);
     }
   }
 }

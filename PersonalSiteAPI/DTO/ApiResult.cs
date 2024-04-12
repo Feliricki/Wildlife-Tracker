@@ -28,7 +28,7 @@ namespace PersonalSiteAPI.DTO
         public string? FilterColumn { get; private set; }
         public string? FilterQuery { get; private set; }
 
-        private readonly string _cacheKey = "GetStudies";
+        //private readonly string _cacheKey = "GetStudies";
 
 
         private ApiResult(

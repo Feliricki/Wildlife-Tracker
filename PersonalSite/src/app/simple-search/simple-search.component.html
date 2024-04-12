@@ -132,10 +132,10 @@
               </div>
 
               @if (study.taxonIds && (commonNames$[j] | async); as commonName){
-              <span>Taxa: {{commonName}}</span><br>
+              <p>Taxa: {{commonName}}</p>
               }
               @else if (study.taxonIds){
-              <span>Taxa: {{study.taxonIds}}</span>
+              <p>Taxa: {{study.taxonIds}}</p>
               }
 
               @if (study.studyObjective){
@@ -149,22 +149,22 @@
               <span>Number of deployed locations: {{study.numberOfDeployedLocations}}</span><br>
 
               @if (study.sensorTypeIds){
-              <span><br>Sensors Used: {{study.sensorTypeIds}}</span>
-              }
-
-              @if (study.acknowledgement){
-              <br>
-              <!-- <mat-divider></mat-divider> -->
-              <h4>Acknowledgements</h4>
-              <p>{{study.acknowledgements}}</p>
+              <p>Sensors Used: {{study.sensorTypeIds}}</p>
               }
 
               @if (study.grantsUsed){
-              <br>
-              <!-- <mat-divider></mat-divider> -->
               <h4>Supported by</h4>
               <p>{{study.grantsUsed}}</p>
               }
+
+              <div>
+                <h4>Acknowledgements</h4>
+                @if (study.citation){
+                <p>{{study.citation}}</p>
+                }
+                <em>This study is was accessed from Movebank.org ("{{study.name}}", study ID {{study.id}}) on {{currentDate() |
+                  date:"full"}}</em>
+              </div>
 
               @if (wikipediaLinks$[j] | async; as Links){
               <br>

@@ -115,6 +115,11 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
     return;
   }
 
+  currentDate(): Date {
+    const date = new Date();
+    return date;
+  }
+
   ngOnInit(): void {
     for (let i = 0; i < this.defaultPageSize; i++) {
       this.commonNames$.push(undefined);
@@ -128,7 +133,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
           this.breakpointMatches.set(state.matches)
           return state.matches;
         }),
-        // tap(val => console.log(`Small screen size = ${val}`))
       );
   }
 

@@ -1,7 +1,6 @@
 <!--NOTE:On small screens this button is disabled.-->
-@if (!(XSmallScreen$ | async)) {
-
-  <!-- TODO: Work on the UI for smaller devices. -->
+<!-- @if (!(XSmallScreen$ | async)) { -->
+@if (!(smallScreen$ | async)) {
   <button mat-mini-fab [hidden]="!mapLoaded()" class="left-toggle-button" (click)="toggleSearchNav()"
           [@leftPanelOpened]="leftPanelOpened()">
     @if (leftPanelOpened()) {
@@ -12,7 +11,7 @@
   </button>
 }
 
-@if (!(XSmallScreen$ | async) && mapLoaded()) {
+@if (!(smallScreen$ | async) && mapLoaded()) {
   <button mat-mini-fab [hidden]="!mapLoaded()" class="right-toggle-button" (click)="toggleEventNav()"
           [@rightPanelOpened]="rightPanelOpened()">
     @if (rightPanelOpened()) {
@@ -21,6 +20,13 @@
       <mat-icon>chevron_left</mat-icon>
     }
   </button>
+} @else {
+  <!-- @if () -->
+ @if (!rightNav.opened){
+ <button mat-fab [hidden]="!mapLoaded()" class="right-toggle-button-small" (click)="openRightNav()">
+  <mat-icon>chevron_left</mat-icon>
+ </button>
+  }
 }
 
 <mat-sidenav-container class="sidenav-container" [hasBackdrop]="false">
@@ -40,8 +46,9 @@
   </mat-sidenav>
   <mat-sidenav-content class="sidenav-content">
 
+    <!-- TODO: Decide on the styling for the normal case. -->
     <!-- NOTE: This is another sidenav within the outer sidenav -->
-    <mat-sidenav class="right-sidenav" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="over"
+    <mat-sidenav class="right-sidenav" [ngStyle]="(smallScreen$ | async) ? {} : rightNavStyle" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="over"
                  [fixedInViewport]="true">
 
       <app-events #eventComponent (eventRequestEmitter)="updateCurrentEventRequest($event)"
@@ -80,11 +87,12 @@
               <!-- INFO:Main menu section-->
               <mat-menu #mainMenu="matMenu" xPosition="after" yPosition="below">
                 <button mat-menu-item [matMenuTriggerFor]="settingsMenu">Settings</button>
+                <button mat-menu-item (click)="gotoReferences()">References</button>
+                <button mat-menu-item (click)="gotoSuggestionsPage()">Suggest Improvements</button>
               </mat-menu>
 
               <mat-menu #settingsMenu="matMenu">
                 <button mat-menu-item [matMenuTriggerFor]="basemaps">Change Base Map</button>
-                <button mat-menu-item (click)="gotoReferences()">References</button>
 <!--                <button mat-menu-item href="references">References</button>-->
               </mat-menu>
 
@@ -173,7 +181,8 @@
 
       <!-- TODO:I should write down in english what the conditions are for this flag to activate. -->
       <!-- This button is shown on smaller screens. -->
-      @if (leftButtonFlag() === true && (XSmallScreen$ | async)) {
+      <!-- @if (leftButtonFlag() === true && (XSmallScreen$ | async)) { -->
+      @if (leftButtonFlag() === true && (smallScreen$ | async)) {
         <button mat-fab [hidden]="!leftButtonFlag()" @leftToggleClick (click)="openSearchNav()" class="toggle-button">
           <mat-icon>chevron_right</mat-icon>
         </button>

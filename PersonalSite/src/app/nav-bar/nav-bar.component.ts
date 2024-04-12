@@ -14,9 +14,6 @@ import { MatButtonModule } from '@angular/material/button';
 export class NavBarComponent {
 
   constructor(private activatedRoute: ActivatedRoute){
-    const childComponents: ActivatedRoute[] = activatedRoute.children;
-    console.log(activatedRoute.snapshot);
-    console.log(activatedRoute.firstChild);
   }
 
   matchRoute(route: string): boolean {

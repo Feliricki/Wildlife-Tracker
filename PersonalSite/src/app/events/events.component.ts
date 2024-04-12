@@ -68,10 +68,20 @@ export type ColorChange = {
   value: RGBAColor;
 }
 
+export type BooleanChange = {
+  type: "boolean";
+  value: boolean;
+}
+
 export interface ControlChange {
-  change: ColorChange | NumberChange | StringChange;
+  change: ColorChange | NumberChange | StringChange | BooleanChange;
   field: string;
   formType: ActiveForm;
+}
+
+export interface EventProfile {
+  value: string;
+  name: string;
 }
 
 @Component({
@@ -96,10 +106,19 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   // NOTE: These studies are toggled to have their events appear on the map if
   // at all possible
   readonly MAX_EVENTS_LIMIT = MAX_EVENTS;
-  tiles: Tile[] = [
+  readonly tiles: Tile[] = [
     { cols: 2, rows: 7, color: 'lightblue' },
     { cols: 3, rows: 7, color: 'lightgreen' },
   ];
+
+  readonly eventProfilesOptions: EventProfile[] = [
+    { value: "EURING_01", name: "24 hours between events" },
+    { value: "EURING_02", name: "50 kilometers between events" },
+    { value: "EURING_03", name: "Last 30 days" },
+    { value: "EURING_04", name: "0.25 degrees movements" },
+  ];
+
+  selectedEventProfile = this.eventProfilesOptions[0].value;
 
   toggledStudies?: Map<bigint, StudyDTO>;
   displayedColumns: string[] = ['select', 'name'];
@@ -172,7 +191,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
 
   eventForm = this.formBuilder.nonNullable.group({
 
-    eventProfiles: this.formBuilder.control(null as EventProfiles),
+    eventProfiles: this.formBuilder.nonNullable.control("EURING_01" as EventProfiles),
     sensorForm: this.formBuilder.control(null as null | string),
     checkboxes: new FormArray<FormControl<boolean>>([]),
 
@@ -247,14 +266,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     private formBuilder: FormBuilder,
     private breakpointObserver: BreakpointObserver
   ) {
-    // const object = this;
-    // this.pathDropdown = document.getElementById("path-units") as HTMLSelectElement;
-    // this.pathDropdown?.addEventListener('change', function () {
-    //
-    //   if (this.nodeValue !== null) {
-    //     object.pathControlChange(this.nodeValue, "widthUnits");
-    //   }
-    // });
   }
 
   get CurrentIndividiuals()
@@ -285,7 +296,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   }
 
   // TODO:Handle color input - Convert to rgba quadtuple.
-  controlChangeHelper(value: number | string | RGBAColor, option: string, formType: ActiveForm): void {
+  controlChangeHelper(value: number | string | RGBAColor | boolean, option: string, formType: ActiveForm): void {
     if (typeof (value) === "string") {
       this.emitControlChanges({
         change: {
@@ -307,10 +318,20 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
       });
 
     }
+    else if (typeof value === "boolean") {
+      this.emitControlChanges({
+        change: {
+          type: "boolean",
+          value: value,
+        },
+        field: option,
+        formType: formType,
+      });
+    }
     else {
       this.emitControlChanges({
         change: {
-          type:"color",
+          type: "color",
           value: value,
         },
         field: option,
@@ -324,7 +345,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     if (colorChange) {
       const color = value as string;
       const rgbaColor = this.hexToRgba(color);
-      // console.log(`Color: ${color} rgbaColor: ${JSON.stringify(rgbaColor)}`);
       this.pointForms.get(option)?.setValue(value);
       this.controlChangeHelper(rgbaColor, option, "point");
       return;
@@ -332,7 +352,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     this.pointForms.get(option)?.setValue(value);
     this.controlChangeHelper(value, option, "point");
   }
-  pathControlChange(value: number | string, option: string): void {
+  pathControlChange(value: number | string | boolean, option: string): void {
     this.pathForms.get(option)?.setValue(value);
     this.controlChangeHelper(value, option, "path");
   }
@@ -349,7 +369,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     const blue = color[2].toString(16);
 
     const ret = '#' + red + green + blue;
-    // console.log(`ret = ${ret}`);
     return ret;
   }
 
@@ -368,7 +387,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     const blueValue = this.normalizeColorValue(parseInt(blueHex, 16));
 
     const ret = [redValue, greenValue, blueValue, 255] as RGBAColor;
-    // console.log(`Converted string ${color} to ${ret.join()}`);
     return ret;
   }
 
@@ -392,7 +410,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
             this.eventForm.markAsPristine();
             this.eventForm.enable();
             this.sensorForm.setValue(this.currentLocationSensors().at(0) ?? null);
-            // console.log("All individuals are loaded (tracker component)");
             break;
 
           case "error":
@@ -466,9 +483,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
           break;
 
         case "currentEventData":
-          // console.log(`Received new chunk in events component:`);
-          // console.log(currentValue);
-
           // TODO:New forms should be added to the list of form groups.
           // Also continue testing by logging the output from the CurrrentActiveLayer signal.
           this.currentEventData = currentValue as EventMetadata;
@@ -617,9 +631,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     this.pointOverlayControls.controls.individual.controls.sort(this.sortControlByIndividual);
     this.pathOverlayControls.controls.individual.controls.sort(this.sortControlByIndividual);
     this.aggregationOverlayControls.controls.individual.controls.sort(this.sortControlByIndividual);
-
-    // console.log("Current status of path forms.");
-    // console.log(this.PathForms);
   }
 
   sortControlByIndividual(a: OverlayTypes, b: OverlayTypes) {
@@ -664,7 +675,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
       return;
     }
 
-    // TODO:Fix this.
     this.overlayOptionsEmitter.emit({
       type: "pointOverlayOptions",
       currentIndividual: formGroup.controls.currentIndividual.value,
@@ -868,7 +878,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   // TODO: This form is better of being sent to another component.
   // It should probably be sent to the google maps component.
   submitForm() {
-    console.log(`EventForm State: ${this.eventForm.valid}`);
 
     if (this.eventForm.invalid) {
       return;
@@ -902,13 +911,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     };
 
     this.sendFetchRequest(eventRequest);
-    // TODO: Consider if an observable or the actual data should be sent to the current
   }
-
-  // sendEventMessage(request: Observable<HttpResponse<LineStringFeatureCollection<LineStringPropertiesV1>[] | null>>): void {
-  //   console.log("Sending event message in events component");
-  //   this.lineDataEmitter.emit(request);
-  // }
 
   sendFetchRequest(request: EventRequest): void {
     this.eventRequestEmitter.emit(request);

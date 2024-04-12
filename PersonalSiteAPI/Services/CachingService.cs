@@ -11,20 +11,16 @@ namespace PersonalSiteAPI.Services
     }
 
     // TODO: Decide on caching options.
-    public class CachingService : ICachingService
+    public class CachingService(
+        IMemoryCache memoryCache) : ICachingService
     {
-        readonly IMemoryCache _memoryCache;
+        readonly IMemoryCache _memoryCache = memoryCache;
         readonly MemoryCacheEntryOptions memoryCacheOptions = new()
         {
             Size = 1,
             SlidingExpiration = TimeSpan.FromMinutes(1),
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2)
         };
-        public CachingService(
-            IMemoryCache memoryCache)
-        {
-            _memoryCache = memoryCache;
-        }
 
         public void AddIndividual(long studyId, string localIdentifier, string? eventProfile, IEnumerable<LineStringFeatures> features)
         {

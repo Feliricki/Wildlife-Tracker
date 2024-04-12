@@ -33,8 +33,8 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     return;
   }
 
+  // eslint-disable-next-line
   connect(collectionViewer: CollectionViewer): Observable<FormControl<boolean>[]> {
-    console.log(collectionViewer);
     return this.sourceSubject$.asObservable().pipe(
       map(formArray => {
         return formArray.controls;
@@ -42,8 +42,11 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     );
   }
 
+  // eslint-disable-next-line
   disconnect(collectionViewer: CollectionViewer): void {
-    console.log(collectionViewer);
+    // TODO:Consider if this observable should be closed so that it can be resused.
+    // A solution could be to store a reference to the observable in the event
+    // component and resuse the observable in different instances of the same table.
     this.sourceSubject$.complete();
   }
 
@@ -52,7 +55,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
   // 2) Then the signal containing the current individuals and the tagged animals are updated with their values from the http response.
   // 3) Finally the loading state is updated and the form is sent to the behavior subject to update the final source.
   getAnimalData(studyId: bigint, sortOrder: "asc" | "desc" = "asc"): void {
-    console.log("Getting animal data in formDataSource");
+    // console.log("Getting animal data in formDataSource");
     this.dataState.set("loading");
     this.dataState$.next("loading");
 
@@ -261,9 +264,6 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
   getIndividual(index: number): Signal<TagJsonDTO | IndividualJsonDTO | null> {
     return computed(() => {
       if (index < 0 || index >= this.currentSource().length) {
-        console.log(`index = ${index}`);
-        console.log(this.currentSource());
-
         console.error("Out of bounds error.");
         return null;
       }

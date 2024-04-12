@@ -7,16 +7,12 @@ using PersonalSiteAPI.Models;
 
 namespace PersonalSiteAPI.Services;
 
-public class Node<T> where T : IEquatable<T>
+public class Node<T>(T value, IEqualityComparer<T>? equalityComparer = null) where T : IEquatable<T>
 {
-    public T Value { get; set; }
+    public T Value { get; set; } = value;
     public int Count;
-    public readonly ConcurrentDictionary<T, Node<T>> Children;
-    public Node(T value = default!, IEqualityComparer<T>? equalityComparer = null)
-    {
-        Value = value;
-        Children = new ConcurrentDictionary<T, Node<T>>(equalityComparer);
-    }
+    public readonly ConcurrentDictionary<T, Node<T>> Children = new ConcurrentDictionary<T, Node<T>>(equalityComparer);
+
     public int IncrementCount()
     {
         Interlocked.Increment(ref Count);

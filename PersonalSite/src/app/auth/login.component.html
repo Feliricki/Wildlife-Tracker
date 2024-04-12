@@ -1,5 +1,6 @@
 <!-- <app-navigation-schematic></app-navigation-schematic> -->
-
+<br>
+<br>
 <br>
 <div class="login">
   <h1>Login</h1>
@@ -11,30 +12,35 @@
     </p>
 
     <!-- Name -->
-    <mat-form-field>
-      <mat-label>Username/Email:</mat-label>
-      <input matInput formControlName="username" required placeholder="Insert email or username.">
-      <mat-error *ngFor="let error of getErrors(form.get('username')!,
-            'Email')">
-        {{error}}
-      </mat-error>
-    </mat-form-field>
+    <div class="username-container">
+      <mat-form-field>
+        <mat-label>Username/Email:</mat-label>
+        <input matInput formControlName="username" required placeholder="Insert email or username.">
+        <mat-error *ngFor="let error of getErrors(form.get('username')!,
+          'Email')">
+          {{error}}
+        </mat-error>
+      </mat-form-field>
 
-    <!-- Password -->
-    <mat-form-field>
-      <mat-label>Password:</mat-label>
-      <input matInput [type]="hide ? 'password' : 'text'" formControlName="password" required
-        placeholder="Insert Password">
+    </div>
 
-      <button mat-icon-button matSuffix (click)="hide=!hide">
-        <mat-icon>{{ hide ? 'visibility_off': 'visibility' }}</mat-icon>
-      </button>
+    <div class="password-container">
+      <!-- Password -->
+      <mat-form-field>
+        <mat-label>Password:</mat-label>
+        <input matInput [type]="hide ? 'password' : 'text'" formControlName="password" required
+          placeholder="Insert Password">
 
-      <mat-error *ngFor="let error of getErrors(form.get('password')!, 'Password')">
-        {{error}}
-      </mat-error>
+        <button mat-icon-button matSuffix (click)="hide=!hide">
+          <mat-icon>{{ hide ? 'visibility_off': 'visibility' }}</mat-icon>
+        </button>
 
-    </mat-form-field>
+        <mat-error *ngFor="let error of getErrors(form.get('password')!, 'Password')">
+          {{error}}
+        </mat-error>
+
+      </mat-form-field>
+    </div>
 
     <div>
       <button class="submit-button" mat-flat-button color="primary" type="submit">

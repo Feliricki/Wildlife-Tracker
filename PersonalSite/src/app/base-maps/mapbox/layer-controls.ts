@@ -53,6 +53,9 @@ export function setSourceLayers(
 
   const prevSource = map.getSource(source) as GeoJSONSource;
   if (prevSource) {
+    // console.log(`preSource was set and setSourceData = ${setSourceData}`);
+    console.log(prevSource);
+    // console.log(collection);
     prevSource.setData(setSourceData ? collection : emptyFeatureCollection());
     return;
   }

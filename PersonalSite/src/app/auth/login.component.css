@@ -1,18 +1,36 @@
-mat-form-field {
-    display: block;    
-    width: 50%;    
-    margin-left: 25%;
-    }
+.username-container {
+  display: flex;
+  justify-content: center;
+  margin-left: 1em;
+  margin-right: 1em;
+  mat-form-field {
+    width: 500px;
+    min-width: 100px;
+  }
+}
+
+.password-container {
+  display: flex;
+  justify-content: center;
+  margin-left: 1em;
+  margin-right: 1em;  mat-form-field {
+    width: 500px;
+    min-width: 100px;
+  }
+}
 
 .submit-button {
     background: rgb(4, 92, 65);
 }
+
 .login {
-    text-align: center;
-    min-height: 100vh;
+  text-align: center;
+  /* display: flex; */
+  /* justify-content: center; */
+  /* align-items: center; */
 }
 .login h1 {
     position: relative;
-    text-align: left;
-    margin-left: 25%;
+    text-align: center;
+    /* margin-left: 25%; */
 }

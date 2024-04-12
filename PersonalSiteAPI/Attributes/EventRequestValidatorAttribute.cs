@@ -18,6 +18,8 @@ namespace PersonalSiteAPI.Attributes
             // TODO: This validation object is unfinished and untested.
             if (value is EventRequest request)
             {
+                //Console.WriteLine(JsonCon);
+
                 if (request.LocalIdentifiers is null || request.LocalIdentifiers.Count == 0)
                 {
                     return new ValidationResult("No individual local identifier requested.");
@@ -33,10 +35,13 @@ namespace PersonalSiteAPI.Attributes
                     return new ValidationResult("Invalid sensor.");
                 }
 
-                if (request.Options is null)
+                if (request.Options is null || request.Options.EventProfile is null)
                 {
-                    return ValidationResult.Success;
+                    //return ValidationResult.Success;
+                    return new ValidationResult("Event profile must be provided.");
                 }
+
+                // TODO: Filter values that contains no filters of any kind. 
 
                 if (request.Options.MaxEventsPerIndividual is not null && request.Options.MaxEventsPerIndividual < 0 || request.Options.MaxEventsPerIndividual > maxIndividuals)
                 {

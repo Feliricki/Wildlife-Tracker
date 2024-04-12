@@ -83,7 +83,8 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   };
 
   defaultAlgorithmOptions: SuperClusterOptions = {
-    radius: 150,
+    // radius: 120,
+    radius: 160,
   }
 
   // defaultMarkerOptions: google.maps.MarkerOptions = {
@@ -162,25 +163,25 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
       switch (propertyName) {
         // NOTE:Unused
         case "pathEventData$":
-          console.log(`Received event observable in google maps component.`);
+          // console.log(`Received event observable in google maps component.`);
           this.pathEventData$ = currentValue as EventResponse;
           break;
 
         // This case sends a message that is received in the event component
         case "focusedMarker":
-          console.log(`Panning to ${currentValue}`);
+          // console.log(`Panning to ${currentValue}`);
           this.panToMarker(currentValue as bigint);
           break;
 
         case "eventRequest":
-          console.log("Received event fetch request in google maps component.");
+          // console.log("Received event fetch request in google maps component.");
           this.eventRequest = currentValue as EventRequest;
           this.handleEventRequest(currentValue as EventRequest);
           break;
 
         // INFO: Map controls section.
         case "mapType":
-          console.log(`Changing style into ${currentValue}`);
+          // console.log(`Changing style into ${currentValue}`);
           this.mapType = currentValue as GoogleMapStyles;
           this.map?.setMapTypeId(this.mapType);
           break;
@@ -188,13 +189,13 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         case "markersVisible":
           this.markersVisible = currentValue as boolean;
           this.toggleMarkerVisibility(this.markersVisible).then(() => console.log("Toggled markers asynchronously."));
-          console.log(`markersVisible value = ${this.markersVisible}`);
+          // console.log(`markersVisible value = ${this.markersVisible}`);
           break;
 
         // INFO: Overlay controls sections
         case "selectedLayer":
           this.selectedLayer = currentValue as LayerTypes;
-          console.log(`Changing selected layer to ${this.selectedLayer} in google maps component.`);
+          // console.log(`Changing selected layer to ${this.selectedLayer} in google maps component.`);
           this.deckOverlay?.changeActiveLayer(this.selectedLayer);
           break;
 
@@ -202,7 +203,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         case "deckOverlayControls":
           this.deckOverlayControls = currentValue as ControlChange;
           this.deckOverlay?.setLayerAttributes(this.deckOverlayControls);
-          console.log(this.deckOverlayControls);
+          // console.log(this.deckOverlayControls);
           break;
 
         default:
@@ -391,6 +392,8 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
         }
 
         this.markers = markers;
+        console.log('About to instantiate mapCluser with markers');
+        console.log(this.markers);
         this.mapCluster = new MarkerClusterer({
 
           map: this.map,
@@ -399,7 +402,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
 
           // onClusterClick: (_, cluster, map) => {
-          //   // If any cluster is clicked, then the info window is restored to its initial state more or less
           //   // if (this.infoWindow && this.infoWindow.get("toggle") === true) {
           //   //   // console.log("Closing any active info windows.");
           //   //   this.infoWindow.close();
@@ -410,7 +412,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           // }
         });
 
-        console.log(`Total number of coordinates: ${coordinates.size} Number of studies: ${this.studies.size}`)
+        // console.log(`Total number of coordinates: ${coordinates.size} Number of studies: ${this.studies.size}`)
 
         this.initializeDeckOverlay(this.map);
         this.mapState.set('loaded');
@@ -426,7 +428,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
 
   initializeDeckOverlay(map: google.maps.Map) {
-    console.log(`Initializing the deck overlay class  with selected layer ${this.selectedLayer}`);
     this.deckOverlay = new DeckOverlayController(map, this.selectedLayer);
     this.streamStatus$ = toObservable(this.deckOverlay.StreamStatus, {
       injector: this.injector
@@ -455,7 +456,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           const numIndividuals = this.deckOverlay?.CurrentIndividuals().size ?? 0;
           switch (status) {
             case "standby":
-              console.log("Google Maps Component: Instantiating signalr client or finished streaming events from a data source.");
+              // console.log("Google Maps Component: Instantiating signalr client or finished streaming events from a data source.");
               this.emitStreamStatus("standby");
               if (numIndividuals === 0) {
                 this.openSnackBar("No Events Found.");
@@ -465,13 +466,13 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
               break;
 
             case "error":
-              console.log("Google Map Component Overlay Status: Error");
+              // console.log("Google Map Component Overlay Status: Error");
               this.emitStreamStatus("error");
               this.openSnackBar("Error retrieving events.");
               break;
 
             case "streaming":
-              console.log("Google Map Component Overlay Status: Streaming");
+              // console.log("Google Map Component Overlay Status: Streaming");
               this.emitStreamStatus("streaming");
               break;
 

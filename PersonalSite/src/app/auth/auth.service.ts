@@ -17,7 +17,7 @@ export class AuthService {
   public tokenKey = "tokenKey";
 
   constructor(private httpClient: HttpClient) {
-    
+
   }
 
   isAuthenticated(): boolean {

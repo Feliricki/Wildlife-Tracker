@@ -8,18 +8,12 @@ using System.Text;
 namespace PersonalSiteAPI.Services
 {
 
-    public class JwtHandler
+    public class JwtHandler(
+        IConfiguration configuration,
+        UserManager<ApplicationUser> userManager)
     {
-        private readonly IConfiguration _configuration;
-        private readonly UserManager<ApplicationUser> _userManager;
-
-        public JwtHandler(
-            IConfiguration configuration, 
-            UserManager<ApplicationUser> userManager)
-        {
-            _configuration = configuration;
-            _userManager = userManager;
-        }
+        private readonly IConfiguration _configuration = configuration;
+        private readonly UserManager<ApplicationUser> _userManager = userManager;
 
         public async Task<JwtSecurityToken> GetTokenAsync(ApplicationUser user)
         {

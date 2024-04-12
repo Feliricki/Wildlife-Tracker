@@ -45,7 +45,7 @@ namespace PersonalSiteAPI.Controllers
         }
 
         [HttpPost(Name = "CreateDefaultUser")]
-        //[Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
+        [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
         public async Task<IActionResult> CreateDefaultUsers()
         {
             int usersCreated = 0;
@@ -92,6 +92,8 @@ namespace PersonalSiteAPI.Controllers
         }
 
         [HttpGet(Name = "LongestName")]
+        [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
+
         public async Task<IActionResult> LongestName()
         {
             try
@@ -144,7 +146,9 @@ namespace PersonalSiteAPI.Controllers
 
         private readonly Expression<Func<Studies, bool>> ValidLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
 
-        [HttpPost(Name = "UpdateStudies")]        
+        [HttpPost(Name = "UpdateStudies")]
+        [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
+
         public async Task<IActionResult> UpdateStudies()
         {
             try
@@ -265,6 +269,8 @@ namespace PersonalSiteAPI.Controllers
 
         // Make sure this method requires proper authorization.
         [HttpPost(Name = "InitializeDB")]
+        [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
+
         public async Task<IActionResult> InitializeDB()
         {
             try

@@ -3,6 +3,12 @@
 
 @switch(currentMapState()){
 
+@case('initial'){
+<div class="button-container">
+  <button mat-raised-button (click)="initializeMap()">Load Map</button>
+</div>
+}
+
 @case('loading'){
 <div class="spinner-container">
   <mat-spinner id="spinner"></mat-spinner>
@@ -12,5 +18,4 @@
 @case('error'){
 <span>Error loading base map.</span>
 }
-
 }

@@ -10,6 +10,8 @@ using Mapster;
 using PersonalSiteAPI.Mappings;
 //using GRPC = PersonalSiteAPI.gRPC;
 using PersonalSiteAPI.Hubs;
+using PersonalSiteAPI.Models.Email;
+using MailKit;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,22 +20,11 @@ var _allowedSpecificOrigins = "SpecificOrigins";
 
 builder.Services.AddCors(options =>
 {
-    //options.AddDefaultPolicy(cfg =>
-    //{
-    //    // TODO: When deploying the origin should be set to the url of the frontend website.
-    //    //cfg.WithOrigins(builder.Configuration["AllowedOrigins"]!);
-    //    cfg.WithOrigins("http://localhost:4200/", "https://localhost:4200");
-    //    //cfg.WithOrigins(builder.C)
-    //    cfg.AllowAnyHeader();
-    //    cfg.AllowAnyMethod();
-    //    cfg.AllowCredentials();
-    //});
-
     options.AddPolicy(name: _allowedSpecificOrigins, cfg =>
     {
-        cfg.WithOrigins("http://localhost:4200", "https://localhost:4200");
+        string[] allowedOrigins = builder.Configuration.GetValue<string[]>("WithOrigins") ?? [];
+        cfg.WithOrigins(allowedOrigins);
         cfg.AllowAnyHeader();
-        //cfg.WithMethods("GET", "POST");
         cfg.AllowAnyMethod();
         cfg.AllowCredentials();
     });
@@ -57,6 +48,10 @@ builder.Services.AddControllers(options =>
     options.CacheProfiles.Add("5-Minutes",
         new CacheProfile() { Location = ResponseCacheLocation.Any, Duration = 60 * 5 });
 });
+
+builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
+builder.Services.Configure<MailRecipient>(builder.Configuration.GetSection("MailRecipient"));
+builder.Services.AddTransient<IEmailService, EmailService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -122,6 +117,11 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = 429;
+});
+
 builder.Services.AddMapster();
 builder.Services.RegisterMapsterConfiguration();
 
@@ -182,6 +182,7 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
+    // NOTE:Production settings.
     app.UseExceptionHandler("/Error");
     app.MapGet("/Error", () => Results.Problem());
     app.UseHsts();
@@ -212,6 +213,7 @@ app.UseWebSockets();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseRateLimiter();
 
 //app.UseEndpoints(endpoints =>
 //{

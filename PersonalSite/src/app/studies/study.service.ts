@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpParams, HttpStatusCode } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of, catchError, tap, map } from 'rxjs';
+import { Observable, of, catchError, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { StudyDTO } from './study';
 import { ApiResult } from '../ApiResult';
@@ -10,7 +10,7 @@ import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
 import { JsonResponseData } from './JsonResults/JsonDataResponse';
 import { EventRequest } from './EventRequest';
 
-type PointFeature<TProp> = GeoJSON.Feature<GeoJSON.Point, TProp>;
+// type PointFeature<TProp> = GeoJSON.Feature<GeoJSON.Point, TProp>;
 type PointFeatureCollection<TProp> = GeoJSON.FeatureCollection<GeoJSON.Point, TProp>;
 
 @Injectable({
@@ -51,7 +51,6 @@ export class StudyService {
         .set("filterColumn", filterColumn)
         .set("filterQuery", filterQuery);
     }
-    console.log(parameters.toString());
     return this.httpClient.get<ApiResult<StudyDTO>>(url, { params: parameters });
   }
 
@@ -84,7 +83,6 @@ export class StudyService {
 
     return response.pipe(
 
-      tap(response => console.log(response)),
       map(response => {
         // Status Code 204
         if (response.status == HttpStatusCode.NoContent) {
@@ -97,7 +95,6 @@ export class StudyService {
           // TODO:The way this is being handle will result in error being caught here
           // which prevents the table state from being properly updating into the 'error' state.
           // Find a way to capture 200 response from the server and also handle actual errors.
-          console.log("unknown response from jsonRequest");
           return [];
         }
       }),
@@ -124,7 +121,6 @@ export class StudyService {
   getGeoJsonFetchRequest(request: EventRequest): Request {
 
     const url = environment.baseUrl + "api/MoveBank/GetEventData";
-    console.log(url);
 
     const fetchRequest = new Request(url, {
       method: "POST",

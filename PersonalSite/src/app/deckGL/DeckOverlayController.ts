@@ -172,10 +172,7 @@ export class DeckOverlayController {
   currentLayer: LayerTypes = LayerTypes.ArcLayer;
   currentData: Array<BinaryLineFeatures & OptionalAttributes> = [];
 
-  // NOTE: The following stores the attribute set by the controls present on the event component.
-  pathAttributes = new Map<string, string>();
-  pointAttributes = new Map<string, string>();
-  aggregationAttributes = new Map<string, string>();
+  tooltipEnabled: boolean = true;
 
   // TODO:Test how these default settings function for the current layers.
   defaultBaseLayerOptions: Partial<LayerProps> = {
@@ -294,7 +291,6 @@ export class DeckOverlayController {
   constructor(map: google.maps.Map | mapboxgl.Map, layer: LayerTypes) {
     this.map = map;
     this.currentLayer = layer;
-    // console.log(`Instantiated deckOverlay with layer ${this.currentLayer}`);
 
     if (typeof Worker !== 'undefined') {
       this.webWorker = new Worker(new URL('./deck-gl.worker', import.meta.url));
@@ -385,8 +381,12 @@ export class DeckOverlayController {
     this.currentActiveOverlay.set(overlay);
   }
 
-  //TODO: Test this method for point and aggregation layers.
   setLayerAttributes(change: ControlChange): void {
+    // NOTE:These options change the custom settings to pertaining to deck.gl layer props.
+    if (change.field === "toggleTooltip") {
+      this.setTooltip(change.change.value as boolean);
+      return;
+    }
     switch (change.formType) {
       case "point":
         this.defaultPointOptions[change.field as keyof PointLayerProps] = change.change.value;
@@ -451,7 +451,7 @@ export class DeckOverlayController {
   // TODO: This method needs to be refactored to display different information depending the currently active layer.
   renderTooltip(info: PickingInfo) {
     const index = info.index;
-    if (index === -1) {
+    if (index === -1 || !this.tooltipEnabled) {
       return null;
     }
     const text = this.getContentHelper(index, info);
@@ -461,9 +461,20 @@ export class DeckOverlayController {
   // TODO:This needs to be refactored to show different content depending on the current layer.
   getContentHelper(index: number, info: PickingInfo): string | undefined {
     const layerIndex = Number(info.layer?.id.split('-').at(1));
+    const layerType = Number(info.layer?.id.split('-').at(0));
     if (layerIndex === undefined) {
       return;
     }
+
+    if (layerType === LayerTypes.ScatterplotLayer) {
+      return `
+        <h5>Scatterplot Layer</h5>
+        <h5>Coordinates</h5>
+        <p>Longitude: ${info.coordinate?.at(0)}</p>
+        <p>Latitude: ${info.coordinate?.at(1)}</p>
+      `;
+    }
+
 
     const content = this.contentArray.at(layerIndex)?.at(index);
     if (content === undefined) {
@@ -474,13 +485,15 @@ export class DeckOverlayController {
     return text;
   }
 
-  // TODO: This method is untested.
-  // This render the latest options selected by the users.
+  setTooltip(value: boolean): void {
+    this.tooltipEnabled = value;
+  }
+
+  // TODO:This render the latest options selected by the users.
   // Test if the updateTrigger attribute is actually doing something.
   changeActiveLayer(layer: LayerTypes): void {
     if (this.currentLayer === layer) return;
     this.currentLayer = layer;
-    console.log(`Active layer is ${layer} in GoogleOverlay.`);
     if (this.dataChunks.length === 0) return;
 
     const layers = this.dataChunks
@@ -530,7 +543,7 @@ export class DeckOverlayController {
       // case LayerTypes.PathLayer:
       //   return this.createPathLayer(data, layerId);
 
-      // NOTE: Heatmap layer is temporarily removed until it stops falling back to CPU aggregation.
+      // NOTE:Heatmap layer is temporarily removed until it stops falling back to CPU aggregation.
       // case LayerTypes.HeatmapLayer:
       //   return this.createHeatmapLayer(data, layerId);
       default:
@@ -589,7 +602,7 @@ export class DeckOverlayController {
     const layers = this.dataChunks.map((chunk, index) => this.createActiveLayer(this.currentLayer, chunk.lines, index));
     this.currentLayers = layers;
 
-    console.log(`Overlay has ${this.dataChunks.length} layers with ${this.contentArray.reduce((acc, arr) => acc + arr.length, 0)} total elements.`);
+    // console.log(`Overlay has ${this.dataChunks.length} layers with ${this.contentArray.reduce((acc, arr) => acc + arr.length, 0)} total elements.`);
     this.deckOverlay?.setProps({
       layers: layers
     });
@@ -649,11 +662,11 @@ export class DeckOverlayController {
   setOptionsHelper(props: LayerProps, layerType: "point" | "path" | "aggregation") {
 
     let entries = Object.entries(this.defaultPathOptions);
-    if (layerType === "point"){
+    if (layerType === "point") {
       entries = Object.entries(this.defaultPointOptions);
-    } else if (layerType === "path"){
+    } else if (layerType === "path") {
       entries = Object.entries(this.defaultPathOptions);
-    }else {
+    } else {
       entries = Object.entries(this.defaultAggregationOptions);
     }
     entries.forEach(([key, value]) => {
@@ -717,7 +730,7 @@ export class DeckOverlayController {
     this.setOptionsHelper(arcLayerProps, "path");
     return new ArcLayer(arcLayerProps);
   }
-  // TODO: This layer needs to have the start vertices specified.
+  // INFO: I can forget about this layer for now. Basically the same as line layer.
   createPathLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
     const BYTE_SIZE = 4;
     const positions = binaryFeatures.positions;
@@ -764,7 +777,7 @@ export class DeckOverlayController {
 
     return new PathLayer();
   }
-  // This layer needs an adjustable radius, color, and opacity.
+
   createScatterplotLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
     const BYTE_SIZE = 4;
     const positions = binaryFeatures.positions;
@@ -980,7 +993,7 @@ export class DeckOverlayController {
       }
     }
 
-    this.setOptionsHelper(lineLayerProps, "aggregation");
+    this.setOptionsHelper(lineLayerProps, "path");
     return new LineLayer(lineLayerProps);
   }
 

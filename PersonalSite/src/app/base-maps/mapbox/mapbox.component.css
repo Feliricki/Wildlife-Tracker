@@ -9,6 +9,13 @@
   padding: 0;
 }
 
+.button-container {
+  display:flex;
+  justify-content: center;
+  z-index: 54;
+  margin-top: 50vh;
+}
+
 .spinner-container {
   display: flex;
   justify-content: center;

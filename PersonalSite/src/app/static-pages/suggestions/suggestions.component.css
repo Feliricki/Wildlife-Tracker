@@ -1,0 +1,26 @@
+.form-container {
+  text-align: center;
+  margin-left: 1em;
+  margin-right: 1em;
+}
+
+mat-form-field {
+  min-width: 100px;
+  width: 500px;
+}
+
+h1 {
+  text-align: center;
+}
+
+.first-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.second-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

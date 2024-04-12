@@ -177,6 +177,14 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     "margin-top": "0.5em"
   }
 
+  rightNavStyle = {
+    "max-width": "700px",
+    "margin-top": "12em",
+    "margin-bottom": "20em",
+    "background-color": "rgba(0,0,0,0)",
+    // "box-shadow": "0"
+  };
+
   smallScreen$?: Observable<boolean>;
   XSmallScreen$?: Observable<boolean>;
 
@@ -236,6 +244,10 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   gotoReferences(): void {
     this.router.navigate(['/references']);
+  }
+
+  gotoSuggestionsPage(): void {
+    this.router.navigate(['/suggestions']);
   }
 
   loadMap(): void {

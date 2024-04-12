@@ -111,7 +111,7 @@ namespace PersonalSiteAPI.Controllers
         {
             try
             {
-                Console.WriteLine("Calling GetStudy");
+                //Console.WriteLine("Calling GetStudy");
                 var cacheKey = $"GetStudy: {studyId}";
                 Studies? study = null;
                 if (!_memoryCache.TryGetValue<Studies>(cacheKey, out var storedResult))
@@ -237,7 +237,7 @@ namespace PersonalSiteAPI.Controllers
                 // _memoryCache.Set(cacheKey, apiResult, cacheOptions);
                 return apiResult;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //Console.WriteLine(e.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError);
@@ -308,7 +308,7 @@ namespace PersonalSiteAPI.Controllers
                 }
                 StudyDTO Func(StudyDTO study) => study;
             }
-            catch (Exception error)
+            catch (Exception)
             {
                 //Console.WriteLine(error.Message);
                 return StatusCode(StatusCodes.Status503ServiceUnavailable);
@@ -324,8 +324,8 @@ namespace PersonalSiteAPI.Controllers
         {
             try
             {
-                Console.WriteLine("Calling GetJsonData");
-                Dictionary<string, string?> parameters = new() { };
+                //Console.WriteLine("Calling GetJsonData");
+                Dictionary<string, string?> parameters = [];
 
                 var cacheKey = $"GetJsonData:{entityType}-{studyId}";
                 if (_memoryCache.TryGetValue<object>(cacheKey, out var result) && result is not null)
@@ -411,7 +411,6 @@ namespace PersonalSiteAPI.Controllers
                 }
 
                 var jsonString = JsonConvert.SerializeObject(data);
-                Console.WriteLine(jsonString);
                 var cacheOptions = new MemoryCacheEntryOptions()
                 {
                     Size = 1,
@@ -462,15 +461,7 @@ namespace PersonalSiteAPI.Controllers
         {
             try
             {
-                Console.WriteLine(JsonConvert.SerializeObject(request, Formatting.Indented));
-
-                Stopwatch stopwatch = new();
-                stopwatch.Start();
-
                 var response = await _moveBankService.DirectRequestEvents(request);
-
-                stopwatch.Stop();
-                Console.WriteLine($"Took {stopwatch.Elapsed / 1000} seconds to recieve a response.");
 
                 if (response is null)
                 {
@@ -479,9 +470,6 @@ namespace PersonalSiteAPI.Controllers
                 
                 // TODO: Time this operations.                
                 var responseContentArray = await response.Content.ReadAsByteArrayAsync();
-
-                stopwatch = new Stopwatch();
-                stopwatch.Start();
 
                 var memStream = new MemoryStream(responseContentArray);
                 using var stream = new StreamReader(memStream, Encoding.UTF8);
@@ -498,17 +486,9 @@ namespace PersonalSiteAPI.Controllers
                     records.Add(record);
                 }
 
-                stopwatch.Stop();
-                Console.WriteLine($"It took {stopwatch.Elapsed / 1000} seconds to process all records");
-
-
-                stopwatch = new Stopwatch();
-                stopwatch.Start();
-
                 var data = LineStringFeatureCollection<LineStringPropertiesV1>.RecordToEventJsonDto(records, request.StudyId);
-                stopwatch.Stop();
 
-                Console.WriteLine($"Converted {records.Count} records to data with {data.IndividualEvents.Count} individuals and processed records to linestrings collections in {stopwatch.Elapsed / 1000} seconds.");
+                //Console.WriteLine($"Converted {records.Count} records to data with {data.IndividualEvents.Count} individuals and processed records to linestrings collections in {stopwatch.Elapsed / 1000} seconds.");
                 
                 if (data is null)
           {
@@ -520,27 +500,17 @@ namespace PersonalSiteAPI.Controllers
                     return new JsonResult(data);
                 }
 
-                stopwatch = new Stopwatch();
-                stopwatch.Start();
-
                 data.IndividualEvents.ForEach(l => l.Locations.Sort((x, y) => x.Timestamp.CompareTo(y.Timestamp)));
-                stopwatch.Stop();
 
-                Console.WriteLine($"Response has {data.IndividualEvents.Aggregate(0, (prev, val) => prev + val.Locations.Count)} events. Sorted all events in {stopwatch.Elapsed / 1000} seconds");
+                //Console.WriteLine($"Response has {data.IndividualEvents.Aggregate(0, (prev, val) => prev + val.Locations.Count)} events. Sorted all events in {stopwatch.Elapsed / 1000} seconds");
 
                 object collection;
                 switch (request.GeometryType.ToLower())
                 {
                     case "linestring":
-                        stopwatch = new Stopwatch();
-                        stopwatch.Start();
-
                         var lineCollections = LineStringFeatureCollection<LineStringPropertiesV1>
                             .CombineLineStringFeatures(data);
                         
-                        stopwatch.Stop();
-                        Console.WriteLine($"Time elapsed: {stopwatch.Elapsed / 1000} seconds to create line collection");
-
                         collection = lineCollections;
                         break;
 
@@ -555,8 +525,6 @@ namespace PersonalSiteAPI.Controllers
                         throw new ArgumentException("GeoJSON parameter was passed an invalid value.");
                 }
 
-                // return new JsonResult(collection);
-                
                 var jsonString = JsonSerializer.Serialize(collection, new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = null,
@@ -593,8 +561,6 @@ namespace PersonalSiteAPI.Controllers
 
 
         private readonly Expression<Func<Studies, bool>> _validLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
-        // private readonly Expression<Func<Studies, bool>> _hasDownloadAccess = study => study.IHaveDownloadAccess;
-        // private readonly Expression<Func<StudyDTO, bool>> _validLicenseExpDto = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
 
         private static bool ValidLicense(Studies study)
         {
@@ -608,7 +574,7 @@ namespace PersonalSiteAPI.Controllers
             {
                 return false;
             }
-            string[] licenses = { "CC_0", "CC_BY", "CC_BY_NC" };
+            string[] licenses = ["CC_0", "CC_BY", "CC_BY_NC"];
             return licenses.Contains(study.LicenseType.Trim());
         }
     }

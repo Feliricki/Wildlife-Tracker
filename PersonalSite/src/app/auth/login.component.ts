@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import {  Router, RouterLink } from '@angular/router';
 import { FormGroup, FormControl, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { BaseFormComponent } from '../base-form.component';
@@ -28,7 +28,7 @@ export class LoginComponent extends BaseFormComponent implements OnInit {
   hide = true;
 
   constructor(
-    private activatedRoute: ActivatedRoute,
+    // private activatedRoute: ActivatedRoute,
     private router: Router,
     private authService: AuthService) {
     super();
