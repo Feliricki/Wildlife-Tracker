@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using PersonalSiteAPI.Constants;
 using PersonalSiteAPI.Models.Email;
 using PersonalSiteAPI.Services;
 using System.ComponentModel.DataAnnotations;
@@ -18,6 +20,7 @@ namespace PersonalSiteAPI.Controllers
 
 
         [HttpPost(Name = "Suggestion")]
+        [Authorize(Roles = $"{RoleNames.Administrator}, {RoleNames.Moderator}")]
         public async Task<IActionResult> Suggestion(
             [Required]
             [MaxLength(100)]

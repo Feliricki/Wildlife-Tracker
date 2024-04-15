@@ -2,7 +2,12 @@
 
 <div class="table-container">
 
-  @if (!studies){
+  @if (studies === undefined){
+  <div class="unloaded">
+    <button class="close-button" mat-icon-button (click)="emitCloseComponentMessage()" aria-label="Close Search Menu">
+      <mat-icon>close</mat-icon></button>
+  </div>
+
   <div class="spinner">
     <mat-spinner></mat-spinner>
   </div>
@@ -162,7 +167,8 @@
                 @if (study.citation){
                 <p>{{study.citation}}</p>
                 }
-                <em>This study is was accessed from Movebank.org ("{{study.name}}", study ID {{study.id}}) on {{currentDate() |
+                <em>This study is was accessed from Movebank.org ("{{study.name}}", study ID {{study.id}}) on
+                  {{currentDate() |
                   date:"full"}}</em>
               </div>
 
@@ -193,6 +199,6 @@
 
 </div>
 
-<mat-paginator class="paginator" (page)="getData($event)" [pageSize]="10" [pageSizeOptions]="[10,20,50]"
-  showFirstLastButtons>
+<mat-paginator class="paginator" (page)="getData($event)" [pageSize]="10"
+  [pageSizeOptions]="[10,20,50]" showFirstLastButtons>
 </mat-paginator>

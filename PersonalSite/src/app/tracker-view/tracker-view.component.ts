@@ -96,8 +96,10 @@ type BaseMaps = 'google' | 'mapbox' | 'arcgis';
     ]),
 
     trigger('rightPanelOpened', [
-      state('true', style({ left: 'calc(100vw - 47.75em)' })),
-      state('false', style({ left: 'calc(100vw - 3.265em)' })),
+      // state('true', style({ left: 'calc(100vw - 47.75em)' })),
+      // state('false', style({ left: 'calc(100vw - 3.265em)' })),
+      state("true", style({ left: "calc(100vw - 47.75em)" })),
+      state("false", style({ right: ".3265em" })),
       transition('true => false', [
         animate('300ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(44.485em))' }))
       ]),
@@ -130,7 +132,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   currentMapType: GoogleMapStyles = "roadmap";
 
-  currentLayer: WritableSignal<LayerTypes> = signal(LayerTypes.ArcLayer);
+  currentLayer: WritableSignal<LayerTypes> = signal(LayerTypes.LineLayer);
   displayedEvents?: EventJsonDTO[];
 
   currentStudy?: StudyDTO;
@@ -177,23 +179,25 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     "margin-top": "0.5em"
   }
 
+  // TODO:Include a larger height for the aggregation layers.
   rightNavStyle = {
     "max-width": "700px",
     "margin-top": "12em",
-    "margin-bottom": "20em",
+    "height": "40em",
     "background-color": "rgba(0,0,0,0)",
-    // "box-shadow": "0"
   };
 
   smallScreen$?: Observable<boolean>;
   XSmallScreen$?: Observable<boolean>;
 
+  // TODO:The purpose of this signal is to check
+  XSmallScreenActive: WritableSignal<boolean> = signal(false);
+
   // NOTE:An ngModel binding in order to set a default value for the radio group.
-  radioGroupValue: LayerTypes = LayerTypes.ArcLayer;
+  radioGroupValue: LayerTypes = LayerTypes.LineLayer;
   readonly layerMenuOptions = [
     ["Arc Layer", LayerTypes.ArcLayer],
     ["Line Layer", LayerTypes.LineLayer],
-    // ["Path Layer", LayerTypes.PathLayer], // Having both the line and path layer is redundant.
     // ["Hexagon Layer", LayerTypes.HexagonLayer],
     ["Scatterplot Layer", LayerTypes.ScatterplotLayer],
     // ["Screen Grid Layer", LayerTypes.ScreenGridLayer],
@@ -273,7 +277,6 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   // INFO:Map and component state.
   updateMapState(state: boolean): void {
-    // console.log(`Setting map loaded state to ${state}`);
     this.mapLoaded.set(state);
   }
 
@@ -288,7 +291,6 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   }
 
   updateCurrentEventRequest(request: EventRequest): void {
-    // console.log("Updating the fetch request in tracker view");
     this.currentEventRequest = request;
   }
 

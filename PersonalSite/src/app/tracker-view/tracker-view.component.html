@@ -1,45 +1,47 @@
 <!--NOTE:On small screens this button is disabled.-->
 <!-- @if (!(XSmallScreen$ | async)) { -->
+
 @if (!(smallScreen$ | async)) {
-  <button mat-mini-fab [hidden]="!mapLoaded()" class="left-toggle-button" (click)="toggleSearchNav()"
-          [@leftPanelOpened]="leftPanelOpened()">
-    @if (leftPanelOpened()) {
-      <mat-icon>chevron_left</mat-icon>
-    } @else {
-      <mat-icon>chevron_right</mat-icon>
-    }
-  </button>
+<button mat-mini-fab [hidden]="!mapLoaded()" class="left-toggle-button" (click)="toggleSearchNav()"
+  [@leftPanelOpened]="leftPanelOpened()">
+  @if (leftPanelOpened()) {
+  <mat-icon>chevron_left</mat-icon>
+  } @else {
+  <mat-icon>chevron_right</mat-icon>
+  }
+</button>
 }
 
 @if (!(smallScreen$ | async) && mapLoaded()) {
-  <button mat-mini-fab [hidden]="!mapLoaded()" class="right-toggle-button" (click)="toggleEventNav()"
-          [@rightPanelOpened]="rightPanelOpened()">
-    @if (rightPanelOpened()) {
-      <mat-icon>chevron_right</mat-icon>
-    } @else {
-      <mat-icon>chevron_left</mat-icon>
-    }
-  </button>
-} @else {
-  <!-- @if () -->
- @if (!rightNav.opened){
- <button mat-fab [hidden]="!mapLoaded()" class="right-toggle-button-small" (click)="openRightNav()">
+<button mat-mini-fab [hidden]="!mapLoaded()" class="right-toggle-button" (click)="toggleEventNav()"
+  [@rightPanelOpened]="rightPanelOpened()">
+  @if (rightPanelOpened()) {
+  <mat-icon>chevron_right</mat-icon>
+  } @else {
   <mat-icon>chevron_left</mat-icon>
- </button>
   }
+</button>
+} @else {
+
+<!-- TODO:This button needs a enter animation. -->
+@if (!rightNav.opened && !sidenav.opened){
+<button mat-fab [hidden]="!mapLoaded()" @rightToggleClick class="right-toggle-button-small" (click)="openRightNav()">
+  <mat-icon>chevron_left</mat-icon>
+</button>
+}
 }
 
 <mat-sidenav-container class="sidenav-container" [hasBackdrop]="false">
 
   <mat-sidenav #sidenav mode="over" [opened]="true" [fixedInViewport]="true" class="sidenav" [disableClose]="true"
-               [ngStyle]="(XSmallScreen$ | async) ? leftNavSmallStyle : leftNavLargeStyle">
+    [ngStyle]="(XSmallScreen$ | async) ? leftNavSmallStyle : leftNavLargeStyle">
 
     <div class="search-container">
 
       @if (sidenav.opened || searchOpened()) {
-        <app-simple-search [hidden]="!searchOpened" [allStudies]="currentStudies" (closeComponent)="closeSearchNav()"
-                           (componentInitialized)="initializeSearchNav()"
-                           (panToMarkerEvent)="updateCurrentMarkers($event)"></app-simple-search>
+      <app-simple-search [hidden]="!searchOpened" [allStudies]="currentStudies" (closeComponent)="closeSearchNav()"
+        (componentInitialized)="initializeSearchNav()"
+        (panToMarkerEvent)="updateCurrentMarkers($event)"></app-simple-search>
       }
 
     </div>
@@ -48,14 +50,13 @@
 
     <!-- TODO: Decide on the styling for the normal case. -->
     <!-- NOTE: This is another sidenav within the outer sidenav -->
-    <mat-sidenav class="right-sidenav" [ngStyle]="(smallScreen$ | async) ? {} : rightNavStyle" #rightSidenav [opened]="false" position="end" [disableClose]="true" mode="over"
-                 [fixedInViewport]="true">
+    <mat-sidenav class="right-sidenav" [ngStyle]="(smallScreen$ | async) ? {} : rightNavStyle" #rightSidenav
+      [opened]="false" position="end" [disableClose]="true" mode="over" [fixedInViewport]="true">
 
       <app-events #eventComponent (eventRequestEmitter)="updateCurrentEventRequest($event)"
-                  (closeRightNavEmitter)="closeRightNav()" [currentStudy]="currentStudy"
-                  [currentEventData]="currentChunkInfo"
-                  [streamStatus]="currentStreamStatus" [currentSelectedLayer]="currentLayer()"
-                  (controlOptionsEmitter)="updateControlChanges($event)"></app-events>
+        (closeRightNavEmitter)="closeRightNav()" [currentStudy]="currentStudy" [currentEventData]="currentChunkInfo"
+        [streamStatus]="currentStreamStatus" [currentSelectedLayer]="currentLayer()"
+        (controlOptionsEmitter)="updateControlChanges($event)"></app-events>
 
     </mat-sidenav>
 
@@ -64,154 +65,186 @@
 
       @if (mapLoaded()) {
 
-        <div class="toolbar-container">
+      <div class="toolbar-container">
 
-          <!-- TODO:Change the color of this button and change to a mini fab on smaller screens. -->
-          <mat-toolbar class="dense-3" id="toolbar">
+        <!-- TODO:Change the color of this button and change to a mini fab on smaller screens. -->
+        <mat-toolbar class="dense-3" id="toolbar">
+
+          @if (XSmallScreen$ | async) {
+          <button mat-mini-fab [ngStyle]="menuXSmallStyle" class="menu-button" [matMenuTriggerFor]="mainMenu">
+            <mat-icon>menu</mat-icon>
+          </button>
+          } @else {
+          <button mat-fab class="menu-button" [ngStyle]="menuNormalStyle" [matMenuTriggerFor]="mainMenu">
+            <mat-icon>menu</mat-icon>
+          </button>
+          }
+          <span class="spacer"></span>
+
+          <!-- INFO:This is the beginning of the flex container. -->
+          <!-- The spacer does not work since the width is not fixed. -->
+          <div class="toolbar-elements">
+
+            <!-- INFO:Main menu section-->
+            <mat-menu #mainMenu="matMenu" xPosition="after" yPosition="below">
+              <button mat-menu-item [matMenuTriggerFor]="settingsMenu">Settings</button>
+              <button mat-menu-item (click)="gotoReferences()">References</button>
+              <!-- <button mat-menu-item (click)="gotoSuggestionsPage()">Suggest Improvements</button> -->
+            </mat-menu>
+
+            <mat-menu #settingsMenu="matMenu">
+              <button mat-menu-item [matMenuTriggerFor]="basemaps">Change Base Map</button>
+              <!--                <button mat-menu-item href="references">References</button>-->
+            </mat-menu>
+
+            <mat-menu #basemaps="matMenu" XPosition="before" yPosition="below">
+              <button mat-menu-item (click)="setBaseMap('google')">
+                Google Maps
+              </button>
+              <button mat-menu-item (click)="setBaseMap('mapbox')">
+                Mapbox
+              </button>
+            </mat-menu>
 
             @if (XSmallScreen$ | async) {
-              <button mat-mini-fab [ngStyle]="menuXSmallStyle" class="menu-button" [matMenuTriggerFor]="mainMenu">
-                <mat-icon>menu</mat-icon>
-              </button>
+            <button mat-mini-fab id="mini-fab-layer" class="extended-fab" [matMenuTriggerFor]="layerMenu">
+              <mat-icon>layers</mat-icon>
+            </button>
             } @else {
-              <button mat-fab class="menu-button" [ngStyle]="menuNormalStyle" [matMenuTriggerFor]="mainMenu">
-                <mat-icon>menu</mat-icon>
-              </button>
+            <button mat-fab extended matRipple class="extended-fab" [matMenuTriggerFor]="layerMenu">
+              <mat-icon>layers</mat-icon>
+              Layers
+            </button>
             }
-            <span class="spacer"></span>
 
-            <!-- INFO:This is the beginning of the flex container. -->
-            <!-- The spacer does not work since the width is not fixed. -->
-            <div class="toolbar-elements">
-
-              <!-- INFO:Main menu section-->
-              <mat-menu #mainMenu="matMenu" xPosition="after" yPosition="below">
-                <button mat-menu-item [matMenuTriggerFor]="settingsMenu">Settings</button>
-                <button mat-menu-item (click)="gotoReferences()">References</button>
-                <button mat-menu-item (click)="gotoSuggestionsPage()">Suggest Improvements</button>
-              </mat-menu>
-
-              <mat-menu #settingsMenu="matMenu">
-                <button mat-menu-item [matMenuTriggerFor]="basemaps">Change Base Map</button>
-<!--                <button mat-menu-item href="references">References</button>-->
-              </mat-menu>
-
-              <mat-menu #basemaps="matMenu" XPosition="before" yPosition="below">
-                <button mat-menu-item (click)="setBaseMap('google')">
-                  Google Maps
-                </button>
-                <button mat-menu-item (click)="setBaseMap('mapbox')">
-                  Mapbox
-                </button>
-              </mat-menu>
-
-              @if (XSmallScreen$ | async) {
-                <button mat-mini-fab id="mini-fab-layer" class="extended-fab" [matMenuTriggerFor]="layerMenu">
-                  <mat-icon>layers</mat-icon>
-                </button>
-              } @else {
-                <button mat-fab extended matRipple class="extended-fab" [matMenuTriggerFor]="layerMenu">
-                  <mat-icon>layers</mat-icon>
-                  Layers
-                </button>
-              }
-
-              <mat-menu #layerMenu="matMenu" xPosition="after" yPosition="below">
-                <mat-radio-group class="layer-radio-group" [(ngModel)]="radioGroupValue">
-                  @for (layerOptions of layerMenuOptions;track layerOptions[0]) {
-                    <mat-radio-button [value]="layerOptions[1]" (change)="layerOptionSelected($event)"
-                                      class="layer-radio-button">{{ layerOptions[0] }}
-                    </mat-radio-button>
-                  }
-                </mat-radio-group>
-              </mat-menu>
-
-
-              @if (activeMap() === 'google') {
-                <mat-button-toggle-group class="toggle-group">
-
-                  <mat-button-toggle (click)="setMapTypeGoogle(checkboxMap.checked ? 'terrain' : 'roadmap')"
-                                     [matMenuTriggerFor]="roadMap">
-                    <mat-icon>map</mat-icon>
-                    Map
-                  </mat-button-toggle>
-                  <mat-button-toggle (click)="setMapTypeGoogle(checkboxSatellite.checked ? 'hybrid' : 'satellite')"
-                                     [matMenuTriggerFor]="Satellitemenu">
-                    <mat-icon>satellite</mat-icon>
-                    Satellite
-                  </mat-button-toggle>
-
-                  <mat-menu #roadMap="matMenu" xPosition="after" yPosition="below">
-
-                    <button mat-menu-item>
-                      <mat-checkbox #checkboxMap color="primary" value="roadmap" (change)="setMapTypeCheckbox($event)">
-                        Terrain
-                      </mat-checkbox>
-                    </button>
-
-                  </mat-menu>
-
-                  <mat-menu #Satellitemenu="matMenu" xPosition="after" yPosition="below">
-                    <button mat-menu-item>
-                      <mat-checkbox #checkboxSatellite color="primary" value="satellite"
-                                    (change)="setMapTypeCheckbox($event)">
-                        Label
-                      </mat-checkbox>
-                    </button>
-                  </mat-menu>
-                </mat-button-toggle-group>
-              }
-
-
-              <button mat-mini-fab matRipple class="marker-toggle" (click)="toggleMarkerVisibility()" color="primary">
-                @if (!markersVisible()) {
-                  <mat-icon>location_on</mat-icon>
-                } @else {
-                  <mat-icon>location_off</mat-icon>
+            <mat-menu #layerMenu="matMenu" xPosition="after" yPosition="below">
+              <mat-radio-group class="layer-radio-group" [(ngModel)]="radioGroupValue">
+                @for (layerOptions of layerMenuOptions;track layerOptions[0]) {
+                <mat-radio-button [value]="layerOptions[1]" (change)="layerOptionSelected($event)"
+                  class="layer-radio-button">{{ layerOptions[0] }}
+                </mat-radio-button>
                 }
-              </button>
-            </div>
+              </mat-radio-group>
+            </mat-menu>
 
-            <span class="spacer"></span>
 
-          </mat-toolbar>
+            @if (activeMap() === 'google') {
+            <mat-button-toggle-group class="toggle-group">
 
-        </div>
+              <mat-button-toggle (click)="setMapTypeGoogle(checkboxMap.checked ? 'terrain' : 'roadmap')"
+                [matMenuTriggerFor]="roadMap">
+                @if (!(XSmallScreen$ | async)){
+                <mat-icon>map</mat-icon>
+                }
+                Map
+              </mat-button-toggle>
+              <mat-button-toggle (click)="setMapTypeGoogle(checkboxSatellite.checked ? 'hybrid' : 'satellite')"
+                [matMenuTriggerFor]="Satellitemenu">
+                @if (!(XSmallScreen$ | async)){
+                <mat-icon>satellite</mat-icon>
+                }
+                Satellite
+              </mat-button-toggle>
+
+              <mat-menu #roadMap="matMenu" xPosition="after" yPosition="below">
+
+                <button mat-menu-item>
+                  <mat-checkbox #checkboxMap color="primary" value="roadmap" (change)="setMapTypeCheckbox($event)">
+                    Terrain
+                  </mat-checkbox>
+                </button>
+
+              </mat-menu>
+
+              <mat-menu #Satellitemenu="matMenu" xPosition="after" yPosition="below">
+                <button mat-menu-item>
+                  <mat-checkbox #checkboxSatellite color="primary" value="satellite"
+                    (change)="setMapTypeCheckbox($event)">
+                    Label
+                  </mat-checkbox>
+                </button>
+              </mat-menu>
+            </mat-button-toggle-group>
+            }
+
+
+            <button mat-mini-fab matRipple class="marker-toggle" (click)="toggleMarkerVisibility()" color="primary">
+              @if (!markersVisible()) {
+              <mat-icon>location_on</mat-icon>
+              } @else {
+              <mat-icon>location_off</mat-icon>
+              }
+            </button>
+          </div>
+
+          <span class="spacer"></span>
+
+        </mat-toolbar>
+
+      </div>
+      } @else {
+      <mat-toolbar class="dense-3" id="toolbar">
+        @if (XSmallScreen$ | async) {
+        <button mat-mini-fab [ngStyle]="menuXSmallStyle" class="menu-button" [matMenuTriggerFor]="mainMenu">
+          <mat-icon>menu</mat-icon>
+        </button>
+        } @else {
+        <button mat-fab class="menu-button" [ngStyle]="menuNormalStyle" [matMenuTriggerFor]="mainMenu">
+          <mat-icon>menu</mat-icon>
+        </button>
+        }
+        <mat-menu #mainMenu="matMenu" xPosition="after" yPosition="below">
+          <button mat-menu-item [matMenuTriggerFor]="settingsMenu">Settings</button>
+          <button mat-menu-item (click)="gotoReferences()">References</button>
+        </mat-menu>
+
+        <mat-menu #settingsMenu="matMenu">
+          <button mat-menu-item [matMenuTriggerFor]="basemaps">Change Base Map</button>
+        </mat-menu>
+
+        <mat-menu #basemaps="matMenu" XPosition="before" yPosition="below">
+          <button mat-menu-item (click)="setBaseMap('google')">
+            Google Maps
+          </button>
+          <button mat-menu-item (click)="setBaseMap('mapbox')">
+            Mapbox
+          </button>
+        </mat-menu>
+
+      </mat-toolbar>
       }
 
       <!-- TODO:I should write down in english what the conditions are for this flag to activate. -->
       <!-- This button is shown on smaller screens. -->
       <!-- @if (leftButtonFlag() === true && (XSmallScreen$ | async)) { -->
       @if (leftButtonFlag() === true && (smallScreen$ | async)) {
-        <button mat-fab [hidden]="!leftButtonFlag()" @leftToggleClick (click)="openSearchNav()" class="toggle-button">
-          <mat-icon>chevron_right</mat-icon>
-        </button>
+      <button mat-fab [hidden]="!leftButtonFlag()" @leftToggleClick (click)="openSearchNav()" class="toggle-button">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
       }
 
       <!-- TODO:This should be changed to a switch case after refactoring. -->
       @switch (activeMap()) {
 
-        @case ("google") {
-          <app-google-map [pathEventData$]="currentEventLineData$" (mapStateEmitter)="updateMapState($event)"
-                          (studiesEmitter)="updateCurrentStudies($event)" (studyEmitter)="updateCurrentStudy($event)"
-                          [focusedMarker]="currentMarker" [eventRequest]="currentEventRequest"
-                          [mapType]="currentMapType"
-                          [selectedLayer]="currentLayer()" (chunkInfoEmitter)="updateChunkMetadata($event)"
-                          (streamStatusEmitter)="updateStreamState($event)" [markersVisible]="markersVisible()"
-                          [deckOverlayControls]="currentControlOptions">
-          </app-google-map>
-        }
-        @case ("mapbox") {
-          <app-mapbox (mapStateEmitter)="updateMapState($event)" (studyEmitter)="updateCurrentStudy($event)"
-                      (studiesEmitter)="updateCurrentStudies($event)" (chunkInfoEmitter)="updateChunkMetadata($event)"
-                      [focusedPoint]="currentMarker" [eventRequest]="currentEventRequest"
-                      [selectedLayer]="currentLayer()"
-                      [pointsVisible]="markersVisible()" [deckOverlayControls]="currentControlOptions">
-          </app-mapbox>
-        }
-        @default {
-          <span>Default case for basemap switch case.</span>
-        }
+      @case ("google") {
+      <app-google-map [pathEventData$]="currentEventLineData$" (mapStateEmitter)="updateMapState($event)"
+        (studiesEmitter)="updateCurrentStudies($event)" (studyEmitter)="updateCurrentStudy($event)"
+        [focusedMarker]="currentMarker" [eventRequest]="currentEventRequest" [mapType]="currentMapType"
+        [selectedLayer]="currentLayer()" (chunkInfoEmitter)="updateChunkMetadata($event)"
+        (streamStatusEmitter)="updateStreamState($event)" [markersVisible]="markersVisible()"
+        [deckOverlayControls]="currentControlOptions">
+      </app-google-map>
+      }
+      @case ("mapbox") {
+      <app-mapbox (mapStateEmitter)="updateMapState($event)" (studyEmitter)="updateCurrentStudy($event)"
+        (studiesEmitter)="updateCurrentStudies($event)" (chunkInfoEmitter)="updateChunkMetadata($event)"
+        [focusedPoint]="currentMarker" [eventRequest]="currentEventRequest" [selectedLayer]="currentLayer()"
+        [pointsVisible]="markersVisible()" [deckOverlayControls]="currentControlOptions">
+      </app-mapbox>
+      }
+      @default {
+      <span>Default case for basemap switch case.</span>
+      }
 
       }
 

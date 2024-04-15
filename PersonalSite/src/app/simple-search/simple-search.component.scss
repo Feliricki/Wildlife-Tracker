@@ -4,6 +4,12 @@
     flex: 1 1 auto;
 }
 
+.unloaded {
+  display: flex;
+  justify-content:right;
+  align-items: right;
+}
+
 .first-row {
   display: flex;
 }
@@ -36,9 +42,15 @@
 }
 
 .spinner {
-  position: absolute;
-  top: calc(50vh - 2em);
-  left: 40%;
+  // position: fixed;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  // spinner {
+  //   display:fixed;
+  //   margin-top: 50vh;
+  // }
 }
 
 .close-button-container {

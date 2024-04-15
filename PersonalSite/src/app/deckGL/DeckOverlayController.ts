@@ -161,6 +161,8 @@ export class DeckOverlayController {
   // TODO:Consider if received chunks can appended to their corresponding layer going by individual.
   // If it's possible to pull this off then I should consider making a layer for each individual
   // and one large layer containing all the individual's event data.
+  cumulativeData: BinaryLineStringResponse<LineStringPropertiesV2> | undefined;
+
   dataChunks: Array<BinaryFeatureWithAttributes> = [];
   currentLayers: Array<Layer | null> = [];
   contentArray: ArrayBufferLike[][] = [];
@@ -169,7 +171,7 @@ export class DeckOverlayController {
   individualColors = new Map<string, [Color, Color]>();
   currentIndividuals: WritableSignal<Set<string>> = signal(new Set());
 
-  currentLayer: LayerTypes = LayerTypes.ArcLayer;
+  currentLayer: LayerTypes = LayerTypes.LineLayer;
   currentData: Array<BinaryLineFeatures & OptionalAttributes> = [];
 
   tooltipEnabled: boolean = true;
@@ -294,10 +296,17 @@ export class DeckOverlayController {
 
     if (typeof Worker !== 'undefined') {
       this.webWorker = new Worker(new URL('./deck-gl.worker', import.meta.url));
+
       this.webWorker.onmessage = (message) => {
         switch (message.data.type) {
 
           case "BinaryLineString":
+            this.handleBinaryResponse(message.data as BinaryLineStringResponse<LineStringPropertiesV2>);
+            break;
+
+            // TODO:Implement this case.
+          case "AggregatedEvents":
+
             this.handleBinaryResponse(message.data as BinaryLineStringResponse<LineStringPropertiesV2>);
             break;
 

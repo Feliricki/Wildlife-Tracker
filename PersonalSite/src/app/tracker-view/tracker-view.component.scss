@@ -17,10 +17,6 @@
 
 .sidenav-content {
   position: relative;
-  /* background-color: lightblue; */
-  // justify-content: center;
-  // align-items: center;
-
   background-color: white;
   width: 100%;
   height: 100%;
@@ -37,7 +33,7 @@
   background-color: green;
 }
 
-/* NOTE: This section is used if the button is placed after the search compnent.*/
+/* NOTE: This section is used if the button is placed after the search component.*/
 .toggle-button {
   position: absolute;
   color:black;
@@ -65,15 +61,17 @@
   color: black;
   background-color: white;
   top: 33vh;
-  z-index: 3;
+  z-index: 2;
 }
 
+// This is the button used for smaller devices.
 .right-toggle-button-small {
   position: absolute;
   color: black;
   background-color: white;
   top: 50vh;
-  left: calc(100vw - 4.25em);
+  right: .1em;
+  // left: calc(100vw - 4.25em);
   z-index: 3;
 }
 
@@ -82,6 +80,7 @@
 // animations
 .right-sidenav {
   z-index: 4;
+  // height: 20em;
   box-shadow: none;
 }
 
@@ -192,7 +191,6 @@
   display: flex;
   flex-direction: column;
   align-content: flex-start;
-  // margin-right: 5px;
 
   .layer-radio-button {
     margin-right: 1em;

@@ -367,6 +367,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
         next: apiResult => {
           this.studiesLoaded.set(true);
 
+          // NOTE:This is undefined if the component is conditionally active.
           this.paginator.length = apiResult.totalCount;
           this.paginator.pageIndex = apiResult.pageIndex;
           this.paginator.pageSize = apiResult.pageSize;
