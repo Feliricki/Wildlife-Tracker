@@ -111,7 +111,6 @@ export class StudyService {
     const url = environment.baseUrl + "api/MoveBank/GetEventData";
     const parameters = this.eventHelper(studyId, localIdentifiers, sensorType, options);
 
-    console.log(parameters);
     return this.httpClient.get<EventJsonDTO>(url, { params: parameters });
   }
   // NOTE: Validation should occur on the form and on the backend.

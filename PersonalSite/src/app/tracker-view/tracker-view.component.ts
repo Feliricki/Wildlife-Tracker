@@ -198,12 +198,11 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
   readonly layerMenuOptions = [
     ["Arc Layer", LayerTypes.ArcLayer],
     ["Line Layer", LayerTypes.LineLayer],
-    // ["Hexagon Layer", LayerTypes.HexagonLayer],
+    ["Hexagon Layer", LayerTypes.HexagonLayer],
     ["Scatterplot Layer", LayerTypes.ScatterplotLayer],
-    // ["Screen Grid Layer", LayerTypes.ScreenGridLayer],
-    // ["Grid Layer", LayerTypes.GridLayer],
-    // INFO:Currrently the heatmap layer uses the cpu for aggregation causing lag
-    // ["Heatmap Layer", LayerTypes.HeatmapLayer],
+    ["Screen Grid Layer", LayerTypes.ScreenGridLayer],
+    // ["Grid Layer", LayerTypes.GridLayer], // NOTE:not working.
+    ["Heatmap Layer", LayerTypes.HeatmapLayer],
   ] as Array<[string, LayerTypes]>;
 
   constructor(
@@ -410,9 +409,9 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   markerToggleLabel(): string {
     if (this.markersVisible()) {
-      return "Remove markers.";
+      return "Remove markers";
     } else {
-      return "Add markers.";
+      return "Add markers";
     }
   }
 

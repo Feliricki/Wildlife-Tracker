@@ -12,6 +12,10 @@
   height: calc(100vh - 7em);
 }
 
+#aggregation-dropdown {
+  display: flex;
+}
+
 #unit-dropdown {
   margin-right: 1em;
 }
@@ -42,7 +46,24 @@
   justify-content: space-between;
   margin-left: 1em;
   margin-right: 1em;
+
+  #aggregation-dropdown-1 {
+    // flex: 2 0 0;
+    width: 350px;
+  }
+  #aggregation-dropdown-2 {
+    // flex: 1 0 0;
+    width: 100px;
+  }
 }
+
+.aggregation-first-row {
+  display: flex;
+  justify-content: space-between;
+  margin-left: 1em;
+  margin-right: 1em;
+}
+
 
 .label-container-normal {
   display: flex;

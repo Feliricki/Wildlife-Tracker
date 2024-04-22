@@ -26,7 +26,6 @@ using System.Text.Json.Serialization;
 using PersonalSiteAPI.DTO.GeoJSON;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using PersonalSiteAPI.DTO.MoveBankAttributes.DirectReadRecords;
-using System.Diagnostics;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -37,7 +36,7 @@ namespace PersonalSiteAPI.Controllers
     public class MoveBankController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly ILogger<AccountController> _logger;
+        private readonly ILogger<MoveBankController> _logger;
         private readonly IMoveBankService _moveBankService;
         private readonly IMemoryCache _memoryCache;
         private readonly UserManager<ApplicationUser> _userManager;
@@ -45,7 +44,7 @@ namespace PersonalSiteAPI.Controllers
 
         public MoveBankController(
             ApplicationDbContext context,
-            ILogger<AccountController> logger,
+            ILogger<MoveBankController> logger,
             IMoveBankService moveBankService,
             IMemoryCache memoryCache,
             UserManager<ApplicationUser> userManager,
@@ -80,6 +79,7 @@ namespace PersonalSiteAPI.Controllers
                     Detail = e.Message,
                     Status = StatusCodes.Status500InternalServerError,
                 };
+                _logger.LogError(e.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
             }
         }
@@ -101,6 +101,7 @@ namespace PersonalSiteAPI.Controllers
                     Detail = e.Message,
                     Status = StatusCodes.Status500InternalServerError,
                 };
+                _logger.LogError(e.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
             }
         }
@@ -148,7 +149,8 @@ namespace PersonalSiteAPI.Controllers
             }
             catch (Exception error)
             {
-                return Unauthorized(error.Message);
+                _logger.LogError(error.Message);
+                return Unauthorized();
             }
         }
 
@@ -237,9 +239,10 @@ namespace PersonalSiteAPI.Controllers
                 // _memoryCache.Set(cacheKey, apiResult, cacheOptions);
                 return apiResult;
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 //Console.WriteLine(e.Message);
+                _logger.LogError(e.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
@@ -252,6 +255,8 @@ namespace PersonalSiteAPI.Controllers
         {
             try
             {
+                _logger.LogWarning("Log warning in MoveBankController");
+
                 IQueryable<Studies> source = _context.Studies
                     .AsNoTracking()
                     .Where(study => study.IHaveDownloadAccess);
@@ -308,9 +313,10 @@ namespace PersonalSiteAPI.Controllers
                 }
                 StudyDTO Func(StudyDTO study) => study;
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 //Console.WriteLine(error.Message);
+                _logger.LogError(e.Message);
                 return StatusCode(StatusCodes.Status503ServiceUnavailable);
             }
         }
@@ -423,7 +429,7 @@ namespace PersonalSiteAPI.Controllers
             }
             catch (Exception error)
             {
-                Console.WriteLine(error.Message);
+                _logger.LogError(error.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError);
             }
         }
@@ -502,6 +508,7 @@ namespace PersonalSiteAPI.Controllers
 
                 data.IndividualEvents.ForEach(l => l.Locations.Sort((x, y) => x.Timestamp.CompareTo(y.Timestamp)));
 
+                _logger.LogInformation($"Sorted {data.IndividualEvents.Count} events in GetEventData method.");
                 //Console.WriteLine($"Response has {data.IndividualEvents.Aggregate(0, (prev, val) => prev + val.Locations.Count)} events. Sorted all events in {stopwatch.Elapsed / 1000} seconds");
 
                 object collection;
@@ -541,10 +548,12 @@ namespace PersonalSiteAPI.Controllers
             }
             catch(TimeoutException timeoutError)
             {
+                _logger.LogError(timeoutError.Message);
                 return StatusCode(StatusCodes.Status408RequestTimeout, timeoutError);
             }            
             catch (Exception error)
             {
+                _logger.LogError(error.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError, error);
             }
         }

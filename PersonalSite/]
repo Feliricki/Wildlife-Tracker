@@ -58,20 +58,20 @@ type OverlayTypes = "google" | "mapbox" | "arcgis";
 
 // NOTE:This files needs to be renamed when mapbox is used as a basemap.
 export enum LayerTypes {
-  ArcLayer, // 0
+  ArcLayer,
   ContourLayer,
   GeoJsonLayer,
   GPUGridLayer,
-  GridLayer,
-  HeatmapLayer, // 5
-  HexagonLayer, // 6
+  GridLayer, // TODO: try this out first then fallback to GPUGrid layer if it doesn't work.
+  HeatmapLayer,
+  HexagonLayer,
   IconLayer,
   LineLayer,
   PointCloudLayer,
   PathLayer,
   ScatterplotLayer,
   ScenegraphLayer,
-  ScreenGridLayer, // 13
+  ScreenGridLayer,
   TerrainLayer,
   TextLayer,
   TileLayer,
@@ -461,20 +461,18 @@ export class DeckOverlayController {
     };
 
     // if (this.webWorker !== undefined) {
-    if (this.webWorker !== undefined) {
-      this.webWorker.postMessage({ data: workerRequest, type: "FetchRequest" as const });
+    if (this.webWorker === undefined) {
+      // this.webWorker.postMessage({ data: workerRequest, type: "FetchRequest" as const });
     }
     else {
-      // TODO:This case is untested.
+      // TODO:This function is untested.
+      console.log("Sending fetch request.");
       this.sendFetchRequest(request).then(lineStringResponse => {
         if (lineStringResponse === null) return;
-        // const responses = lineStringResponse as Array<[BinaryLineStringResponse<LineStringPropertiesV2>, ArrayBufferLike[]]>;
 
-        for (const response of lineStringResponse){
-          if (response === null) continue;
-          this.cumulativeData = this.mergeBinaryResponse(this.cumulativeData, response[0]);
-          this.handleBinaryResponse(response[0]);
-        }
+        this.cumulativeData = this.mergeBinaryResponse(this.cumulativeData, lineStringResponse[0]);
+        this.handleBinaryResponse(lineStringResponse[0]);
+
       });
     }
     return this.deckOverlay;
@@ -504,11 +502,9 @@ export class DeckOverlayController {
       });
 
       const collections = await response.json() as Array<LineStringFeatureCollection<LineStringPropertiesV2>>;
-      // console.log(collections);
 
-      // BUG:Type Error: map is not a function
       const lineStringResponses = collections.map((collection, index) => {
-        return handleFeatures({
+        const features = handleFeatures({
           features: collection.features,
           individualLocalIdentifier: "N/A",
           count: collection.features.length,
@@ -525,7 +521,6 @@ export class DeckOverlayController {
   }
 
   // TODO: This method needs to be refactored to display different information depending the currently active layer.
-  // Aggregation layers need to display different information.
   renderTooltip(info: PickingInfo) {
     const index = info.index;
     if (index === -1 || !this.tooltipEnabled) {
@@ -542,7 +537,6 @@ export class DeckOverlayController {
       return;
     }
 
-    // Consider sending coordinate data to the front end.
     if (layerType === LayerTypes.ScatterplotLayer) {
       return `
         <h5>Coordinates</h5>
@@ -550,18 +544,8 @@ export class DeckOverlayController {
         <p>Latitude: ${info.coordinate?.at(1)}</p>
       `;
     }
-    else if (layerType === LayerTypes.HexagonLayer){
-      const layerObject = info.object as { points: unknown[] };
-      return `
-        <p>Events: ${layerObject.points.length}</p>
-      `;
-    }
-    else if (layerType === LayerTypes.ScreenGridLayer){
-      const layerObject = info.object as { cellCount: number };
-      return `
-        <p>Events: ${layerObject.cellCount}</p>
-      `;
-    }
+    // TODO: Decide what information to show for aggregation layers.
+
 
     const content = this.contentArray.at(layerIndex)?.at(index);
     if (content === undefined) {

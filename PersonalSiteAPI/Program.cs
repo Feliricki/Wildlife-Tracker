@@ -8,22 +8,27 @@ using PersonalSiteAPI.Models;
 using PersonalSiteAPI.Services;
 using Mapster;
 using PersonalSiteAPI.Mappings;
-//using GRPC = PersonalSiteAPI.gRPC;
 using PersonalSiteAPI.Hubs;
 using PersonalSiteAPI.Models.Email;
 using MailKit;
+using Microsoft.AspNetCore.Diagnostics;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-var _allowedSpecificOrigins = "SpecificOrigins";
+builder.Services.AddLogging(option =>
+{
+    option.AddApplicationInsights(                     
+        telemetry => telemetry.ConnectionString =
+        builder
+            .Configuration["Azure:ApplicationInsights:ConnectionString"],loggerOptions => { });
+});
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(name: _allowedSpecificOrigins, cfg =>
+    options.AddPolicy(name: "Angular", cfg =>
     {
-        string[] allowedOrigins = builder.Configuration.GetValue<string[]>("WithOrigins") ?? [];
-        cfg.WithOrigins(allowedOrigins);
+        cfg.WithOrigins(builder.Configuration["AllowedCORS"]!);
         cfg.AllowAnyHeader();
         cfg.AllowAnyMethod();
         cfg.AllowCredentials();
@@ -35,7 +40,6 @@ builder.Services.AddCors(options =>
             cfg.AllowAnyOrigin();
             cfg.AllowAnyHeader();
             cfg.AllowAnyMethod();
-            //cfg.AllowCredentials();
         });
 });
 
@@ -122,6 +126,7 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = 429;
 });
 
+
 builder.Services.AddMapster();
 builder.Services.RegisterMapsterConfiguration();
 
@@ -132,6 +137,7 @@ builder.Services.AddScoped<JwtHandler>();
 
 // Amazon Key Vault Services
 var options = builder.Configuration.GetAWSOptions();
+// Console.WriteLine(options.Credentials);
 builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
 
 builder.Services.AddAWSService<IAmazonSecretsManager>();
@@ -183,8 +189,27 @@ if (app.Environment.IsDevelopment())
 else
 {
     // NOTE:Production settings.
-    app.UseExceptionHandler("/Error");
-    app.MapGet("/Error", () => Results.Problem());
+    app.UseExceptionHandler("/Error ");
+    app.MapGet("/Error", (HttpContext context) => {
+        var exceptionHandler =
+            context.Features.Get<IExceptionHandlerPathFeature>();
+
+        var details = new ProblemDetails();
+        details.Detail = exceptionHandler?.Error.Message;
+        details.Extensions["traceId"] =
+            System.Diagnostics.Activity.Current?.Id
+              ?? context.TraceIdentifier;
+        details.Type =
+            "https://tools.ietf.org/html/rfc7231#section-6.6.1";
+        details.Status = StatusCodes.Status500InternalServerError;
+
+        app.Logger.LogError(
+            exceptionHandler?.Error,
+            "An unhandled exception occurred.");
+
+        return Results.Problem(details);
+    }
+    );
     app.UseHsts();
     app.Use(async (context, next) =>
     {
@@ -195,8 +220,7 @@ else
         // Prevents XSS attacks
         context.Response.Headers.Append("Content-Security-Policy", "default-src 'self' ;");
         context.Response.Headers.Append("Referrer-Policy", "strict-origin");
-
-
+        // 
         await next();
     });
 }
@@ -205,7 +229,7 @@ app.UseHttpsRedirection();
 app.UseRouting();
 
 //app.UseCors("AnyOrigin");
-app.UseCors();
+app.UseCors("Angular");
 
 //var websocketOptions = new WebSocketOptions();
 app.UseWebSockets();
@@ -221,12 +245,12 @@ app.UseRateLimiter();
 //    endpoints.MapHub<MoveBankHub>("/api/MoveBank-Hub");
 //});
 
-app.MapControllers().RequireCors(_allowedSpecificOrigins);
+app.MapControllers().RequireCors("Angular");
 app.MapHub<MoveBankHub>("/api/MoveBank-Hub", options =>
 {
     options.AllowStatefulReconnects = true;
     options.TransportMaxBufferSize = 1024 * 1024;
-}).RequireCors(_allowedSpecificOrigins);
+}).RequireCors("Angular");
 
 ////app.UseHealthChecks(new PathString("/api/health"));
 ////app.MapControllers().RequireCors("AnyOrigin");

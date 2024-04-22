@@ -44,6 +44,7 @@ import { MatGridListModule } from '@angular/material/grid-list';
 import { MtxColorpickerModule } from '@ng-matero/extensions/colorpicker';
 
 export type RGBAColor = [number, number, number, number];
+export type Color = [number, number, number] | RGBAColor;
 export type ActiveForm = "point" | "path" | "aggregation";
 export type FormTypes = PointForms | PathForms | AggregationForms;
 export type OverlayTypes = FormGroup<PointForms> | FormGroup<PathForms> | FormGroup<AggregationForms>;
@@ -107,8 +108,8 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   // at all possible
   readonly MAX_EVENTS_LIMIT = MAX_EVENTS;
   readonly tiles: Tile[] = [
-    { cols: 2, rows: 7, color: 'lightblue' },
-    { cols: 3, rows: 7, color: 'lightgreen' },
+    { cols: 2, rows: 8, color: 'lightblue' },
+    { cols: 3, rows: 8, color: 'lightgreen' },
   ];
 
   readonly eventProfilesOptions: EventProfile[] = [
@@ -117,6 +118,36 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     { value: "EURING_03", name: "Last 30 days" },
     { value: "EURING_04", name: "0.25 degrees movements" },
   ];
+
+  readonly ColorRangeThemes: Color[][] = [
+    // default theme
+    [
+      [255, 255,  178],
+      [254, 217, 118],
+      [254, 178, 76],
+      [253, 141, 60],
+      [240, 59, 32],
+      [189, 0, 38],
+    ],
+    // This is the blue to red theme.
+    [
+      [1, 152, 189],
+      [73, 227, 206],
+      [216, 254, 181],
+      [254, 237, 177],
+      [254, 173, 84],
+      [209, 55, 78]
+    ],
+    // grey to green theme
+    [
+      [0, 25, 0, 25],
+      [0, 85, 0, 85],
+      [0, 127, 0, 127],
+      [0, 170, 0, 170],
+      [0, 190, 0, 190],
+      [0, 255, 0, 255]
+    ],
+  ]
 
   selectedEventProfile = this.eventProfilesOptions[0].value;
 
@@ -185,8 +216,22 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   });
 
   aggregationForms = this.formBuilder.nonNullable.group({
-    radius: this.formBuilder.nonNullable.control(1),
-    elevationAggregation: this.formBuilder.nonNullable.control(1),
+    // NOTE:Related fields. Controls the radius of the aggregated points.
+    radiusPixels: this.formBuilder.nonNullable.control(30),
+    radius: this.formBuilder.nonNullable.control(1000),
+    cellSizePixels: this.formBuilder.nonNullable.control(100),
+
+    // NOTE:heatmap only fields.
+    intensity: this.formBuilder.nonNullable.control(1),
+    threshold: this.formBuilder.nonNullable.control(0.5),
+    //NOTE:Hexagon only fields
+    coverage: this.formBuilder.nonNullable.control(1),
+    // elevationScale: this.formBuilder.nonNullable.control(1),
+    upperPercentile: this.formBuilder.nonNullable.control(100),
+    lowerPercentile: this.formBuilder.nonNullable.control(0),
+
+    // NOTE:Screengrid only fields.
+    // elevationAggregation: this.formBuilder.nonNullable.control(1),
   });
 
   eventForm = this.formBuilder.nonNullable.group({
@@ -486,7 +531,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
           // TODO:New forms should be added to the list of form groups.
           // Also continue testing by logging the output from the CurrrentActiveLayer signal.
           this.currentEventData = currentValue as EventMetadata;
-          this.currentActiveLayer.set(this.currentEventData.layer);
+          // this.currentActiveLayer.set(this.currentEventData.layer);
 
           Array.from(this.currentEventData.currentIndividuals.values())
             .filter(elem => this.currentIndividuals().indexOf(elem) === -1)
@@ -512,6 +557,8 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
 
         case "currentSelectedLayer":
           this.currentSelectedLayer = currentValue as LayerTypes;
+          this.currentActiveLayer.set(this.currentSelectedLayer);
+          // console.log(`Setting the current layer to ${currentValue}`);
           this.currentActiveForms.set(this.getActiveForm(this.currentSelectedLayer));
           break;
 

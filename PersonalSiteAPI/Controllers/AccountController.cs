@@ -89,11 +89,12 @@ namespace PersonalSiteAPI.Controllers
       }
       catch (Exception e)
       {
-        return Unauthorized(new LoginResultDTO()
-        {
-          Success = false,
-          Message = e.Message,
-        });
+            _logger.LogError(e.Message);
+            return Unauthorized(new LoginResultDTO()
+            {
+                Success = false,
+                Message = e.Message,
+            });
       }
     }
 

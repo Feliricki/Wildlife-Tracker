@@ -41,7 +41,7 @@ export type NumericPropsType<T> = {
 }
 
 export interface BinaryLineStringResponse<TProp> {
-  type: "BinaryLineString";
+  type: "BinaryLineString" | "AggregatedEvents";
   index: number;
   length: number;
   individualLocalIdentifier: string;

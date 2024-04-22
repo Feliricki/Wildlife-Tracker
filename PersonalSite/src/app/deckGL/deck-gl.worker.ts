@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
 
-// import { ArcLayer, GeoJsonLayer } from '@deck.gl/layers/typed';
 import { BinaryLineStringResponse, BufferAttribute, ContentBufferArrays, NumericPropsResponse, WorkerFetchRequest } from "./MessageTypes";
 import { LineStringFeature, LineStringFeatureCollection, LineStringFeatures, LineStringPropertiesV2 } from "./GeoJsonTypes";
 // import { environment } from '../../environments/environment';
@@ -10,11 +9,11 @@ import { NonNumericProps, NumericPropsType } from "./MessageTypes";
 import * as signalR from '@microsoft/signalr';
 import { MessagePackHubProtocol } from '@microsoft/signalr-protocol-msgpack';
 import * as msgPack from '@msgpack/msgpack';
+import { isDevMode } from "@angular/core";
 
 
 let streamSubscription: signalR.ISubscription<LineStringFeature<LineStringPropertiesV2>> | null = null;
-// const worker: Worker = new Worker(new URL('./deck-gl/worker', import.meta.url));
-let allEvents: LineStringFeatureCollection<LineStringPropertiesV2> = emptyFeatureCollection();
+// let allEvents: LineStringFeatures<LineStringPropertiesV2> = emptyLineStringFeatureCollection(0);
 
 addEventListener('message', ({ data }) => {
 
@@ -34,17 +33,18 @@ addEventListener('message', ({ data }) => {
 // Work on getting aggregation layers working by saving the results in a singular data structure
 // consider offloading the work to another web worker.
 export async function setData(
-  fetchRequest: WorkerFetchRequest,
+  fetchRequest: WorkerFetchRequest
 ) {
   try {
     streamSubscription?.dispose();
 
-    // INFO:The url needs to be remained fixed to work in a webworker.
-    // Relative addresses won't work but this url will be proxied.
+    const url = isDevMode() ? "https://localhost:4200/api/MoveBank-Hub"
+      : "https://api.wildlife-tracker.com/api/MoveBank-Hub";
+
     const connection: signalR.HubConnection =
       new signalR.HubConnectionBuilder()
         .configureLogging(signalR.LogLevel.Debug)
-        .withUrl("https://localhost:4200/api/MoveBank-Hub", { withCredentials: false })
+        .withUrl(url, { withCredentials: false })
         .withHubProtocol(new MessagePackHubProtocol())
         .withStatefulReconnect()
         .build();
@@ -59,23 +59,37 @@ export async function setData(
         // NOTE:this operation should only be performed once.
         const decoded = msgPack.decode(response) as Array<number | string | unknown[]>;
         const featuresRes: LineStringFeatures<LineStringPropertiesV2> = parseMsgPackResponse(decoded);
-        handleFeatures(featuresRes);
-        handleEventAggregation(featuresRes);
+
+        handleFeatures(featuresRes, "BinaryLineString").then(res => {
+          if (res !== null) {
+            // TODO:Remove once all of the typedArray types have been written down.
+            // console.log(res);
+            postMessage(res[0], res[1]);
+          }
+        });
+
+        // TODO: Test the performance of this algorithm, if it is too slow
+        // then look up how to spawn a web worker here.
+        // allEvents.features.push(...featuresRes.features);
+        // allEvents.count = featuresRes.features.length;
+        // handleEventAggregation(allEvents).then(res => {
+        //   if (res !== null) {
+        //     postMessage(res[0], res[1]);
+        //   }
+        // });
       },
       complete: () => {
         // TODO:Consider writing another type to hold the information for the aggregated events.
         console.log("Stream successfully ended.");
-        allEvents = emptyFeatureCollection();
+        // allEvents = emptyLineStringFeatureCollection(0);
         postMessage({
           type: "StreamEnded"
         });
 
-        // postMessage({
-        //   type: ""
-        // });
       },
       error: (err: unknown) => {
         console.error(err);
+        // allEvents = emptyLineStringFeatureCollection(0);
         postMessage({
           type: "StreamError"
         });
@@ -87,36 +101,30 @@ export async function setData(
   }
 }
 
+export async function handleFeatures(
+  featuresRes: LineStringFeatures<LineStringPropertiesV2>,
+  responseType: "BinaryLineString" | "AggregatedEvents"
+):
+  Promise<[BinaryLineStringResponse<LineStringPropertiesV2>, ArrayBufferLike[]] | null> {
 
-// TODO:Consider if this function can be made into an async iterator so that deck.gl layers
-// can be imcrementally loaded.
-// This is done by by manually implementing next and return callback functions.
-async function handleFeatures(featuresRes: LineStringFeatures<LineStringPropertiesV2>) {
-// async function handleFeatures(featuresRes: LineStringFeatures<LineStringPropertiesV2>) {
-
-  if (featuresRes.count === 0) return;
-  handleEventAggregation(featuresRes);
+  if (featuresRes.count === 0) return null;
 
   const features = featuresRes.features;
 
   const binaryFeature = geojsonToBinary(features);
   const binaryLineFeatures: BinaryLineFeatures | undefined = binaryFeature.lines;
 
-  if (binaryLineFeatures === undefined || features.length === 0) return;
+  if (binaryLineFeatures === undefined || features.length === 0) return null;
 
   const binaryResponse = createBinaryResponse(
     binaryLineFeatures,
-    featuresRes);
+    featuresRes,
+    responseType);
 
-  // TODO: Consider posting another message containing the aggregated values.
-  postMessage(binaryResponse[0], binaryResponse[1]);
+  return binaryResponse;
 }
 
-// NOTE:A naive implemenation will have a O(n^2) runtime.
-// Offloading the work to another thread can prevent this worker from blocking
-function handleEventAggregation(collection: LineStringFeatures<LineStringPropertiesV2>) {
-  allEvents.features.push(...collection.features);
-}
+
 
 function parseMsgPackResponse(msg: Array<number | string | unknown[]>) {
   const features = msg[0] as object[][];
@@ -164,7 +172,8 @@ function parseMsgPackFeature(feature: Array<object>): LineStringFeature<LineStri
 
 export function createBinaryResponse(
   binaryLines: BinaryLineFeatures,
-  featureRes: LineStringFeatures<LineStringPropertiesV2>):
+  featureRes: LineStringFeatures<LineStringPropertiesV2>,
+  responseType: "BinaryLineString" | "AggregatedEvents"):
   [BinaryLineStringResponse<LineStringPropertiesV2>, ArrayBufferLike[]] {
 
   const properties = binaryLines.properties as NonNumericProps<LineStringPropertiesV2>[];
@@ -173,7 +182,7 @@ export function createBinaryResponse(
   // NOTE: The following returns the object being returns and an array of all the buffers within it.
   const numericPropsPairValue = extractNumericProps(binaryLines.numericProps);
   const response: BinaryLineStringResponse<LineStringPropertiesV2> = {
-    type: "BinaryLineString",
+    type: responseType,
     index: featureRes.index,
     length: featureRes.count,
     individualLocalIdentifier: featureRes.individualLocalIdentifier,
@@ -228,6 +237,7 @@ export function extractNumericProps(
     map.set(key, { size: value.size, value: value.value.buffer });
   }
 
+  // console.log(castedProps);
   const newObj = {
     sourceTimestamp: {
       size: castedProps.sourceTimestamp.size,
@@ -238,7 +248,7 @@ export function extractNumericProps(
       value: castedProps.destinationTimestamp.value.buffer
     },
     distanceKm: {
-      size: castedProps.distanceKm.size,
+      size: castedProps.distanceKm?.size ?? 2,
       value: castedProps.distanceKm.value.buffer
     },
     distanceTravelledKm: {
@@ -259,18 +269,27 @@ export function extractContent(properties: Array<NonNumericProps<LineStringPrope
 }
 
 export function randomColor(): [number, number, number, number] {
-  const color = [];
+  const color: [number, number, number, number] = [0, 0, 0, 0];
   for (let i = 0; i < 3; i++) {
-    color.push(Math.round(Math.random() * 255));
+    color[i] = Math.round(Math.random() * 255);
   }
-  color.push(255);
-  return color as [number, number, number, number];
+  color[3] = 255;
+  return color;
 }
 
 function GetBufferFromBinaryAttribute(attribute: BinaryAttribute): { size: number, value: ArrayBufferLike } {
   return {
     size: attribute.size,
     value: attribute.value.buffer
+  };
+}
+
+export function emptyLineStringFeatureCollection(count: number): LineStringFeatures<LineStringPropertiesV2> {
+  return {
+    features: [],
+    individualLocalIdentifier: "all",
+    index: 0,
+    count: count
   };
 }
 

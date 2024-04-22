@@ -18,12 +18,15 @@ namespace PersonalSiteAPI.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly IAmazonSecretsManager _amazonSecretsManager;
+        private readonly ILogger<SecretsController> _logger;
         public SecretsController(
             IConfiguration configuration,
-            IAmazonSecretsManager amazonSecretsManager)
+            IAmazonSecretsManager amazonSecretsManager,
+            ILogger<SecretsController> logger)
         {
             _configuration = configuration;
             _amazonSecretsManager = amazonSecretsManager;
+            _logger = logger;   
         }
 
         [HttpGet(Name = "GetSecrets")]
@@ -32,6 +35,7 @@ namespace PersonalSiteAPI.Controllers
         {
             try
             {
+                _logger.LogDebug("Attempting to retrieve secrets from amazon configurations");
                 GetSecretValueRequest request = new GetSecretValueRequest
                 {
                     SecretId = "WebSiteKeys",
@@ -42,6 +46,7 @@ namespace PersonalSiteAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex.Message);
                 return BadRequest(ex.Message);
             }
         }

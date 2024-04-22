@@ -92,7 +92,6 @@ export class MapboxComponent implements OnInit, OnChanges {
   }
 
   ngOnInit(): void {
-    // this.initializeMap();
     return;
   }
 
@@ -113,7 +112,7 @@ export class MapboxComponent implements OnInit, OnChanges {
         container: 'map',
         style: "mapbox://styles/feliricki/cltqf12yx00p301p5dq5hcmiv",
         center: [0, 0],
-        zoom: 5,
+        // zoom: 20,
       });
 
       // TODO:Add some controls for resetting the position back to the default.
@@ -122,7 +121,7 @@ export class MapboxComponent implements OnInit, OnChanges {
         .addControl(new mapboxgl.NavigationControl())
         .addControl(new mapboxgl.ScaleControl())
         .addControl(new mapboxgl.GeolocateControl())
-        .addControl(new mapboxgl.FullscreenControl())
+        .addControl(new mapboxgl.FullscreenControl());
 
       this.map.on('load', () => {
         if (!this.map) {
@@ -385,7 +384,6 @@ export class MapboxComponent implements OnInit, OnChanges {
     this.snackbar.openFromComponent(SnackbarComponent, { duration: timeLimit * 1000, data: message });
   }
 
-  // BUG:This will sometimes glitch the map resulting in repeated button presses.
   panToPoint(studyId: bigint): void {
     if (!this.map || !this.studies) return;
     // NOTE:In this method I would want the coordinates of the study's location.
