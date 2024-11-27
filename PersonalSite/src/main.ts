@@ -11,7 +11,7 @@ import { provideServiceWorker } from '@angular/service-worker';
 
 bootstrapApplication(AppComponent, {
   providers: [
-    importProvidersFrom(BrowserModule, HttpClientJsonpModule, FormsModule, ReactiveFormsModule, AppRoutingModule),
+    importProvidersFrom(BrowserModule, FormsModule, ReactiveFormsModule, AppRoutingModule),
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     provideHttpClient(withInterceptorsFromDi()),
     provideAnimations(),
