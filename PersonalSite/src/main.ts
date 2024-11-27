@@ -5,7 +5,7 @@ import { AppRoutingModule } from './app/app-routing.module';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { BrowserModule, bootstrapApplication } from '@angular/platform-browser';
 import { AuthInterceptor } from './app/auth/auth.interceptor';
-import { HTTP_INTERCEPTORS, withInterceptorsFromDi, provideHttpClient, HttpClientJsonpModule } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, withInterceptorsFromDi, provideHttpClient } from '@angular/common/http';
 import { provideServiceWorker } from '@angular/service-worker';
 
 

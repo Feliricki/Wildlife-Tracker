@@ -72,26 +72,6 @@ namespace PersonalSiteAPI.Hubs
                 yield break;
             }
 
-            //List<string> afterFiltering = [];
-            //Dictionary<string, List<LineStringFeatures>> foundEventPairs = [];
-            //foreach (string localIdentifier in localIdentifiers)
-            //{
-            //    if (!cachingService.TryGetIndividualEvents(request.StudyId, localIdentifier, request.Options.EventProfile, out List<LineStringFeatures> foundEvents))
-            //    {
-            //        afterFiltering.Add(localIdentifier);
-            //    }
-            //    else
-            //    {
-            //        foundEventPairs.Add(localIdentifier, foundEvents);
-            //    }
-            //}
-
-            //request.LocalIdentifiers = afterFiltering;
-
-            //Console.WriteLine($"New request after filtering is " + JsonConvert.SerializeObject(request));
-            //Console.WriteLine("Found events for individuals: [ " + string.Join(", ", foundEventPairs.Keys) + " ]");
-
-
             // TODO: Decide if this http call still needs to be made if all requested individuals are cached.
             HttpResponseMessage? response = await moveBankService.DirectRequestEvents(request);
             if (response is null)

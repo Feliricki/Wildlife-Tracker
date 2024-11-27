@@ -335,7 +335,6 @@ export class MapboxComponent implements OnInit, OnChanges {
 
             case "error":
               this.emitStreamStatus("error");
-              // TODO:Snackbar needs to be opened
               break;
             case "streaming":
               this.emitStreamStatus("streaming");

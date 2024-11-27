@@ -360,6 +360,8 @@ export class DeckOverlayController {
     this.currentMetaData.set(structuredClone(this.MetadataDefaultOptions));
     this.currentIndividuals.set(new Set());
     this.deckOverlay?.finalize();
+
+    console.log("Releasing all release in deckOvelayController.");
   }
 
   createOverlay(overlayType: OverlayTypes): GoogleMapsOverlay | MapboxOverlay {
@@ -465,7 +467,7 @@ export class DeckOverlayController {
       this.webWorker.postMessage({ data: workerRequest, type: "FetchRequest" as const });
     }
     else {
-      // TODO:This case is untested.
+
       this.sendFetchRequest(request).then(lineStringResponse => {
         if (lineStringResponse === null) return;
         // const responses = lineStringResponse as Array<[BinaryLineStringResponse<LineStringPropertiesV2>, ArrayBufferLike[]]>;
@@ -481,8 +483,6 @@ export class DeckOverlayController {
   }
 
   async sendFetchRequest(request: EventRequest)
-  // : Promise<[BinaryLineStringResponse<LineStringPropertiesV2>, ArrayBufferLike[]] | null> {{
-  // TODO:Make sure that the geometry type is set to recieve geojson data.
   {
     try {
 
@@ -504,7 +504,6 @@ export class DeckOverlayController {
       });
 
       const collections = await response.json() as Array<LineStringFeatureCollection<LineStringPropertiesV2>>;
-      // console.log(collections);
 
       // BUG:Type Error: map is not a function
       const lineStringResponses = collections.map((collection, index) => {
@@ -717,6 +716,8 @@ export class DeckOverlayController {
       return prev;
     });
 
+    // console.log(`Current number of individuals is ${this.currentIndividuals().size}`);
+
     this.currentMetaData.update(prev => {
       return {
         numberOfEvents: prev.numberOfEvents + binaryLineFeatures.length,
@@ -734,7 +735,7 @@ export class DeckOverlayController {
     if (this.isAggregationLayer(this.currentLayer)) {
       // TODO:Test this function using various aggregation layers.
       // NOTE: All of the positions and pathIndices up unitl this point are used in a single layer.
-      console.log("Creating aggregation layer in deckOverlaycontroller");
+      // console.log("Creating aggregation layer in deckOverlaycontroller");
       layers = [this.createActiveLayer(
         this.currentLayer,
         this.processBinaryData(this.cumulativeData as BinaryLineStringResponse<LineStringPropertiesV2>), 0)];
@@ -863,8 +864,6 @@ export class DeckOverlayController {
       colorFormat: "RGBA",
       pickable: this.currentLayer === LayerTypes.ArcLayer,
       visible: this.currentLayer === LayerTypes.ArcLayer,
-      // getWidth: 3,
-      // widthMinPixels: 1,
       updateTriggers: {
         visible: this.currentLayer,
         pickable: this.currentLayer
@@ -958,7 +957,6 @@ export class DeckOverlayController {
     return new ScatterplotLayer(scatterplotProps);
   }
 
-  // BUG:This layer currently always fallbacks to CPU aggregation slowing down the UI.
   createHeatmapLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
     const BYTE_SIZE = 4;
     const positions = binaryFeatures.positions;
@@ -988,7 +986,6 @@ export class DeckOverlayController {
       // weightsTextureSize: 512,
       visible: this.currentLayer === LayerTypes.HeatmapLayer,
       getWeight: 1,
-      // debounceTimeout: 1000 * 1, // TODO: This needs to adjusted.
       updateTriggers: {
         visible: this.currentLayer,
         pickable: this.currentLayer

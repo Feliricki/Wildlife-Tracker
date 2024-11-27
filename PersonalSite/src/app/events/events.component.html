@@ -464,7 +464,7 @@
 
         <div class="label-container">
           <!-- NOTE:FIELD Name: widthUnits-->
-          <mat-form-field id="dropdown-path-1">
+          <mat-form-field id="aggregation-dropdown1">
             <mat-label>Units</mat-label>
             <mat-select id="unit-dropdown" #PathDropdown [disabled]="currentEventData === undefined"
               (valueChange)="pathControlChange($event, 'widthUnits')">
@@ -473,7 +473,7 @@
             </mat-select>
           </mat-form-field>
 
-          <mat-form-field class="tooltip-dropdown">
+          <mat-form-field class="tooltip-dropdown" id="aggregation-dropdown2">
             <mat-label>Tooltip Visibility</mat-label>
             <mat-select (valueChange)="pathControlChange($event, 'toggleTooltip')"
               [disabled]="currentEventData === undefined">
@@ -580,7 +580,7 @@
 
         @case ("aggregation") {
 
-        <div class="aggregation-first-row">
+        <div class="label-container">
           <mat-form-field id="aggregation-dropdown-1">
 
             <!-- NOTE:This field is called 'aggregation' for the -->

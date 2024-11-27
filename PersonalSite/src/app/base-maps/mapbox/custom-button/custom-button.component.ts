@@ -80,10 +80,8 @@ export class CustomButtonComponent {
     }
 
     this.map.on('style.load', () => {
-      console.log('Calling style loaded callback function.');
 
       if (!this.map || !this.collection) {
-        console.log(`Loaded style with falsy values for map or collection`);
         return;
       }
       if (!this.map.getSource('mapbox-dem')) {
@@ -102,12 +100,10 @@ export class CustomButtonComponent {
       });
 
       // NOTE:This sets the studies source and layers.
-      // console.log(`About to set source layers in style loaded callback function.`);
       setSourceLayers(this.map, this.collection, "studies", this.studiesVisible);
     });
 
     this.initializedCallback = true;
-    console.log(`Initialized map callback function and sources.`);
   }
 
   toggleTerrain(): void {
@@ -159,7 +155,6 @@ export class CustomButtonComponent {
       this.currentMapStyle = newStyle;
       this.currentLayerType = layer;
       this.map.setStyle(this.currentMapStyle);
-      // setSourceLayers(this.map, this.collection, 'studies', this.studiesVisible);
     }
   }
 }

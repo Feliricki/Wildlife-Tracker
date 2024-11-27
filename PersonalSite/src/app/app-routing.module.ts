@@ -6,7 +6,7 @@ import { ReferenceComponent} from "./static-pages/references/reference.component
 import {PageNotFoundComponent} from "./page-not-found/page-not-found.component";
 // import { SuggestionsComponent } from './static-pages/suggestions/suggestions.component';
 
-const routes: Routes = [
+const routes: Routes = [  
   { path: '', component: HomeComponent, pathMatch: 'full' },
   { path: 'references', component: ReferenceComponent },
   { path: 'login', component: LoginComponent },

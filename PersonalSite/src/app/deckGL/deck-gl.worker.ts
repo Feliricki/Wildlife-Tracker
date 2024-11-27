@@ -67,21 +67,9 @@ export async function setData(
             postMessage(res[0], res[1]);
           }
         });
-
-        // TODO: Test the performance of this algorithm, if it is too slow
-        // then look up how to spawn a web worker here.
-        // allEvents.features.push(...featuresRes.features);
-        // allEvents.count = featuresRes.features.length;
-        // handleEventAggregation(allEvents).then(res => {
-        //   if (res !== null) {
-        //     postMessage(res[0], res[1]);
-        //   }
-        // });
       },
       complete: () => {
         // TODO:Consider writing another type to hold the information for the aggregated events.
-        console.log("Stream successfully ended.");
-        // allEvents = emptyLineStringFeatureCollection(0);
         postMessage({
           type: "StreamEnded"
         });
@@ -89,7 +77,6 @@ export async function setData(
       },
       error: (err: unknown) => {
         console.error(err);
-        // allEvents = emptyLineStringFeatureCollection(0);
         postMessage({
           type: "StreamError"
         });

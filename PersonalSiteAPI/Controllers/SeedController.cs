@@ -56,7 +56,7 @@ namespace PersonalSiteAPI.Controllers
                 await _roleManager.CreateAsync(new IdentityRole(RoleNames.Administrator));
                 rolesCreated++;
             }
-
+    
             if (await _roleManager.FindByNameAsync(RoleNames.Moderator) == null)
             {
                 await _roleManager.CreateAsync(new IdentityRole(RoleNames.Moderator));

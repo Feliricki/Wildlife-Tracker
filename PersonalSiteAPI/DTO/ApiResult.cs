@@ -67,13 +67,6 @@ namespace PersonalSiteAPI.DTO
 
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery) && IsValidProperty(filterColumn))
             {
-                //if (queryable is IEnumerable<StudyDTO> studyQueryable)
-                //{
-                //    queryable = (IQueryable<T>)studyQueryable.Where(s => s.Name.Contains(filterQuery, StringComparison.InvariantCultureIgnoreCase));
-                //}
-                //queryable = queryable.Where(
-                //    string.Format("{0}.StartsWith(@0, @1)", filterColumn), filterQuery, StringComparison.InvariantCultureIgnoreCase);
-
                 queryable = queryable.Where(
                     string.Format("{0}.Contains(@0, @1)", filterColumn), filterQuery, StringComparison.InvariantCultureIgnoreCase);
             }
