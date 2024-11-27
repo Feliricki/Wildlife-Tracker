@@ -1,12 +1,6 @@
 ﻿using Amazon.SecretsManager;
 using Amazon.SecretsManager.Model;
-using Amazon.SecurityToken;
-using Amazon.SecurityToken.Model;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Amazon.S3;
-using PersonalSiteAPI.Services;
-using Amazon;
 using Microsoft.AspNetCore.Authorization;
 using PersonalSiteAPI.Constants;
 
