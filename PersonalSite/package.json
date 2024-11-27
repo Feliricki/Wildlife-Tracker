@@ -24,7 +24,6 @@
     "@angular/platform-browser-dynamic": "^18.0.4",
     "@angular/router": "^18.0.4",
     "@angular/service-worker": "^18.0.4",
-    "@azure/ng-deploy": "^0.2.3",
     "@googlemaps/js-api-loader": "^1.16.2",
     "@googlemaps/markerclusterer": "^2.5.2",
     "@microsoft/signalr": "^8.0.0",
