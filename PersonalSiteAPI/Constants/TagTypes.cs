@@ -13,8 +13,8 @@ namespace PersonalSiteAPI.Constants
     }
     public class TagTypes
     {
-        private static List<TagInfo> SensorInformation = new List<TagInfo>()
-        {
+        private static readonly List<TagInfo> SensorInformation =
+        [
             new TagInfo()
             {
                 Description = null,
@@ -159,7 +159,7 @@ namespace PersonalSiteAPI.Constants
                 IsLocationSensor = false,
                 Name = "Proximity"
             },
-        };
+        ];
         private static readonly HashSet<string> locationSensors = new HashSet<string>()
         {
             "GPS",

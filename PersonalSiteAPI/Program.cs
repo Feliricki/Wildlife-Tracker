@@ -10,7 +10,6 @@ using Mapster;
 using PersonalSiteAPI.Mappings;
 using PersonalSiteAPI.Hubs;
 using PersonalSiteAPI.Models.Email;
-using MailKit;
 using Microsoft.AspNetCore.Diagnostics;
 
 
@@ -53,9 +52,8 @@ builder.Services.AddControllers(options =>
         new CacheProfile() { Location = ResponseCacheLocation.Any, Duration = 60 * 5 });
 });
 
-builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
-builder.Services.Configure<MailRecipient>(builder.Configuration.GetSection("MailRecipient"));
-builder.Services.AddTransient<IEmailService, EmailService>();
+//builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
+//builder.Services.Configure<MailRecipient>(builder.Configuration.GetSection("MailRecipient"));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -137,7 +135,6 @@ builder.Services.AddScoped<JwtHandler>();
 
 // Amazon Key Vault Services
 var options = builder.Configuration.GetAWSOptions();
-// Console.WriteLine(options.Credentials);
 builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
 
 builder.Services.AddAWSService<IAmazonSecretsManager>();
@@ -189,7 +186,7 @@ if (app.Environment.IsDevelopment())
 else
 {
     // NOTE:Production settings.
-    app.UseExceptionHandler("/Error ");
+    app.UseExceptionHandler("/Error");
     app.MapGet("/Error", (HttpContext context) => {
         var exceptionHandler =
             context.Features.Get<IExceptionHandlerPathFeature>();

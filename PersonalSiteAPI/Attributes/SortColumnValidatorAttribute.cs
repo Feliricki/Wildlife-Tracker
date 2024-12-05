@@ -1,16 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace MyBGList.Attributes
+namespace PersonalSiteAPI.Attributes
 {
     public class SortColumnValidatorAttribute : ValidationAttribute
     {
         public Type EntityType { get; set; }
 
         public SortColumnValidatorAttribute(Type entityType)
-            : base("Value must match an existing column.")
-        {
-            EntityType = entityType;
-        }
+            : base("Value must match an existing column.") => EntityType = entityType;
 
         protected override ValidationResult? IsValid(
             object? value,

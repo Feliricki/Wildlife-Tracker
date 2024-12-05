@@ -1,9 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using PersonalSiteAPI.Constants;
-using PersonalSiteAPI.Models.Email;
-using PersonalSiteAPI.Services;
 using System.ComponentModel.DataAnnotations;
 
 namespace PersonalSiteAPI.Controllers
@@ -12,11 +9,9 @@ namespace PersonalSiteAPI.Controllers
     [ApiController]
     public class UserInputController : ControllerBase
     {
-        private readonly IEmailService _emailService;
         private readonly ILogger<UserInputController> _logger;
-        public UserInputController(IEmailService emailService, ILogger<UserInputController> logger)
+        public UserInputController(ILogger<UserInputController> logger)
         {
-            _emailService = emailService;
             _logger = logger;
         }
 
@@ -32,12 +27,10 @@ namespace PersonalSiteAPI.Controllers
             [MaxLength(10000)]
             string content)
         {
-            // TODO: the purpose of this method is to send an email to my work email
-            // make sure that inputs are being throttled
-            // perhaps I should implement a banlist on my database
+            // TODO: Purpose is to send emails. Not currently being used.
             _logger.LogWarning("Calling authorization only method Suggestions in UserInputController");
-            var result = await _emailService.SendMailToMeAsync(email, content);
-            return Ok(result);
+            await Task.CompletedTask;
+            return Ok();
         }
     }
 }

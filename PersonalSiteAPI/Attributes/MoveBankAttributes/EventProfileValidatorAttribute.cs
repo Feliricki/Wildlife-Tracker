@@ -4,7 +4,7 @@ namespace PersonalSiteAPI.Attributes.MoveBankAttributes
 {
     public class EventProfileValidatorAttribute : ValidationAttribute
     {
-        public string[] AllowedValues { get; set; } = new string[] { "EURING_01" , "EURING_02", "EURING_03", "EURING_04" };
+        public string[] AllowedValues { get; set; } = ["EURING_01" , "EURING_02", "EURING_03", "EURING_04"];
 
         public EventProfileValidatorAttribute(): base("Every value must be one of the following: {0}.") { }
 
