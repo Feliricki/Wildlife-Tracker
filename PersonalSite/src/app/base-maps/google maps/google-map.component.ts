@@ -301,18 +301,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           position: google.maps.ControlPosition.BOTTOM_RIGHT,
         };
 
-        // this.defaultMapOptions.zoomControl = true;
-        // this.defaultMapOptions.zoomControlOptions = {
-        //   // position: google.maps.ControlPosition.BLOCK_END_INLINE_CENTER,
-        //   position: google.maps.ControlPosition.BLOCK_START_INLINE_CENTER
-        // }
-
-
-        // this.defaultMapOptions.streetViewControl = true;
-        // this.defaultMapOptions.streetViewControlOptions = {
-        //   position: google.maps.ControlPosition.INLINE_START_BLOCK_CENTER,
-        // };
-
         this.map = new google.maps.Map(mapEl as HTMLElement, this.defaultMapOptions);
 
         this.infoWindow = new google.maps.InfoWindow({
@@ -412,8 +400,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           // }
         });
 
-        // console.log(`Total number of coordinates: ${coordinates.size} Number of studies: ${this.studies.size}`)
-
         this.initializeDeckOverlay(this.map);
         this.mapState.set('loaded');
         this.sendMapState(true);
@@ -455,8 +441,8 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
           // TODO: Finish this method and also remove the snack bar button.
           const numIndividuals = this.deckOverlay?.CurrentIndividuals().size ?? 0;
           switch (status) {
+
             case "standby":
-              // console.log("Google Maps Component: Instantiating signalr client or finished streaming events from a data source.");
               this.emitStreamStatus("standby");
               if (numIndividuals === 0) {
                 this.openSnackBar("No Events Found.");
@@ -466,13 +452,11 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
               break;
 
             case "error":
-              // console.log("Google Map Component Overlay Status: Error");
               this.emitStreamStatus("error");
               this.openSnackBar("Error retrieving events.");
               break;
 
             case "streaming":
-              // console.log("Google Map Component Overlay Status: Streaming");
               this.emitStreamStatus("streaming");
               break;
 
@@ -498,7 +482,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     return infoWindowEl;
   }
 
-  // TODO:The component needs to deal with the case when retrieving the individuals results in an error.
   getJsonData(entityType: "study" | "individual" | "tag", studyId: bigint): Observable<JsonResponseData[]> {
     return this.studyService.jsonRequest(entityType, studyId);
   }
