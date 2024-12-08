@@ -52,8 +52,6 @@ namespace PersonalSiteAPI.Controllers
     [ResponseCache(CacheProfileName = "NoCache")]
     public async Task<ActionResult<LoginResultDTO>> Login(LoginRequestDTO loginRequest)
     {
-      // TODO: Change tab width for C# files
-      // Finish frontend service
       try
       {
         //Console.WriteLine($"Got login request {JsonSerializer.Serialize(loginRequest)}");

@@ -1,0 +1,97 @@
+{
+  "configVersion": 1,
+  "timestamp": 1733443632318,
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "cacheQueryOptions": {
+        "ignoreVary": true
+      },
+      "urls": [
+        "/307.1ea49c7d7da784d9.js",
+        "/favicon.ico",
+        "/index.html",
+        "/main.59c3d1e18da4ab68.js",
+        "/manifest.webmanifest",
+        "/polyfills.66c0dc7a6e8d814e.js",
+        "/runtime.4bf2f2938fe13e01.js",
+        "/styles.0608c85c279c6d3c.css"
+      ],
+      "patterns": []
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "cacheQueryOptions": {
+        "ignoreVary": true
+      },
+      "urls": [
+        "/assets/icons/icon-128x128.png",
+        "/assets/icons/icon-144x144.png",
+        "/assets/icons/icon-152x152.png",
+        "/assets/icons/icon-192x192.png",
+        "/assets/icons/icon-384x384.png",
+        "/assets/icons/icon-512x512.png",
+        "/assets/icons/icon-72x72.png",
+        "/assets/icons/icon-96x96.png",
+        "/assets/location-pin-noglyph-smaller.png",
+        "/assets/location-pin2-small.png",
+        "/assets/location-pin2.png",
+        "/assets/scripts/signalr.js",
+        "/assets/scripts/signalr.js.map",
+        "/assets/scripts/signalr.min.js",
+        "/assets/scripts/signalr.min.js.map"
+      ],
+      "patterns": []
+    }
+  ],
+  "dataGroups": [],
+  "hashTable": {
+    "/307.1ea49c7d7da784d9.js": "b56e346ed4624d934b48d22d74034dd6bba3433b",
+    "/assets/icons/icon-128x128.png": "f912963bdc6d5a38d8f1dd0afbaab2ce8d657acb",
+    "/assets/icons/icon-144x144.png": "b155fd5f2fd5d2ea7760721063003c4cd95fd783",
+    "/assets/icons/icon-152x152.png": "eae6e0f0c8afb8aaae339e2a569b43e9238e5e6c",
+    "/assets/icons/icon-192x192.png": "15c4180454633880d98674aa7394656196c91584",
+    "/assets/icons/icon-384x384.png": "94a915751ef6c9282df9aea405ad679230631814",
+    "/assets/icons/icon-512x512.png": "1de182f76f7329dfa8f9fcdd1fdcdd695bea6a99",
+    "/assets/icons/icon-72x72.png": "aa88a6096bd973be7f6d7a5489bfa6bc2463f8c4",
+    "/assets/icons/icon-96x96.png": "7fb8f59c30ce2ff12c700321a0b39e14b3dc8f95",
+    "/assets/location-pin-noglyph-smaller.png": "85942052f4abde69b80b38d0db6ca08901dbbe03",
+    "/assets/location-pin2-small.png": "1f097d4f32eeee07a76b25aaaedec19ad3b64700",
+    "/assets/location-pin2.png": "c4745c5e67758a4a662067718f073305829b1208",
+    "/assets/scripts/signalr.js": "1b8af8804fe46740b4feb969a700486d696ff72a",
+    "/assets/scripts/signalr.js.map": "941403e4cfc325440f4956d407ecadbf95601eea",
+    "/assets/scripts/signalr.min.js": "8a440cf4d856bd1b33825e81a849f81aabc2cbc6",
+    "/assets/scripts/signalr.min.js.map": "99b4e77b123b8421aa6a82b658307c28df495fb2",
+    "/favicon.ico": "22f6a4a3bcaafafb0254e0f2fa4ceb89e505e8b2",
+    "/index.html": "68015c9a1fb744ff3a54b24078dd0420d3ff957d",
+    "/main.59c3d1e18da4ab68.js": "e288a77f71e55b5081371745158c6d18f616d881",
+    "/manifest.webmanifest": "34bc4304bff4f552839cc273dd986648a86a0496",
+    "/polyfills.66c0dc7a6e8d814e.js": "aed332fcbcb594326611a5b06083210bd7689b98",
+    "/runtime.4bf2f2938fe13e01.js": "fdd064581ada0d347c31eabeead3562efbb862f2",
+    "/styles.0608c85c279c6d3c.css": "38c113546f7bacf3fa1a1108d5f19a1e9aeef3c3"
+  },
+  "navigationUrls": [
+    {
+      "positive": true,
+      "regex": "^\\/.*$"
+    },
+    {
+      "positive": false,
+      "regex": "^\\/(?:.+\\/)?[^/]*\\.[^/]*$"
+    },
+    {
+      "positive": false,
+      "regex": "^\\/(?:.+\\/)?[^/]*__[^/]*$"
+    },
+    {
+      "positive": false,
+      "regex": "^\\/(?:.+\\/)?[^/]*__[^/]*\\/.*$"
+    }
+  ],
+  "navigationRequestStrategy": "performance"
+}
