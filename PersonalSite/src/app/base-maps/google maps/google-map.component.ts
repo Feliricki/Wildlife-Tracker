@@ -282,136 +282,144 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
       marker: markerRes$,
       studies: studies$,
 
-    }).subscribe({
-      next: (objRes) => {
-        this.mapState.set('loading');
+    })
+      .subscribe({
+        next: (objRes) => {
+          this.mapState.set('loading');
 
-        console.log("Successfully loaded google maps markers and map.")
-        const mapEl = document.getElementById("map");
+          console.log("Successfully loaded google maps markers and map.")
+          const mapEl = document.getElementById("map");
 
-        // NOTE:Write a custom controller to prevent excessively flickering.
-        this.defaultMapOptions.mapTypeControl = false;
-        this.defaultMapOptions.mapTypeControlOptions = {
-          style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-          position: google.maps.ControlPosition.TOP_CENTER,
-        };
+          // NOTE:Write a custom controller to prevent excessively flickering.
+          this.defaultMapOptions.mapTypeControl = false;
+          this.defaultMapOptions.mapTypeControlOptions = {
+            style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+            position: google.maps.ControlPosition.TOP_CENTER,
+          };
 
-        this.defaultMapOptions.fullscreenControl = true;
-        this.defaultMapOptions.fullscreenControlOptions = {
-          position: google.maps.ControlPosition.BOTTOM_RIGHT,
-        };
+          this.defaultMapOptions.fullscreenControl = true;
+          this.defaultMapOptions.fullscreenControlOptions = {
+            position: google.maps.ControlPosition.BOTTOM_RIGHT,
+          };
 
-        this.map = new google.maps.Map(mapEl as HTMLElement, this.defaultMapOptions);
 
-        this.infoWindow = new google.maps.InfoWindow({
-          disableAutoPan: true,
-        });
-
-        this.infoWindow.set("toggle", false);
-        this.infoWindow.set("studyId", -1n);
-
-        const studyDTOs = objRes.studies;
-
-        const mappings = new Map<bigint, StudyDTO>();
-        studyDTOs.forEach(studyDTO => {
-          mappings.set(studyDTO.id, studyDTO);
-        });
-        this.studies = mappings;
-
-        this.emitStudies(this.studies);
-        const markers = new Map<bigint, google.maps.marker.AdvancedMarkerElement>();
-        const coordinates = new Set<string>();
-        for (const studyDTO of this.studies.values()) {
-
-          if (studyDTO.mainLocationLon === undefined || studyDTO.mainLocationLat === undefined) {
-            continue;
-          }
-
-          // INFO:Prevent markers from overlapping too much.
-          let key = `${studyDTO.mainLocationLon.toString()},${studyDTO.mainLocationLat.toString()}`;
-          while (coordinates.has(key)) {
-            studyDTO.mainLocationLon += 0.002;
-            key = `${studyDTO.mainLocationLon.toString()},${studyDTO.mainLocationLat.toString()}`;
-          }
-          coordinates.add(key);
-
-          const imageIcon = document.createElement('img');
-          imageIcon.src = '../../assets/location-pin2-small.png';
-
-          const marker = new google.maps.marker.AdvancedMarkerElement({
-            map: this.map,
-            content: imageIcon,
-            position: {
-              lat: studyDTO.mainLocationLat,
-              lng: studyDTO.mainLocationLon
-            },
-            title: studyDTO.name,
+          this.map = new google.maps.Map(mapEl as HTMLElement, this.defaultMapOptions);
+          this.map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(this.hintControl());
+          this.infoWindow = new google.maps.InfoWindow({
+            disableAutoPan: true,
           });
 
-          // NOTE: This is where the info window logic is handled.
-          marker.addListener("click", () => {
+          this.infoWindow.set("toggle", false);
+          this.infoWindow.set("studyId", -1n);
 
-            if (this.infoWindow === undefined) {
-              return;
+          const studyDTOs = objRes.studies;
+
+          const mappings = new Map<bigint, StudyDTO>();
+          studyDTOs.forEach(studyDTO => {
+            mappings.set(studyDTO.id, studyDTO);
+          });
+          this.studies = mappings;
+
+          this.emitStudies(this.studies);
+          const markers = new Map<bigint, google.maps.marker.AdvancedMarkerElement>();
+          const coordinates = new Set<string>();
+          for (const studyDTO of this.studies.values()) {
+
+            if (studyDTO.mainLocationLon === undefined || studyDTO.mainLocationLat === undefined) {
+              continue;
             }
-            // console.log(`Clicked marker with id = ${studyDTO.id} Contained in markers = ${this.markers?.has(studyDTO.id)}`);
-            // console.log(this.mapCluster);
-            // NOTE: If a marker is clicked then close another instance of the info window component
-            if (this.infoWindow.get("studyId") !== undefined
-              && this.infoWindow.get("studyId") === studyDTO.id
-              && this.infoWindow.get("toggle") === true) {
+
+            // INFO:Prevent markers from overlapping too much.
+            let key = `${studyDTO.mainLocationLon.toString()},${studyDTO.mainLocationLat.toString()}`;
+            while (coordinates.has(key)) {
+              studyDTO.mainLocationLon += 0.002;
+              key = `${studyDTO.mainLocationLon.toString()},${studyDTO.mainLocationLat.toString()}`;
+            }
+            coordinates.add(key);
+
+            const imageIcon = document.createElement('img');
+            imageIcon.src = '../../assets/location-pin2-small.png';
+
+            const marker = new google.maps.marker.AdvancedMarkerElement({
+              map: this.map,
+              content: imageIcon,
+              position: {
+                lat: studyDTO.mainLocationLat,
+                lng: studyDTO.mainLocationLon
+              },
+              title: studyDTO.name,
+            });
+
+            // NOTE: This is where the info window logic is handled.
+            marker.addListener("click", () => {
+
+              if (this.infoWindow === undefined) {
+                return;
+              }
+              // console.log(`Clicked marker with id = ${studyDTO.id} Contained in markers = ${this.markers?.has(studyDTO.id)}`);
+              // console.log(this.mapCluster);
+              // NOTE: If a marker is clicked then close another instance of the info window component
+              if (this.infoWindow.get("studyId") !== undefined
+                && this.infoWindow.get("studyId") === studyDTO.id
+                && this.infoWindow.get("toggle") === true) {
+                this.infoWindow.close();
+                this.infoWindow.set("toggle", false);
+                return;
+              }
+
+              // If the same marker is clicked again then toggle the current state of the
+              // info window component.
               this.infoWindow.close();
-              this.infoWindow.set("toggle", false);
-              return;
-            }
 
-            // If the same marker is clicked again then toggle the current state of the
-            // info window component.
-            this.infoWindow.close();
+              this.infoWindow.setContent(this.buildInfoWindowContent(studyDTO));
 
-            this.infoWindow.setContent(this.buildInfoWindowContent(studyDTO));
+              this.infoWindow.set("toggle", !this.infoWindow.get("toggle"));
+              this.infoWindow.set("studyId", studyDTO.id);
+              this.infoWindow.open(this.map, marker);
+            });
 
-            this.infoWindow.set("toggle", !this.infoWindow.get("toggle"));
-            this.infoWindow.set("studyId", studyDTO.id);
-            this.infoWindow.open(this.map, marker);
+            markers.set(studyDTO.id, marker);
+          }
+
+          this.markers = markers;
+          console.log('About to instantiate mapCluser with markers');
+          console.log(this.markers);
+          this.mapCluster = new MarkerClusterer({
+
+            map: this.map,
+            markers: Array.from(markers.values()),
+            renderer: new CustomRenderer1(),
+            algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
+
+            // onClusterClick: (_, cluster, map) => {
+            //   // if (this.infoWindow && this.infoWindow.get("toggle") === true) {
+            //   //   // console.log("Closing any active info windows.");
+            //   //   this.infoWindow.close();
+            //   //   this.infoWindow.set("toggle", false);
+            //   //   this.infoWindow.set("studyId", -1n);
+            //   // }
+            //   map.fitBounds(cluster.bounds as google.maps.LatLngBounds);
+            // }
           });
 
-          markers.set(studyDTO.id, marker);
+          this.initializeDeckOverlay(this.map);
+          this.mapState.set('loaded');
+          this.sendMapState(true);
+        },
+        error: err => {
+          console.error(err);
+          this.mapState.set('error');
         }
-
-        this.markers = markers;
-        console.log('About to instantiate mapCluser with markers');
-        console.log(this.markers);
-        this.mapCluster = new MarkerClusterer({
-
-          map: this.map,
-          markers: Array.from(markers.values()),
-          renderer: new CustomRenderer1(),
-          algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
-
-          // onClusterClick: (_, cluster, map) => {
-          //   // if (this.infoWindow && this.infoWindow.get("toggle") === true) {
-          //   //   // console.log("Closing any active info windows.");
-          //   //   this.infoWindow.close();
-          //   //   this.infoWindow.set("toggle", false);
-          //   //   this.infoWindow.set("studyId", -1n);
-          //   // }
-          //   map.fitBounds(cluster.bounds as google.maps.LatLngBounds);
-          // }
-        });
-
-        this.initializeDeckOverlay(this.map);
-        this.mapState.set('loaded');
-        this.sendMapState(true);
-      },
-      error: err => {
-        console.error(err);
-        this.mapState.set('error');
-      }
-    });
+      });
     return true;
   }
 
+  hintControl(): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.textContent = "Hold shift to rotate";
+
+    return button;
+  }
 
   initializeDeckOverlay(map: google.maps.Map) {
     this.deckOverlay = new DeckOverlayController(map, this.selectedLayer);

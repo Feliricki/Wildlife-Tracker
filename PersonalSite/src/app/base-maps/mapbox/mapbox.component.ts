@@ -16,6 +16,7 @@ import { SnackbarComponent } from '../snackbar.component';
 import { LayerControl, setSourceLayers } from './layer-controls';
 import { ControlChange } from 'src/app/events/events.component';
 import { MatButtonModule } from '@angular/material/button';
+import { HintControl } from './hint-control';
 
 type MapState =
   'initial' |
@@ -140,7 +141,9 @@ export class MapboxComponent implements OnInit, OnChanges {
             }
 
             this.layerControl = new LayerControl(collection);
-            this.map = this.map.addControl(this.layerControl, "bottom-left");
+            this.map = this.map
+              .addControl(this.layerControl, "bottom-left")
+              .addControl(new HintControl(), "bottom-left");
 
             this.currentCollection = collection;
             this.studies = new Map<bigint, StudyDTO>();
