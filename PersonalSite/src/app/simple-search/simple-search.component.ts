@@ -55,7 +55,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
   autoComplete?: AutoComplete;
 
   defaultPageIndex = 0;
-  defaultPageSize = 10;
+  defaultPageSize = 20;
 
   defaultSortColumn = "name";
   defaultFilterColumn = "name";

@@ -28,10 +28,14 @@
   word-break: break-all;
 }
 
-.table-container {
-  position:relative;
-  max-height: 90vh;
-  overflow-y:scroll;
+table {
+  overflow-y: scroll;
+  max-height: calc(100vh - 1em);
+}
+
+.paginator {
+  position: sticky;
+  bottom: 0;
 }
 
 .mini-button {
@@ -46,11 +50,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-
-  // spinner {
-  //   display:fixed;
-  //   margin-top: 50vh;
-  // }
 }
 
 .close-button-container {
@@ -73,12 +72,6 @@
   left: 370px;
   background-color: white;
   color: black;
-}
-
-.paginator-container {
-  align-content: left;
-  justify-content: left;
-  justify-items: left;
 }
 
 .column-header {

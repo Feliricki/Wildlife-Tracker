@@ -108,8 +108,8 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   // at all possible
   readonly MAX_EVENTS_LIMIT = MAX_EVENTS;
   readonly tiles: Tile[] = [
-    { cols: 2, rows: 8, color: 'lightblue' },
-    { cols: 3, rows: 8, color: 'lightgreen' },
+    { cols: 4, rows: 1, color: 'lightblue' },
+    { cols: 6, rows: 1, color: 'lightgreen' },
   ];
 
   readonly eventProfilesOptions: EventProfile[] = [
@@ -270,16 +270,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   tableState$?: Observable<SourceState>;
   tableStateSubscription?: Subscription;
 
-  // TODO:Remove these objects from the templates
-  smallTabSize = {
-    // 'min-width': '150px',
-    // 'max-width': '290px',
-  }
-
-  largeTabSize = {
-    // 'width': '290px',
-  }
-
   fourthRowSmall = {
     'justify-content': 'left'
   }
@@ -303,9 +293,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   formSubscriptions: Subscription[] = [];
   // INFO:This group contains the overlay controls; one for each individual.
 
-  // pathDropdown: HTMLSelectElement;
-  // pointDropdown: HTMLSelectElement;
-  // aggregationDropdown: HTMLSelectElement;
   constructor(
     private studyService: StudyService,
     private formBuilder: FormBuilder,
@@ -692,22 +679,7 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     }
   }
 
-  // NOTE:This method is meant to be used in templates but may be prone to errors.
-  // formVisible(layerType: ActiveForm): Signal<boolean> {
-  //   return computed(() => {
-  //     let layerMatches = false;
-  //     if (layerType === "point") {
-  //       layerMatches = this.isPointLayer(this.CurrentActiveLayer());
-  //     }
-  //     else if (layerType === "path") {
-  //       layerMatches = this.isPathLayer(this.CurrentActiveLayer());
-  //     }
-  //     else if (layerType === "aggregation") {
-  //       layerMatches = this.isAggregationLayer(this.CurrentActiveLayer());
-  //     }
-  //     return layerMatches && this.currentEventData !== undefined;
-  //   });
-  // }
+  // TODO:the following methods are excesive. Move the functionality to a service
   emitControlChanges(changes: ControlChange): void {
     this.controlOptionsEmitter.emit(changes);
   }
@@ -806,18 +778,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
     } as AggregationOverlayOptions);
   }
 
-  // setMaxEventsValue(values: number) {
-  //   this.MaxEvents.setValue(value);
-  // }
-
-  // get dateRange() {
-  //   return this.eventForm.controls.dateRange;
-  // }
-
-  // get MaxEvents(): FormControl<number | null> {
-  //   return this.eventForm.controls.maxEvents;
-  // }
-
   get formEnabled(): Signal<boolean> {
     return computed(() => {
       return this.TableState() === "loaded"
@@ -855,15 +815,6 @@ export class EventsComponent implements OnInit, OnChanges, AfterViewInit, OnDest
   updateState(): void {
     this.tableSource;
   }
-
-  // toggleMaxEvents(): void {
-  //   this.maxEventsToggle.update(prev => !prev);
-  //   if (this.maxEventsToggle()) {
-  //     this.MaxEvents.disable();
-  //   } else {
-  //     this.MaxEvents.enable();
-  //   }
-  // }
 
   getIndividual(index: number): Signal<TagJsonDTO | IndividualJsonDTO | null> {
     return this.tableSource.getIndividual(index);

@@ -52,7 +52,8 @@ export class MapboxComponent implements OnInit, OnChanges {
   // just redo the component.
 
   // NOTE:Restricted mapbox key
-  mapboxToken = "pk.eyJ1IjoiZmVsaXJpY2tpIiwiYSI6ImNsdGRkYjZnZjAyOXcycXA3anN0ZHZqbW8ifQ.XHxBIr35WPQYtd9BshOTdA";
+  // mapboxToken = "pk.eyJ1IjoiZmVsaXJpY2tpIiwiYSI6ImNsdGRkYjZnZjAyOXcycXA3anN0ZHZqbW8ifQ.XHxBIr35WPQYtd9BshOTdA";
+  mapboxToken = "pk.eyJ1IjoiZmVsaXJpY2tpIiwiYSI6ImNsdGRkMWppMDA1ODUyanBmNWczZnp1c20ifQ.efFPdWGtuf6qkLsCo9KlqQ";
   mainSubscription?: Subscription;
 
   currentCollection?: GeoJSON.FeatureCollection<GeoJSON.Point, StudyDTO>;

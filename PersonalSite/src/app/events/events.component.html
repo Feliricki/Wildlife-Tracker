@@ -12,7 +12,7 @@
     <form [formGroup]="eventForm" class="grid-table-form-small" id="small-screen-table" (ngSubmit)="submitForm()">
 
       <div class="input-container">
-        <div class="dense-3" id="input-container"
+        <div class="dense-5" id="input-container"
           [ngStyle]="(screenChange | async) ? fourthRowSmall : fourthRowDefault">
 
           <!-- NOTE:Remove the None options here and on the backend server. -->
@@ -63,12 +63,13 @@
             <mat-checkbox [formControlName]="j" (click)="$event.stopPropagation()" (change)="toggleRow(j)"
               [id]="j"></mat-checkbox>
           </td>
-          <td mat-footer-cell *matFooterCellDef>
-            <button mat-raised-button class="submit-button" [disabled]="TableState() !== 'loaded' || eventForm.invalid"
-              color="primary" type="submit">
-              Submit
-            </button>
-          </td>
+          <!--- TODO: Move the button to a sticky element at the end of the table tag -->
+          <!-- <td mat-footer-cell *matFooterCellDef> -->
+          <!--   <button mat-raised-button class="submit-button" [disabled]="TableState() !== 'loaded' || eventForm.invalid" -->
+          <!--     color="primary" type="submit"> -->
+          <!--     Submit -->
+          <!--   </button> -->
+          <!-- </td> -->
           <mat-progress-bar mode="indeterminate"></mat-progress-bar>
         </ng-container>
 
@@ -90,8 +91,12 @@
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky:true"></tr>
         <tr mat-row *matRowDef="let row; let i = index; columns:displayedColumns;"></tr>
-        <tr mat-footer-row *matFooterRowDef="displayedColumns; sticky: true">
+        <!-- <tr mat-footer-row *matFooterRowDef="displayedColumns; sticky: true"> -->
       </table>
+      <button mat-raised-button class="submit-button" [disabled]="TableState() !== 'loaded' || eventForm.invalid"
+        color="primary" type="submit">
+        Submit
+      </button>
     </form>
 
     @if (TableState() === "loading"){
@@ -104,7 +109,7 @@
     <button mat-icon-button (click)="closeRightNav()" class="close-button-small">
       <mat-icon>close</mat-icon>
     </button>
-    <div class="control-panel-container">
+    <div class="control-panel-container dense-5">
 
       @switch (currentActiveForms()) {
       @case ("path") {
@@ -176,9 +181,7 @@
       @case ("point") {
 
       <div class="label-container">
-        <!-- NOTE:FIELD Name: widthUnits-->
-        <!-- <mat-slide-toggle id="slide-toggle" color="primary" -->
-        <!--   (change)="pathControlChange($event.checked, 'autoHighlight')">auto-highlight</mat-slide-toggle> -->
+
         <mat-form-field id="dropdown-point-1">
 
           <mat-label>Units</mat-label>
@@ -364,94 +367,104 @@
 } @else {
 <!-- NOTE:The following templating is used when a larger screen size is detected. -->
 <!-- Total Height: rowHeight (4) * rows (8) -->
-<mat-grid-list class="grid-list" cols="5" rowHeight="4em">
+<!-- <mat-grid-list class="grid-list dense-5" cols="5" rowHeight="4em"> -->
+<mat-grid-list class="grid-list dense-5" cols="10" rowHeight="500px" gutterSize="3px">
   @for (tile of tiles;track tile;let i = $index) {
+  <mat-grid-tile [colspan]="tile.cols" [style.background]="tile.color">
   <!-- <mat-grid-tile [colspan]="tile.cols" [rowspan]="tile.rows" [style.background]="tile.color"> -->
-  <mat-grid-tile [colspan]="tile.cols" [rowspan]="tile.rows">
+  <!-- <mat-grid-tile> -->
     <!-- TODO:For now I'm testing how the table fits into the grid. -->
+    <!-- TODO:One if these containers is a flex container that is messing up the display -->
     @if (i === 0) {
     <mat-card class="table-card">
-      <form [formGroup]="eventForm" class="grid-table-form" (ngSubmit)="submitForm()">
+      <mat-card-content>
 
-        <div class="dense-3" id="input-container"
-          [ngStyle]="(screenChange | async) ? fourthRowSmall : fourthRowDefault">
-          <mat-form-field class="reduction-profile-form">
-            <!--TODO:Change this to a more compact input type in order to reduce the size of the whole sidenav. -->
-            <mat-select formControlName="eventProfiles" placeholder="Reduction Profiles"
-              [(value)]="selectedEventProfile"
-              matTooltip="Limit the number of events to improve performance and reduce clutter.">
+        <form [formGroup]="eventForm" class="grid-table-form" (ngSubmit)="submitForm()">
 
-              @for (option of eventProfilesOptions; track option.value){
-              <mat-divider></mat-divider>
-              <mat-option [value]="option.value">{{option.name}}</mat-option>
+          <div class="dense-5" id="input-container"
+            [ngStyle]="(screenChange | async) ? fourthRowSmall : fourthRowDefault">
+            <mat-form-field class="reduction-profile-form" appearance="outline">
+              <!--TODO:Change this to a more compact input type in order to reduce the size of the whole sidenav. -->
+              <!-- <mat-select formControlName="eventProfiles" placeholder="Reduction Profiles" -->
+              <mat-label>Reduction Profile</mat-label>
+              <mat-select formControlName="eventProfiles"
+                [(value)]="selectedEventProfile"
+                matTooltip="Limit the number of events to improve performance and reduce clutter.">
+
+                @for (option of eventProfilesOptions; track option.value){
+                <mat-divider></mat-divider>
+                <mat-option [value]="option.value">{{option.name}}</mat-option>
+                }
+
+              </mat-select>
+            </mat-form-field>
+            <!-- TODO:Resize the input fields later after fixing the grids -->
+            <mat-form-field class="sensor-form" appearance="outline">
+
+              <mat-label>Sensors</mat-label>
+              <mat-select formControlName="sensorForm" matTooltip="Select a sensor type.">
+                @for (option of currentLocationSensors();track option) {
+                <mat-divider></mat-divider>
+                <mat-option [value]="option">{{ option }}</mat-option>
+                } @empty {
+                <mat-option [value]="null">-</mat-option>
+                }
+              </mat-select>
+
+              @if (eventForm.dirty && eventForm.hasError("noSensorSelected")) {
+              <mat-error>No Sensor Selected.</mat-error>
               }
+            </mat-form-field>
 
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field class="sensor-form">
+          </div>
 
-            <mat-select formControlName="sensorForm" placeholder="Sensors" matTooltip="Select a sensor type.">
-              @for (option of currentLocationSensors();track option) {
-              <mat-divider></mat-divider>
-              <mat-option [value]="option">{{ option }}</mat-option>
-              } @empty {
-              <mat-option [value]="null">-</mat-option>
-              }
-            </mat-select>
+          <table mat-table formArrayName="checkboxes" matSort matSortDisableClear matSortActive="name"
+            matSortDirection="asc" [dataSource]="tableSource" #Table [trackBy]="trackById" class="animal-table">
+            Checkbox Column
+            <ng-container matColumnDef="select">
+              <th mat-header-cell *matHeaderCellDef>
+                <mat-checkbox [checked]="hasValue() && isAllSelected()" [disabled]="TableState() !== 'loaded'"
+                  [indeterminate]="hasValue() && !isAllSelected()"
+                  (change)="$event ? toggleAllRows() : null"></mat-checkbox>
+              </th>
+              <td mat-cell *matCellDef="let control; let j = index;" class="checkbox-header-cell">
+                <mat-checkbox [formControlName]="j" (click)="$event.stopPropagation()" (change)="toggleRow(j)"
+                  [id]="j"></mat-checkbox>
+              </td>
+              <td mat-footer-cell *matFooterCellDef>
+                <button mat-raised-button class="submit-button"
+                  [disabled]="TableState() !== 'loaded' || eventForm.invalid" color="primary" type="submit">
+                  Submit
+                </button>
+              </td>
+              <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+            </ng-container>
+            <ng-container matColumnDef="name" class="ng-container">
+              <th mat-header-cell class="animal-header-cell" *matHeaderCellDef mat-sort-header
+                sortActionDescription="Sort by name">
+                <div class="animal-header-content">
+                  <span>Animals</span>
+                  <mat-icon
+                    matTooltip="Each animal is assigned a unique individual identifier provided by the owner of the study."
+                    aria-label="false" fontIcon="info"></mat-icon>
+                </div>
+              </th>
+              <td mat-cell *matCellDef="let control; let j = index;" class="individual-header-cell">
+                <p>{{ getIndividual(j)()?.LocalIdentifier ?? "N/A" }}</p>
+              </td>
+              <td mat-footer-cell *matFooterCellDef>
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky:true"></tr>
+            <tr mat-row *matRowDef="let row; let i = index; columns:displayedColumns;"></tr>
+            <tr mat-footer-row *matFooterRowDef="displayedColumns; sticky: true">
+          </table>
+        </form>
+        @if (TableState() === "loading"){
+        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+        }
 
-            @if (eventForm.dirty && eventForm.hasError("noSensorSelected")) {
-            <mat-error>No Sensor Selected.</mat-error>
-            }
-          </mat-form-field>
-
-        </div>
-        <!-- <mat-error>No Option Selected.</mat-error> -->
-
-        <table mat-table formArrayName="checkboxes" matSort matSortDisableClear matSortActive="name"
-          matSortDirection="asc" [dataSource]="tableSource" #Table [trackBy]="trackById" class="animal-table">
-          Checkbox Column
-          <ng-container matColumnDef="select">
-            <th mat-header-cell *matHeaderCellDef>
-              <mat-checkbox [checked]="hasValue() && isAllSelected()" [disabled]="TableState() !== 'loaded'"
-                [indeterminate]="hasValue() && !isAllSelected()"
-                (change)="$event ? toggleAllRows() : null"></mat-checkbox>
-            </th>
-            <td mat-cell *matCellDef="let control; let j = index;" class="checkbox-header-cell">
-              <mat-checkbox [formControlName]="j" (click)="$event.stopPropagation()" (change)="toggleRow(j)"
-                [id]="j"></mat-checkbox>
-            </td>
-            <td mat-footer-cell *matFooterCellDef>
-              <button mat-raised-button class="submit-button"
-                [disabled]="TableState() !== 'loaded' || eventForm.invalid" color="primary" type="submit">
-                Submit
-              </button>
-            </td>
-            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-          </ng-container>
-          <ng-container matColumnDef="name" class="ng-container">
-            <th mat-header-cell class="animal-header-cell" *matHeaderCellDef mat-sort-header
-              sortActionDescription="Sort by name">
-              <div class="animal-header-content">
-                <span>Animals</span>
-                <mat-icon
-                  matTooltip="Each animal is assigned a unique individual identifier provided by the owner of the study."
-                  aria-label="false" fontIcon="info"></mat-icon>
-              </div>
-            </th>
-            <td mat-cell *matCellDef="let control; let j = index;" class="individual-header-cell">
-              <p>{{ getIndividual(j)()?.LocalIdentifier ?? "N/A" }}</p>
-            </td>
-            <td mat-footer-cell *matFooterCellDef>
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky:true"></tr>
-          <tr mat-row *matRowDef="let row; let i = index; columns:displayedColumns;"></tr>
-          <tr mat-footer-row *matFooterRowDef="displayedColumns; sticky: true">
-        </table>
-      </form>
-      @if (TableState() === "loading"){
-      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-      }
+      </mat-card-content>
     </mat-card>
     } @else if (i === 1) {
     <mat-card class="card-controls">
@@ -464,7 +477,7 @@
 
         <div class="label-container">
           <!-- NOTE:FIELD Name: widthUnits-->
-          <mat-form-field id="aggregation-dropdown1">
+          <mat-form-field id="path-dropdown1" appearance="outline">
             <mat-label>Units</mat-label>
             <mat-select id="unit-dropdown" #PathDropdown [disabled]="currentEventData === undefined"
               (valueChange)="pathControlChange($event, 'widthUnits')">
@@ -473,7 +486,7 @@
             </mat-select>
           </mat-form-field>
 
-          <mat-form-field class="tooltip-dropdown" id="aggregation-dropdown2">
+          <mat-form-field class="tooltip-dropdown" id="path-dropdown2" appearance="outline">
             <mat-label>Tooltip Visibility</mat-label>
             <mat-select (valueChange)="pathControlChange($event, 'toggleTooltip')"
               [disabled]="currentEventData === undefined">
@@ -527,7 +540,7 @@
           <!-- NOTE:FIELD Name: widthUnits-->
           <!-- <mat-slide-toggle id="slide-toggle" color="primary" -->
           <!--   (change)="pathControlChange($event.checked, 'autoHighlight')">auto-highlight</mat-slide-toggle> -->
-          <mat-form-field id="dropdown-point-1">
+          <mat-form-field id="dropdown-point-1" appearance="outline">
 
             <mat-label>Units</mat-label>
             <mat-select id="unit-dropdown" #PathDropdown [disabled]="currentEventData === undefined"
@@ -538,7 +551,7 @@
             </mat-select>
           </mat-form-field>
 
-          <mat-form-field id="dropdown-point-2">
+          <mat-form-field id="dropdown-point-2" appearance="outline">
             <mat-label>Color</mat-label>
             <input matInput [mtxColorpicker]="PointColorpicker"
               (colorChange)="pointControlChange($event.value, 'getFillColor', true)"
@@ -581,7 +594,7 @@
         @case ("aggregation") {
 
         <div class="label-container">
-          <mat-form-field id="aggregation-dropdown-1">
+          <mat-form-field id="aggregation-dropdown-1" appearance="outline">
 
             <!-- NOTE:This field is called 'aggregation' for the -->
             <!-- heatmap and the screen grid layer. -->
@@ -601,7 +614,7 @@
             </mat-select>
           </mat-form-field>
 
-          <mat-form-field id="aggregation-dropdown-2">
+          <mat-form-field id="aggregation-dropdown-2" appearance="outline">
 
             <mat-label>Theme</mat-label>
             <mat-select #AggregationDropdown2 [disabled]="currentEventData === undefined"

@@ -13,7 +13,7 @@
   </div>
   }
 
-  <table mat-table [dataSource]="studies" [trackBy]="trackStudy" class="mat-elevation-z8" *ngIf="studies">
+  <table mat-table [dataSource]="studies" [trackBy]="trackStudy" class="mat-elevation-z8 dense-5" *ngIf="studies">
     <!-- Name -->
     <ng-container matColumnDef="name" class="cell-container">
 
@@ -22,7 +22,7 @@
 
           <form [formGroup]="searchForm">
 
-            <mat-form-field class="dense-3" id="search-form" appearance="outline">
+            <mat-form-field class="dense-5" id="search-form" appearance="outline">
 
               <button matPrefix mat-icon-button aria-label="Search" (click)="loadData(Filter.value)">
                 <mat-icon>search</mat-icon>
@@ -34,7 +34,7 @@
               <input matInput type="text" #Filter (keyup)="filterEvent(Filter.value)" [matAutocomplete]="auto"
                 class="search-input" formControlName="filterQuery" />
 
-              <mat-autocomplete class="auto-complete" (optionSelected)="selectOption($event)" #auto="matAutocomplete">
+              <mat-autocomplete class="dense-5" (optionSelected)="selectOption($event)" #auto="matAutocomplete">
                 <!-- NOTE: currentOptions is a writable signal that contains the current options. -->
                 @for (option of currentOptions(); track option){
                 <mat-divider></mat-divider>
@@ -194,11 +194,10 @@
 
     <tr mat-header-row class="header-row" *matHeaderRowDef="displayedColumns; sticky:true"></tr>
     <tr mat-row class="study-row" *matRowDef="let row; let i = index; columns: displayedColumns;"></tr>
-    <!-- <mat-footer-row *matFooterRowDef="displayedColumns; sticky:true"></mat-footer-row> -->
   </table>
 
 </div>
 
-<mat-paginator class="paginator" (page)="getData($event)" [pageSize]="10"
-  [pageSizeOptions]="[10,20,50]" showFirstLastButtons>
+<mat-paginator class="paginator dense-5" (page)="getData($event)" [pageSize]="15"
+  [pageSizeOptions]="[20,30,50]" showFirstLastButtons>
 </mat-paginator>

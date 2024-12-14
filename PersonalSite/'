@@ -6,6 +6,7 @@
 
 .grid-table-form-small {
   height: calc(100vh - 7em);
+  /* height: calc(100vh - 7em); */
 }
 
 #aggregation-dropdown {
@@ -17,13 +18,13 @@
 }
 
 // TODO: Also add margins to the control panel elements.
-/* .input-container { */
-/*   margin-left: 1em; */
-/* } */
+.input-container {
+  margin-left: 1em;
+}
 
-/* .control-panel-tab { */
-/*   width: 100%; */
-/* } */
+.control-panel-tab {
+  width: 100%;
+}
 
 .close-button {
   position: absolute;
@@ -48,6 +49,7 @@
 .aggregation-first-row {
   display: flex;
   flex-wrap: wrap;
+  // justify-content: space-between;
   margin-left: 1em;
   margin-right: 1em;
 }
@@ -60,64 +62,45 @@
   margin-right: 1em;
 }
 
+// NOTE:This section contains the styling for dropdown inputs.
+#dropdown-point-1 {
+  width: 150px;
+}
 
+#dropdown-point-2 {
+  width: 150px;
+}
 
-/* #aggregation-drowndown1 { */
-/*   width: 20px */
-/* } */
-/* #aggregation-drowndown2 { */
-/*   width: 20px */
-/* } */
+#dropdown-path-1 {
+  width: 150px;
+}
 
-/* #path-dropdown1{ */
-/*   width: 140px; */
-/* } */
-/* #path-dropdown2{ */
-/*   width: 140px; */
-/* } */
-/* // NOTE:This section contains the styling for dropdown inputs. */
-/* #dropdown-point-1 { */
-/*   width: 150px; */
-/* } */
-/* #dropdown-point-2 { */
-/*   width: 150px; */
-/* } */
-/* #dropdown-path-1 { */
-/*   width: 150px; */
-/* } */
-/* #dropdown-path-2 { */
-/*   width: 150px; */
-/* } */
-
+#dropdown-path-2 {
+  width: 150px;
+}
 
 // NOTE:The following two elements are
 // the cards for the right side panel
 .table-card {
-  height: 100%; // NOTE: Formally 90%
+  /* height: 100%; // NOTE: Formally 90% */
   /* width: 100%; */
-  width: fit-content;
-  overflow-y: scroll;
   /* border-radius: 5px; */
   /* background-color: #FDFBFB; */
-  /* background-color: lightgreen; */
+  background-color: lightgreen;
 }
 
 .card-controls {
   /* margin-top: 1em; */
-  height: 100%;
-  width: 100%;
+  /* height: 100%; */
+  /* width: 100%; */
   /* border-radius: 5px; */
   // background-color: #FDFBFB;
-  /* background-color: lightblue; */
+  background-color: lightblue;
 }
 
 // INFO:This determines the dimensions of the grid list.
 .grid-list {
-  /* width: 45em; */
-  /* width: 700px; */
-  width: calc(700px - 1em);
-  /* height: calc(500px - 1em); */
-  /* height: 40em; */
+  width: 45em;
   /* width: 400px; */
   /* margin-top: 1em; */
 }
@@ -127,13 +110,12 @@
   /* margin-top: 1em; */
   /* width: 100%; */
   /* height: 100%; */
-  /* overflow-y: scroll; */
+  overflow-y: scroll;
   word-break: break-all;
 
   .animal-header-cell {
     word-break: normal;
   }
-
 }
 
 .submit-button {
@@ -146,6 +128,7 @@
 .control-panel-container {
   margin-left: 1em;
   margin-right: 1em;
+  // display: flex;
 }
 
 #table-container {
@@ -171,7 +154,6 @@
 /* mat-card { */
 /*   margin: 10px 10px 30px 30px; */
 /* } */
-
 
 .first-content-row {
   display: flex;

@@ -14,8 +14,8 @@
   @include mat.all-component-densities(-3);
 }
 
-.select-3 {
-    @include mat.select-density(-3);
+.dense-5 {
+  @include mat.all-component-densities(-5)
 }
 
 html, body {

@@ -96,15 +96,15 @@ type BaseMaps = 'google' | 'mapbox' | 'arcgis';
     ]),
 
     trigger('rightPanelOpened', [
-      // state('true', style({ left: 'calc(100vw - 47.75em)' })),
       // state('false', style({ left: 'calc(100vw - 3.265em)' })),
-      state("true", style({ left: "calc(100vw - 47.75em)" })),
-      state("false", style({ right: ".3265em" })),
+      state("true", style({ left: "calc(100vw - 700px - 1em)" })),
+      // state("false", style({ right: ".3265em" })),
+      state("false", style({ right: "0em" })),
       transition('true => false', [
-        animate('300ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(44.485em))' }))
+        animate('300ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(700px - 2em))' }))
       ]),
       transition('false => true', [
-        animate('325ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(-44.485em))' }))
+        animate('325ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(-700px + 2em))' }))
       ]),
     ])
   ]
@@ -181,9 +181,11 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   // TODO:Include a larger height for the aggregation layers.
   rightNavStyle = {
-    "max-width": "700px",
-    "margin-top": "12em",
-    "height": "40em",
+    "width": "700px",
+    "margin-top": "13em",
+    // "top": "13em",
+    // "height": "40em",
+    "height": "500px",
     "background-color": "rgba(0,0,0,0)",
   };
 
