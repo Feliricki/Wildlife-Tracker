@@ -9,7 +9,6 @@ using PersonalSiteAPI.Services;
 using Mapster;
 using PersonalSiteAPI.Mappings;
 using PersonalSiteAPI.Hubs;
-using PersonalSiteAPI.Models.Email;
 using Microsoft.AspNetCore.Diagnostics;
 
 
@@ -73,10 +72,11 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    // NOTE: Switch this to the other connection string to make changes to production database
-    //options.UseSqlServer(builder.Configuration["TestConnectionStrings:DefaultConnection"]);
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), options =>
-    {
+// NOTE: Switch this to the other connection string to make changes to production database
+//options.UseSqlServer(builder.Configuration["TestConnectionStrings:DefaultConnection"]);
+//options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), options =>
+options.UseSqlServer(builder.Configuration["TestConnectionStrings:DefaultConnection"], options => 
+{
         options.CommandTimeout(60);
     });
 });

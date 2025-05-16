@@ -28,14 +28,12 @@ export class LoginComponent extends BaseFormComponent implements OnInit {
   hide = true;
 
   constructor(
-    // private activatedRoute: ActivatedRoute,
     private router: Router,
     private authService: AuthService) {
     super();
   }
 
   ngOnInit(): void {
-    console.log("loading login form");
     this.form = new FormGroup({
       username: new FormControl('', Validators.required),
       password: new FormControl('', Validators.required)
@@ -51,7 +49,6 @@ export class LoginComponent extends BaseFormComponent implements OnInit {
       .login(loginRequest)
       .subscribe({
         next: (response) => {
-          console.log(response);
           this.loginResult = response;
           if (response.success) {
             this.router.navigate(['/']);

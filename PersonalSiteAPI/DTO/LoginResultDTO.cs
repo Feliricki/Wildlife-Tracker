@@ -11,6 +11,10 @@ namespace PersonalSiteAPI.DTO
         [Required]
         public string Message { get; set; } = null!;
         // Jwt bearer token if the login attempt is successful. Null otherwise
+
+        [Required]
+        public List<string> Roles { get; set; } = [];
+
         [Required]
         public string? Token { get; set; }
     }

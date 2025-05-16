@@ -1,4 +1,4 @@
-import { importProvidersFrom, isDevMode } from '@angular/core';
+import { APP_INITIALIZER, importProvidersFrom, isDevMode } from '@angular/core';
 import { AppComponent } from './app/app.component';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { AppRoutingModule } from './app/app-routing.module';
@@ -7,12 +7,15 @@ import { BrowserModule, bootstrapApplication } from '@angular/platform-browser';
 import { AuthInterceptor } from './app/auth/auth.interceptor';
 import { HTTP_INTERCEPTORS, withInterceptorsFromDi, provideHttpClient } from '@angular/common/http';
 import { provideServiceWorker } from '@angular/service-worker';
+import { authInitializer } from './app/auth/auth-initializer';
+import { AuthService } from './app/auth/auth.service';
 
 
 bootstrapApplication(AppComponent, {
   providers: [
     importProvidersFrom(BrowserModule, FormsModule, ReactiveFormsModule, AppRoutingModule),
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    { provide: APP_INITIALIZER, useFactory: authInitializer, multi: true, deps: [AuthService] },
     provideHttpClient(withInterceptorsFromDi()),
     provideAnimations(),
     provideServiceWorker('ngsw-worker.js', {

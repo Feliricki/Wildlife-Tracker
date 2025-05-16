@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using PersonalSiteAPI.Models;
 using System.IdentityModel.Tokens.Jwt;
@@ -29,16 +30,22 @@ namespace PersonalSiteAPI.Services
 
         private SigningCredentials GetSigningCredentials()
         {
+            var secret = GetSymmetricSecurityKey();
+            return new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
+        }
+
+        private SymmetricSecurityKey GetSymmetricSecurityKey()
+        {
             var key = Encoding.UTF8.GetBytes(_configuration["JwtSettings:SecurityKey"]!);
             var secret = new SymmetricSecurityKey(key);
-            return new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
+            return secret;
         }
 
         private async Task<List<Claim>> GetClaimsAsync(ApplicationUser user)
         {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, user.Email!)
+                new(ClaimTypes.Name, user.Email!)
             };
 
             foreach (var role in await _userManager.GetRolesAsync(user))
@@ -46,6 +53,54 @@ namespace PersonalSiteAPI.Services
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
             return claims;
+        }
+
+        private async Task<bool> ValidateToken(string token)
+        {
+            // TODO: The token includes the 'Bearer ' part
+            string[] split = token.Split(" ");
+            if (split.Length != 2)
+            {
+                return false;
+            }
+
+            token = split[1];
+            var handler = new JwtSecurityTokenHandler();
+            var validationParameters = new TokenValidationParameters()
+            {
+                IssuerSigningKey = GetSymmetricSecurityKey(),
+                ValidAudience = _configuration["JwtSettings:Audience"],
+                ValidIssuer = _configuration["JwtSettings:Issuer"]
+            };
+            var result = await handler.ValidateTokenAsync(token, validationParameters);
+            return result.IsValid;
+        }
+
+        public async Task<List<string>> GetRolesFromUserAsync(ApplicationUser user)
+        {
+            var claims = await GetClaimsAsync(user);
+            return claims
+                .Where(c => c.Type == "role" || c.Type == "roles" || c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")
+                .Select(c => c.Value)
+                .ToList();
+        }
+
+        public async Task<List<string>> GetRolesFromToken(string token)
+        {
+            if (!await ValidateToken(token))
+            {
+                Console.WriteLine("Failed to validate token");
+                return [];
+            }
+
+            token = token.Split(" ")[1];
+            var handler = new JwtSecurityTokenHandler();
+            var claims = handler.ReadJwtToken(token);
+            return handler.ReadJwtToken(token)
+                .Claims
+                .Where(c => c.Type == "role" || c.Type == "roles" || c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")
+                .Select(c => c.Value)
+                .ToList();
         }
     }
 }

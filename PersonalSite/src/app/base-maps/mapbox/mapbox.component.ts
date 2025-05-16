@@ -135,6 +135,7 @@ export class MapboxComponent implements OnInit, OnChanges {
 
         const studies$ = this.studyService.getAllStudiesGeoJSON<StudyDTO>();
         this.mainSubscription = studies$.subscribe({
+
           next: collection => {
             if (!this.map) {
               this.currentMapState.set('error');

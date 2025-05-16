@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, ViewChild, WritableSignal, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, Signal, ViewChild, WritableSignal, signal } from '@angular/core';
 import { MapComponent } from '../base-maps/google maps/google-map.component';
 import { SimpleSearchComponent } from '../simple-search/simple-search.component';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
@@ -28,6 +28,7 @@ import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
 import { FormsModule } from '@angular/forms';
 import { MapboxComponent } from '../base-maps/mapbox/mapbox.component';
 import { Router } from '@angular/router';
+import { AuthService } from '../auth/auth.service';
 
 export type GoogleMapStyles =
   "roadmap" | "terrain" | "hybrid" | "satellite";
@@ -110,6 +111,7 @@ type BaseMaps = 'google' | 'mapbox' | 'arcgis';
   ]
 })
 export class TrackerViewComponent implements OnInit, OnDestroy {
+
   options = {
     fixed: true,
     bottom: 0,
@@ -154,6 +156,7 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   radioGroupInitialized: WritableSignal<boolean> = signal(false);
   markersVisible: WritableSignal<boolean> = signal(true);
+
   // INFO:The following are dynamic styling which
   // changes depending on the current screen size.
   leftNavSmallStyle = {
@@ -207,14 +210,15 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     ["Heatmap Layer", LayerTypes.HeatmapLayer],
   ] as Array<[string, LayerTypes]>;
 
+  isAdmin: Signal<boolean>;
+
   constructor(
     private breakpointObserver: BreakpointObserver,
-    private router: Router) { }
+    private router: Router,
+    private authService: AuthService) {
+    this.isAdmin = signal(false);
+  }
 
-  // TODO:
-  // 1) Fix the event forms. Or rewrite them scratch if its not possible to resize the input elements.
-  // 2) Rework the UI more.
-  // 3) Look up how to set multiple docker containers for deployment.
   ngOnInit(): void {
     const breakpointObserver = this.breakpointObserver
       .observe([Breakpoints.XSmall, Breakpoints.Small]).pipe(
@@ -223,7 +227,6 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
         }),
       );
 
-    // INFO:Close the search component on smaller screens.
     firstValueFrom(breakpointObserver).then(value => {
       if (value) {
         this.closeSearchNav();
@@ -241,10 +244,16 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
         map((state: BreakpointState) => state.matches),
       );
 
+    this.isAdmin = this.authService.getIsAdmin;
   }
 
   ngOnDestroy(): void {
     return;
+  }
+
+  gotoAdminPage(): void {
+    // TODO:This requires verifications
+    this.router.navigate(["/admin-page"]);
   }
 
   gotoReferences(): void {
@@ -253,6 +262,10 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
 
   gotoSuggestionsPage(): void {
     this.router.navigate(['/suggestions']);
+  }
+
+  gotoLoginPage(): void {
+    this.router.navigate(['/login']);
   }
 
   loadMap(): void {

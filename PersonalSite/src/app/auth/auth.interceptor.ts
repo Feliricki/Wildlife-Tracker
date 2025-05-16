@@ -10,7 +10,18 @@ export class AuthInterceptor implements HttpInterceptor {
   }
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    const cloned = request.clone();
+    let cloned = request.clone();
+
+    // Only attach the token if sending a request to my backend
+    if (cloned.url.startsWith("/api")){
+      if (localStorage.getItem("tokenKey") !== null){
+        cloned = cloned.clone({
+          setHeaders: {
+            Authorization: `Bearer ${localStorage.getItem("tokenKey")}`
+          }
+        });
+      }
+    }
 
     if (request.method === "JSONP") {
       return next.handle(cloned);

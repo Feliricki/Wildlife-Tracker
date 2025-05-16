@@ -79,6 +79,7 @@ namespace PersonalSiteAPI.Controllers
                     Detail = e.Message,
                     Status = StatusCodes.Status500InternalServerError,
                 };
+
                 _logger.LogError(e.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError, exceptionDetails);
             }

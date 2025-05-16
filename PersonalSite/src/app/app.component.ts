@@ -4,7 +4,6 @@ import { NavBarComponent } from './nav-bar/nav-bar.component';
 import { createCustomElement } from '@angular/elements';
 import { InfoWindowComponent } from './base-maps/google maps/info-window/info-window.component';
 import { CustomButtonComponent } from './base-maps/mapbox/custom-button/custom-button.component';
-// import { AppRoutingModule } from './app-routing.module';
 
 
 @Component({
