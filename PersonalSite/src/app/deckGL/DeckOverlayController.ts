@@ -505,7 +505,6 @@ export class DeckOverlayController {
 
       const collections = await response.json() as Array<LineStringFeatureCollection<LineStringPropertiesV2>>;
 
-      // BUG:Type Error: map is not a function
       const lineStringResponses = collections.map((collection, index) => {
         return handleFeatures({
           features: collection.features,

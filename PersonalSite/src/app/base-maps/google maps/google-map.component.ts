@@ -1,5 +1,5 @@
-import { Component, OnInit, OnChanges, SimpleChanges, Input, Output, EventEmitter, WritableSignal, signal, AfterViewInit, OnDestroy, ChangeDetectionStrategy, Injector } from '@angular/core';
-import { distinctUntilChanged, forkJoin, from, Observable, skip, Subscription } from 'rxjs';
+import { Component, AfterViewInit, ChangeDetectionStrategy, Injector, inject, signal, DestroyRef } from '@angular/core';
+import { distinctUntilChanged, forkJoin, from, Observable, skip } from 'rxjs';
 import { StudyService } from '../../studies/study.service';
 import { StudyDTO } from '../../studies/study';
 import { Loader } from '@googlemaps/js-api-loader';
@@ -11,18 +11,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NgElement, WithProperties } from '@angular/elements';
 import { InfoWindowComponent } from './info-window/info-window.component';
-import { DeckOverlayController, LayerTypes, StreamStatus } from '../../deckGL/DeckOverlayController';
+import { DeckOverlayController, StreamStatus } from '../../deckGL/DeckOverlayController';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { HttpResponse } from '@angular/common/http';
-import { LineStringFeatureCollection, LineStringPropertiesV1 } from "../../deckGL/GeoJsonTypes";
 import { EventRequest } from "../../studies/EventRequest";
-import { GoogleMapStyles } from '../../tracker-view/tracker-view.component';
-import { toObservable } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { EventMetadata } from '../../events/EventsMetadata';
 import { SnackbarComponent } from '../snackbar.component';
-import { ControlChange } from 'src/app/events/events.component';
+
+// Import the new services
+import { UIStateService } from '../../services/ui-state.service';
+import { MapStateService } from '../../services/map-state.service';
+import { DeckOverlayStateService } from '../../services/deck-overlay-state.service';
 
 type MapState =
   'initial' |
@@ -30,16 +30,6 @@ type MapState =
   'loaded' |
   'error' |
   'rate-limited';
-
-type EventState =
-  "initial" |
-  "loaded" |
-  "loading" |
-  "time out" |
-  "error";
-
-// NOTE: Unused type.
-export type EventResponse = Observable<HttpResponse<LineStringFeatureCollection<LineStringPropertiesV1>[] | null>>;
 
 @Component({
   selector: 'app-google-map',
@@ -52,24 +42,17 @@ export type EventResponse = Observable<HttpResponse<LineStringFeatureCollection<
     MatIconModule, MatProgressSpinnerModule,
   ]
 })
-export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy {
-  mainSubscription$?: Subscription;
-  mapState: WritableSignal<MapState> = signal('initial');
-  eventState: WritableSignal<EventState> = signal("initial");
+export class MapComponent implements  AfterViewInit {
+  // Inject services
+  private readonly uiStateService = inject(UIStateService);
+  private readonly mapStateService = inject(MapStateService);
+  private readonly deckOverlayStateService = inject(DeckOverlayStateService);
+  private readonly studyService = inject(StudyService);
+  private readonly snackbar = inject(MatSnackBar);
+  private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
 
-  @Input() focusedMarker?: bigint;
-  // This input is currently unused.
-  @Input() pathEventData$?: EventResponse;
-  @Input() eventRequest?: EventRequest;
-
-  // INFO:Map Controls
-  @Input() mapType: GoogleMapStyles = "roadmap";
-  @Input() markersVisible: boolean = true;
-
-  // INFO:Overlay controls
-  @Input() selectedLayer: LayerTypes = LayerTypes.ArcLayer;
-  @Input() deckOverlayControls?: ControlChange;
-
+  mapState = signal<MapState>('initial');
 
   defaultMapOptions: google.maps.MapOptions = {
     center: {
@@ -83,20 +66,8 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
   };
 
   defaultAlgorithmOptions: SuperClusterOptions = {
-    // radius: 120,
     radius: 160,
   }
-
-  // defaultMarkerOptions: google.maps.MarkerOptions = {
-  //   clickable: true,
-  // };
-  // defaultPinOptions: google.maps.marker.PinElementOptions = {
-  //   scale: 1, // default = 1
-  // }
-  // defaultInfoWindowOptions: google.maps.InfoWindowOptions = {
-  // };
-  // defaultInfoWindowOpenOptions: google.maps.InfoWindowOpenOptions = {
-  // };
 
   // this api key is restricted
   loader = new Loader({
@@ -107,123 +78,70 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
 
   map?: google.maps.Map;
   studies?: Map<bigint, StudyDTO>;
-
-  @Output() studiesEmitter = new EventEmitter<Map<bigint, StudyDTO>>();
-  @Output() studyEmitter = new EventEmitter<StudyDTO>();
-  @Output() mapStateEmitter = new EventEmitter<boolean>();
-
-  // INFO:Section for changing overlay display options;
-  // Decide on a more specific type.
-  @Output() chunkInfoEmitter = new EventEmitter<EventMetadata>();
-  @Output() streamStatusEmitter = new EventEmitter<StreamStatus>();
-
-  @Output() JsonDataEmitter = new EventEmitter<Observable<JsonResponseData[]>>();
-  @Output() componentInitialized = new EventEmitter<true>;
-  // INFO:This where event info. gets sent to the track and then the events component.
-  @Output() eventMetaData = new EventEmitter<EventMetadata>();
-
   markers: Map<bigint, google.maps.marker.AdvancedMarkerElement> | undefined;
   mapCluster: MarkerClusterer | undefined;
-
   infoWindow: google.maps.InfoWindow | undefined;
-
   deckOverlay?: DeckOverlayController;
-  streamStatus$?: Observable<StreamStatus>;
-  streamStatusSubscription?: Subscription;
-  chunkLoadSubscription?: Subscription;
 
-  // NOTE: New event data in some form will come from the events component.
-  // lineDataStream: BehaviorSubject<Observable<LineStringSource>>;
-  // lineSource: Subscription<>;
+  constructor() {
 
-  constructor(
-    private studyService: StudyService,
-    private snackbar: MatSnackBar,
-    private injector: Injector) { }
+    this.mapStateService.focusedStudyId$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: studyId => {
+          if (studyId){
+            this.panToMarker(studyId);
+          }
+        }
+      })
 
-  ngOnInit(): void {
-    return;
+    // Subscribe to map type changes
+    this.mapStateService.mapStyleGoogle$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(mapType => {
+        this.map?.setMapTypeId(mapType);
+      });
+
+    // Subscribe to marker visibility changes
+    this.mapStateService.pointsVisible$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(visible => {
+        this.toggleMarkerVisibility(visible);
+      });
+
+    // Subscribe to layer changes
+    this.deckOverlayStateService.currentLayer$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(layer => {
+        this.deckOverlay?.changeActiveLayer(layer);
+      });
+
+    // Subscribe to control changes
+    // { change: ColorChange | NumberChange | StringChange | BooleanChange, field: string, formType: ActiveForm }
+    this.deckOverlayStateService.controlChange$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(change => {
+        if (change) {
+          this.deckOverlay?.setLayerAttributes(change);
+        }
+      });
+
+    this.deckOverlayStateService.eventRequest$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(request => {
+        if (request){
+          this.handleEventRequest(request);
+        }
+      });
   }
 
   ngAfterViewInit(): void {
-    this.componentInitialized.emit(true);
+    // Initialize map after view is ready
+    this.initMap();
   }
 
-  // NOTE: This method listens to values received from tracker view component
-  //  Only new values (actual changes) make it to this method.
-  //  Subscribe to the event data message here to handle the map controller
-  //  and forbidden responses correctly.
-  ngOnChanges(changes: SimpleChanges): void {
-    for (const propertyName in changes) {
-      const currentValue = changes[propertyName].currentValue;
-      if (currentValue === undefined) {
-        continue;
-      }
-
-      switch (propertyName) {
-        // NOTE:Unused
-        case "pathEventData$":
-          // console.log(`Received event observable in google maps component.`);
-          this.pathEventData$ = currentValue as EventResponse;
-          break;
-
-        // This case sends a message that is received in the event component
-        case "focusedMarker":
-          // console.log(`Panning to ${currentValue}`);
-          this.panToMarker(currentValue as bigint);
-          break;
-
-        case "eventRequest":
-          // console.log("Received event fetch request in google maps component.");
-          this.eventRequest = currentValue as EventRequest;
-          this.handleEventRequest(currentValue as EventRequest);
-          break;
-
-        // INFO: Map controls section.
-        case "mapType":
-          // console.log(`Changing style into ${currentValue}`);
-          this.mapType = currentValue as GoogleMapStyles;
-          this.map?.setMapTypeId(this.mapType);
-          break;
-
-        case "markersVisible":
-          this.markersVisible = currentValue as boolean;
-          this.toggleMarkerVisibility(this.markersVisible).then(() => console.log("Toggled markers asynchronously."));
-          // console.log(`markersVisible value = ${this.markersVisible}`);
-          break;
-
-        // INFO: Overlay controls sections
-        case "selectedLayer":
-          this.selectedLayer = currentValue as LayerTypes;
-          // console.log(`Changing selected layer to ${this.selectedLayer} in google maps component.`);
-          this.deckOverlay?.changeActiveLayer(this.selectedLayer);
-          break;
-
-        // TODO: Implement this.
-        case "deckOverlayControls":
-          this.deckOverlayControls = currentValue as ControlChange;
-          this.deckOverlay?.setLayerAttributes(this.deckOverlayControls);
-          // console.log(this.deckOverlayControls);
-          break;
-
-        default:
-          break;
-      }
-    }
-  }
-
-  ngOnDestroy(): void {
-    this.mainSubscription$?.unsubscribe();
-    this.streamStatusSubscription?.unsubscribe();
-    this.chunkLoadSubscription?.unsubscribe();
-  }
-
-  // NOTE:This implemention may cause a memory leak if repeatly toggled.
-  // Lookup if the documentation has a builtin way to
-  // toggle visibility without wasting resources.
   async toggleMarkerVisibility(visible: boolean): Promise<void> {
-    if (!this.mapCluster) return;
-    if (!this.markers) return;
+    if (!this.mapCluster || !this.markers) return;
 
     const cluster = this.mapCluster;
     const currentMarkers: google.maps.marker.AdvancedMarkerElement[] = [];
@@ -232,6 +150,7 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
       marker.map = visible ? this.map : undefined;
       currentMarkers.push(marker);
     }
+
     if (!visible) {
       cluster.clearMarkers();
     } else {
@@ -256,14 +175,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     this.deckOverlay.loadData(request, { type: "google", map: this.map });
   }
 
-  coordinateToLatLng(coordinates: GeoJSON.Position): google.maps.LatLng {
-    return new google.maps.LatLng(coordinates[0], coordinates[1]);
-  }
-
-  sendMapState(loaded: boolean): void {
-    this.mapStateEmitter.emit(loaded);
-  }
-
   async initMap(): Promise<boolean> {
     if (this.map !== undefined) {
       return true;
@@ -275,218 +186,198 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     const markerRes$ = from(this.loader.importLibrary('marker'));
     const studies$ = this.studyService.getAllStudies();
 
-
-    this.mainSubscription$ = forkJoin({
-
+    forkJoin({
       map: mapRes$,
       marker: markerRes$,
       studies: studies$,
-
     })
-      .subscribe({
-        next: (objRes) => {
-          this.mapState.set('loading');
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe({
+      next: (objRes) => {
+        this.mapState.set('loading');
 
-          console.log("Successfully loaded google maps markers and map.")
-          const mapEl = document.getElementById("map");
+        console.log("Successfully loaded google maps markers and map.")
+        const mapEl = document.getElementById("map");
 
-          // NOTE:Write a custom controller to prevent excessively flickering.
-          this.defaultMapOptions.mapTypeControl = false;
-          this.defaultMapOptions.mapTypeControlOptions = {
-            style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-            position: google.maps.ControlPosition.TOP_CENTER,
-          };
+        this.defaultMapOptions.mapTypeControl = false;
+        this.defaultMapOptions.mapTypeControlOptions = {
+          style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+          position: google.maps.ControlPosition.TOP_CENTER,
+        };
 
-          this.defaultMapOptions.fullscreenControl = true;
-          this.defaultMapOptions.fullscreenControlOptions = {
-            position: google.maps.ControlPosition.BOTTOM_RIGHT,
-          };
+        this.defaultMapOptions.fullscreenControl = true;
+        this.defaultMapOptions.fullscreenControlOptions = {
+          position: google.maps.ControlPosition.BOTTOM_RIGHT,
+        };
 
+        this.map = new google.maps.Map(mapEl as HTMLElement, this.defaultMapOptions);
+        this.map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(this.hintControl());
+        this.infoWindow = new google.maps.InfoWindow({
+          disableAutoPan: true,
+        });
 
-          this.map = new google.maps.Map(mapEl as HTMLElement, this.defaultMapOptions);
-          this.map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(this.hintControl());
-          this.infoWindow = new google.maps.InfoWindow({
-            disableAutoPan: true,
-          });
+        this.infoWindow.set("toggle", false);
+        this.infoWindow.set("studyId", -1n);
 
-          this.infoWindow.set("toggle", false);
-          this.infoWindow.set("studyId", -1n);
+        const studyDTOs = objRes.studies;
+        const mappings = new Map<bigint, StudyDTO>();
+        studyDTOs.forEach(studyDTO => {
+          mappings.set(studyDTO.id, studyDTO);
+        });
+        this.studies = mappings;
 
-          const studyDTOs = objRes.studies;
+        // Use service instead of emitting
+        this.mapStateService.setStudies(this.studies);
 
-          const mappings = new Map<bigint, StudyDTO>();
-          studyDTOs.forEach(studyDTO => {
-            mappings.set(studyDTO.id, studyDTO);
-          });
-          this.studies = mappings;
+        const markers = new Map<bigint, google.maps.marker.AdvancedMarkerElement>();
+        const coordinates = new Set<string>();
 
-          this.emitStudies(this.studies);
-          const markers = new Map<bigint, google.maps.marker.AdvancedMarkerElement>();
-          const coordinates = new Set<string>();
-          for (const studyDTO of this.studies.values()) {
-
-            if (studyDTO.mainLocationLon === undefined || studyDTO.mainLocationLat === undefined) {
-              continue;
-            }
-
-            // INFO:Prevent markers from overlapping too much.
-            let key = `${studyDTO.mainLocationLon.toString()},${studyDTO.mainLocationLat.toString()}`;
-            while (coordinates.has(key)) {
-              studyDTO.mainLocationLon += 0.002;
-              key = `${studyDTO.mainLocationLon.toString()},${studyDTO.mainLocationLat.toString()}`;
-            }
-            coordinates.add(key);
-
-            const imageIcon = document.createElement('img');
-            imageIcon.src = '../../assets/location-pin2-small.png';
-
-            const marker = new google.maps.marker.AdvancedMarkerElement({
-              map: this.map,
-              content: imageIcon,
-              position: {
-                lat: studyDTO.mainLocationLat,
-                lng: studyDTO.mainLocationLon
-              },
-              title: studyDTO.name,
-            });
-
-            // NOTE: This is where the info window logic is handled.
-            marker.addListener("click", () => {
-
-              if (this.infoWindow === undefined) {
-                return;
-              }
-              // console.log(`Clicked marker with id = ${studyDTO.id} Contained in markers = ${this.markers?.has(studyDTO.id)}`);
-              // console.log(this.mapCluster);
-              // NOTE: If a marker is clicked then close another instance of the info window component
-              if (this.infoWindow.get("studyId") !== undefined
-                && this.infoWindow.get("studyId") === studyDTO.id
-                && this.infoWindow.get("toggle") === true) {
-                this.infoWindow.close();
-                this.infoWindow.set("toggle", false);
-                return;
-              }
-
-              // If the same marker is clicked again then toggle the current state of the
-              // info window component.
-              this.infoWindow.close();
-
-              this.infoWindow.setContent(this.buildInfoWindowContent(studyDTO));
-
-              this.infoWindow.set("toggle", !this.infoWindow.get("toggle"));
-              this.infoWindow.set("studyId", studyDTO.id);
-              this.infoWindow.open(this.map, marker);
-            });
-
-            markers.set(studyDTO.id, marker);
+        for (const studyDTO of this.studies.values()) {
+          if (studyDTO.mainLocationLon === undefined || studyDTO.mainLocationLat === undefined) {
+            continue;
           }
 
-          this.markers = markers;
-          console.log('About to instantiate mapCluser with markers');
-          console.log(this.markers);
-          this.mapCluster = new MarkerClusterer({
+          // Prevent markers from overlapping too much
+          let key = `${studyDTO.mainLocationLon.toString()},${studyDTO.mainLocationLat.toString()}`;
+          while (coordinates.has(key)) {
+            studyDTO.mainLocationLon += 0.002;
+            key = `${studyDTO.mainLocationLon.toString()},${studyDTO.mainLocationLat.toString()}`;
+          }
+          coordinates.add(key);
 
+          const imageIcon = document.createElement('img');
+          imageIcon.src = '../../assets/location-pin2-small.png';
+
+          const marker = new google.maps.marker.AdvancedMarkerElement({
             map: this.map,
-            markers: Array.from(markers.values()),
-            renderer: new CustomRenderer1(),
-            algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
-
-            // onClusterClick: (_, cluster, map) => {
-            //   // if (this.infoWindow && this.infoWindow.get("toggle") === true) {
-            //   //   // console.log("Closing any active info windows.");
-            //   //   this.infoWindow.close();
-            //   //   this.infoWindow.set("toggle", false);
-            //   //   this.infoWindow.set("studyId", -1n);
-            //   // }
-            //   map.fitBounds(cluster.bounds as google.maps.LatLngBounds);
-            // }
+            content: imageIcon,
+            position: {
+              lat: studyDTO.mainLocationLat,
+              lng: studyDTO.mainLocationLon
+            },
+            title: studyDTO.name,
           });
 
-          this.initializeDeckOverlay(this.map);
-          this.mapState.set('loaded');
-          this.sendMapState(true);
-        },
-        error: err => {
-          console.error(err);
-          this.mapState.set('error');
+          marker.addListener("click", () => {
+            if (this.infoWindow === undefined) {
+              return;
+            }
+
+            if (this.infoWindow.get("studyId") !== undefined
+                && this.infoWindow.get("studyId") === studyDTO.id
+                && this.infoWindow.get("toggle") === true) {
+              this.infoWindow.close();
+              this.infoWindow.set("toggle", false);
+              return;
+            }
+
+            this.infoWindow.close();
+            this.infoWindow.setContent(this.buildInfoWindowContent(studyDTO));
+            this.infoWindow.set("toggle", !this.infoWindow.get("toggle"));
+            this.infoWindow.set("studyId", studyDTO.id);
+            this.infoWindow.open(this.map, marker);
+          });
+
+          markers.set(studyDTO.id, marker);
         }
-      });
+
+        this.markers = markers;
+        this.mapCluster = new MarkerClusterer({
+          map: this.map,
+          markers: Array.from(markers.values()),
+          renderer: new CustomRenderer1(),
+          algorithm: new SuperClusterAlgorithm(this.defaultAlgorithmOptions),
+        });
+
+        this.initializeDeckOverlay(this.map);
+        this.mapState.set('loaded');
+
+        // Use service instead of emitting
+        this.uiStateService.setMapLoaded(true);
+        this.mapStateService.setMapLoaded(true);
+      },
+      error: err => {
+        console.error(err);
+        this.mapState.set('error');
+      }
+    });
+
     return true;
   }
 
   hintControl(): HTMLButtonElement {
     const button = document.createElement('button');
     button.textContent = "Hold shift to rotate";
-
     return button;
   }
 
   initializeDeckOverlay(map: google.maps.Map) {
-    this.deckOverlay = new DeckOverlayController(map, this.selectedLayer);
-    this.streamStatus$ = toObservable(this.deckOverlay.StreamStatus, {
+    this.deckOverlay = new DeckOverlayController(map, this.deckOverlayStateService.currentLayer());
+
+    const streamStatus$ = toObservable(this.deckOverlay.StreamStatus, {
       injector: this.injector
     });
 
-    const onChunkLoad$ = toObservable(this.deckOverlay.currentMetaData,
-      { injector: this.injector });
+    const onChunkLoad$ = toObservable(this.deckOverlay.currentMetaData, {
+      injector: this.injector
+    });
 
-    // TODO: This subscription responses to emitted chunks from the deck overlay class.
+    // Subscribe to chunk loading
     onChunkLoad$.pipe(
-      skip(1), // NOTE: A skip will result in the first loaded chunk being seen.
-    ).
-      subscribe({
-        next: chunk => this.emitChunkData(chunk),
-        error: err => console.error(err),
-      });
-
-    // TODO: This subscription will response to the latest stream status of the signalr client.
-    this.streamStatusSubscription = this.streamStatus$.pipe(
       skip(1),
-      distinctUntilChanged()
-    )
-      .subscribe({
-        next: (status: StreamStatus) => {
-          // TODO: Finish this method and also remove the snack bar button.
-          const numIndividuals = this.deckOverlay?.CurrentIndividuals().size ?? 0;
-          switch (status) {
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: chunk => this.mapStateService.setEventData(chunk),
+      error: err => console.error(err),
+    });
 
-            case "standby":
-              this.emitStreamStatus("standby");
-              if (numIndividuals === 0) {
-                this.openSnackBar("No Events Found.");
-                break;
-              }
-              this.openSnackBar(`Events found for ${numIndividuals} animal(s).`);
+    // Subscribe to stream status changes
+    streamStatus$.pipe(
+      skip(1),
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (status: StreamStatus) => {
+        const numIndividuals = this.deckOverlay?.CurrentIndividuals().size ?? 0;
+
+        switch (status) {
+          case "standby":
+            this.mapStateService.setStreamStatus("standby");
+            if (numIndividuals === 0) {
+              this.openSnackBar("No Events Found.");
               break;
+            }
+            this.openSnackBar(`Events found for ${numIndividuals} animal(s).`);
+            break;
 
-            case "error":
-              this.emitStreamStatus("error");
-              this.openSnackBar("Error retrieving events.");
-              break;
+          case "error":
+            this.mapStateService.setStreamStatus("error");
+            this.openSnackBar("Error retrieving events.");
+            break;
 
-            case "streaming":
-              this.emitStreamStatus("streaming");
-              break;
+          case "streaming":
+            this.mapStateService.setStreamStatus("streaming");
+            break;
 
-            default:
-              return;
-          }
-        },
-        error: err => console.error(err)
-      });
+          default:
+            return;
+        }
+      },
+      error: err => console.error(err)
+    });
   }
 
   openSnackBar(message: string, timeLimit: number = 2) {
-    this.snackbar.openFromComponent(SnackbarComponent, { duration: timeLimit * 1000, data: message });
+    this.snackbar.openFromComponent(SnackbarComponent, {
+      duration: timeLimit * 1000,
+      data: message
+    });
   }
 
-  // NOTE: This function serves to create a dynamic button element every time the info window is opened
-  // On button click an event is emitted that makes send jsonData to the event component
   buildInfoWindowContent(studyDTO: StudyDTO): HTMLElement {
     const infoWindowEl = document.createElement('info-window-el') as NgElement & WithProperties<InfoWindowComponent>;
     infoWindowEl.currentStudy = studyDTO;
-    infoWindowEl.eventRequest = this.studyEmitter;
-
+    infoWindowEl.mapStateService = this.mapStateService;
     return infoWindowEl;
   }
 
@@ -494,13 +385,6 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     return this.studyService.jsonRequest(entityType, studyId);
   }
 
-  //NOTE:The focusedMarker needs to be set before calling this function.
-  panToCurrentMarker() {
-    if (!this.focusedMarker) return;
-    this.panToMarker(this.focusedMarker);
-  }
-
-  // NOTE: This function only affects the map component
   panToMarker(studyId: bigint): void {
     const curMarker = this.markers?.get(studyId);
     if (!curMarker || !this.infoWindow || !this.map) return;
@@ -511,23 +395,5 @@ export class MapComponent implements OnInit, AfterViewInit, OnChanges, OnDestroy
     this.map.panTo(markerPos);
     this.map.setZoom(10);
     google.maps.event.trigger(curMarker, "click");
-  }
-
-
-  // INFO: This message is received in the event component.
-  emitStudy(study: StudyDTO): void {
-    this.studyEmitter.emit(study);
-  }
-
-  emitStudies(studies: Map<bigint, StudyDTO>): void {
-    this.studiesEmitter.emit(studies);
-  }
-
-  emitChunkData(chunkInfo: EventMetadata): void {
-    this.chunkInfoEmitter.emit(chunkInfo);
-  }
-
-  emitStreamStatus(streamStatus: StreamStatus): void {
-    this.streamStatusEmitter.emit(streamStatus);
   }
 }

@@ -113,7 +113,6 @@ namespace PersonalSiteAPI.Controllers
         {
             try
             {
-                //Console.WriteLine("Calling GetStudy");
                 var cacheKey = $"GetStudy: {studyId}";
                 Studies? study = null;
                 if (!_memoryCache.TryGetValue<Studies>(cacheKey, out var storedResult))
@@ -168,8 +167,6 @@ namespace PersonalSiteAPI.Controllers
         {
             try
             {
-                Console.WriteLine("Calling GetStudies");
-
                 if (!ModelState.IsValid)
                 {
                     return BadRequest();
@@ -182,7 +179,6 @@ namespace PersonalSiteAPI.Controllers
                 bool authorized = true;
                 if (!User.IsInRole(RoleNames.Administrator))
                 {
-                    //Console.WriteLine("User is not authorized.");
                     // Valid Licenses are: "CC_0", "CC_BY", "CC_BY_NC"                    
                     source = source.Where(_validLicenseExp);
                     authorized = false;
@@ -192,8 +188,6 @@ namespace PersonalSiteAPI.Controllers
                 var cacheKey = $"GetStudies: {authorized}-{pageIndex}-{pageSize}-{sortColumn}-{sortOrder}-{filterColumn}-{filterQuery}";
                 if (_memoryCache.TryGetValue<ApiResult<StudyDTO>>(cacheKey, out var storedResult))
                 {
-                    //Console.WriteLine("Using cached result in GetStudies");
-                    //Console.WriteLine(storedResult?.Data[0].TimestampFirstDeployedLocation.ToString());
                     return storedResult ?? throw new Exception("Invalid object placed in cache.");
                 }
 
@@ -201,7 +195,6 @@ namespace PersonalSiteAPI.Controllers
                 cacheKey = $"GetAllStudies:{User.IsInRole(RoleNames.Administrator)}";
                 if (_memoryCache.TryGetValue<StudyDTO[]>(cacheKey, out var allStudies) && allStudies is not null)
                 {
-                    Console.WriteLine("Using cached result from GetAllStudies in GetStudies endpoint.");
                     var newSource = !User.IsInRole(RoleNames.Administrator)
                         ? allStudies.Where(ValidLicense) 
                         : allStudies.AsEnumerable();
@@ -215,9 +208,8 @@ namespace PersonalSiteAPI.Controllers
                         filterColumn,
                         filterQuery);
                 }
-                // INFO: The type Studies is projected to StudyDTO.
+
                 var dataSource = source.ProjectToType<StudyDTO>();
-                // TODO: Store the entire table in cache in apiResult?
                 ApiResult<StudyDTO> apiResult = await ApiResult<StudyDTO>.CreateAsync(
                     dataSource,
                     pageIndex,
@@ -227,17 +219,18 @@ namespace PersonalSiteAPI.Controllers
                     filterColumn,
                     filterQuery);
 
-                // Tentatively, cache the result for 1 minute.
+                // In 2 minutes, the entry is removed if not used
+                // In 5 minutes, the entry is removed no matter what in order keep results up to date
                 var cacheOptions = new MemoryCacheEntryOptions()
                 {
                     Size = 1,
                     SlidingExpiration = TimeSpan.FromMinutes(2),
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
                 };
+                // Only the first page is cached for faster initial performance
                 if (pageIndex == 0){
                     _memoryCache.Set(cacheKey, apiResult, cacheOptions);    
                 }
-                // _memoryCache.Set(cacheKey, apiResult, cacheOptions);
                 return apiResult;
             }
             catch (Exception e)
@@ -495,8 +488,6 @@ namespace PersonalSiteAPI.Controllers
 
                 var data = LineStringFeatureCollection<LineStringPropertiesV1>.RecordToEventJsonDto(records, request.StudyId);
 
-                //Console.WriteLine($"Converted {records.Count} records to data with {data.IndividualEvents.Count} individuals and processed records to linestrings collections in {stopwatch.Elapsed / 1000} seconds.");
-                
                 if (data is null)
           {
                     throw new Exception("Data was null");

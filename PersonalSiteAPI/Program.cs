@@ -10,6 +10,7 @@ using Mapster;
 using PersonalSiteAPI.Mappings;
 using PersonalSiteAPI.Hubs;
 using Microsoft.AspNetCore.Diagnostics;
+using Amazon.Runtime;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -73,7 +74,6 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
 // NOTE: Switch this to the other connection string to make changes to production database
-//options.UseSqlServer(builder.Configuration["TestConnectionStrings:DefaultConnection"]);
 //options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), options =>
 options.UseSqlServer(builder.Configuration["TestConnectionStrings:DefaultConnection"], options => 
 {
@@ -134,9 +134,9 @@ builder.Services.AddDataProtection();
 builder.Services.AddScoped<JwtHandler>();
 
 // Amazon Key Vault Services
-var options = builder.Configuration.GetAWSOptions();
-builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
-
+var awsOptions = builder.Configuration.GetAWSOptions();
+awsOptions.Credentials = new BasicAWSCredentials(builder.Configuration["AWS:AccessKey"], builder.Configuration["AWS:SecretKey"]);
+builder.Services.AddDefaultAWSOptions(awsOptions);
 builder.Services.AddAWSService<IAmazonSecretsManager>();
 
 // TODO: Use MessagePack protocol.
@@ -236,10 +236,6 @@ app.UseAuthorization();
 
 app.UseRateLimiter();
 
-//app.UseEndpoints(endpoints =>
-//{
-//    endpoints.MapControllers().RequireCors("SpecificOrigins");
-//    endpoints.MapHub<MoveBankHub>("/api/MoveBank-Hub");
 //});
 
 app.MapControllers().RequireCors("Angular");
@@ -249,8 +245,5 @@ app.MapHub<MoveBankHub>("/api/MoveBank-Hub", options =>
     options.TransportMaxBufferSize = 1024 * 1024;
 }).RequireCors("Angular");
 
-////app.UseHealthChecks(new PathString("/api/health"));
-////app.MapControllers().RequireCors("AnyOrigin");
-//app.MapControllers().RequireCors("SpecificOrigins");
 
 app.Run();

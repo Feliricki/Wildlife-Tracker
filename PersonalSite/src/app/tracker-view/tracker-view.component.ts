@@ -1,18 +1,14 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, Signal, ViewChild, WritableSignal, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, Signal, WritableSignal, signal, inject, DestroyRef } from '@angular/core';
 import { MapComponent } from '../base-maps/google maps/google-map.component';
 import { SimpleSearchComponent } from '../simple-search/simple-search.component';
-import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
+import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
 import { ControlChange, EventsComponent } from '../events/events.component';
 import { StudyDTO } from '../studies/study';
-import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
 import { MatIconModule } from '@angular/material/icon';
 import { animate, style, transition, trigger, state } from '@angular/animations';
 import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/layout';
-import { Observable, firstValueFrom, map } from 'rxjs';
-import { HttpResponse } from '@angular/common/http';
-import { LineStringFeatureCollection, LineStringPropertiesV1 } from "../deckGL/GeoJsonTypes";
-import { EventRequest } from "../studies/EventRequest";
+import { firstValueFrom, map } from 'rxjs';
 import { NgStyle, AsyncPipe } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -29,6 +25,13 @@ import { FormsModule } from '@angular/forms';
 import { MapboxComponent } from '../base-maps/mapbox/mapbox.component';
 import { Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
+
+// Import the new services
+import { UIStateService } from '../services/ui-state.service';
+import { MapStateService } from '../services/map-state.service';
+import { DeckOverlayStateService } from '../services/deck-overlay-state.service';
+import { MoveBankService } from '../services/movebank.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export type GoogleMapStyles =
   "roadmap" | "terrain" | "hybrid" | "satellite";
@@ -63,7 +66,6 @@ type BaseMaps = 'google' | 'mapbox' | 'arcgis';
     FormsModule,
   ],
   animations: [
-
     trigger('leftToggleClick', [
       transition('void => *', [
         style({ transform: 'translateX(-100%)' }),
@@ -79,180 +81,150 @@ type BaseMaps = 'google' | 'mapbox' | 'arcgis';
     ]),
 
     trigger('leftPanelOpened', [
-
       state('true', style({ left: 'calc(400px - 1.5em)' })),
       state('false', style({ left: '.3em' })),
 
-      // INFO:Animation used on the toggling button for the left sidenav.
       transition('true => false', [
         animate('300ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(-400px + 1.5em + .3em))' })),
       ]),
 
-      // NOTE:This transition is used when opening the left sidenav.
-      // Uses standard easing according to material design specs`
-      // old cubic-bezier value is cubic-bezier(0.2, 0, 0, 1)
       transition('false => true', [
         animate('325ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(400px - 1.5em - .3em))' })),
       ]),
     ]),
 
     trigger('rightPanelOpened', [
-      // state('false', style({ left: 'calc(100vw - 3.265em)' })),
-      state("true", style({ left: "calc(100vw - 700px - 1em)" })),
-      // state("false", style({ right: ".3265em" })),
-      state("false", style({ right: "0em" })),
+      state("true", style({ left: "calc(100vw - 700px - 1rem)" })),
+      state("false", style({ left : "calc(100vw - 2.75rem)" })),
       transition('true => false', [
-        animate('300ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(700px - 2em))' }))
+        animate('300ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(700px - 1.75rem))' }))
       ]),
       transition('false => true', [
-        animate('325ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(-700px + 2em))' }))
+        animate('325ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(-700px + 1.75rem))' }))
       ]),
     ])
   ]
 })
-export class TrackerViewComponent implements OnInit, OnDestroy {
+export class TrackerViewComponent implements OnInit {
+  // Inject services
+  private readonly uiStateService = inject(UIStateService);
+  private readonly mapStateService = inject(MapStateService);
+  private readonly deckOverlayStateService = inject(DeckOverlayStateService);
+  private readonly moveBankService = inject(MoveBankService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly router = inject(Router);
+  private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  options = {
-    fixed: true,
-    bottom: 0,
-    top: 0
-  };
+  // UI State from service
+  readonly leftPanelOpen = this.uiStateService.leftPanelOpen;
+  readonly rightPanelOpen = this.uiStateService.rightPanelOpen;
+  readonly mapLoaded = this.uiStateService.mapLoaded;
+  readonly isSmallScreen = this.uiStateService.isSmallScreen;
+  readonly isExtraSmallScreen = this.uiStateService.isExtraSmallScreen;
 
-  activeMap: WritableSignal<BaseMaps> = signal('mapbox');
+  // Map State from service
+  readonly currentStudy = this.mapStateService.currentStudy;
+  readonly studies = this.mapStateService.studies;
+  readonly focusedStudyId = this.mapStateService.focusedStudyId;
+  readonly currentEventData = this.mapStateService.currentEventData;
+  readonly streamStatus = this.mapStateService.streamStatus;
+  readonly pointsVisible = this.mapStateService.pointsVisible;
 
-  mapLoaded: WritableSignal<boolean> = signal(false);
-  searchOpened: WritableSignal<boolean> = signal(false);
+  // Deck Overlay State from service
+  readonly currentLayer = this.deckOverlayStateService.currentLayer;
+  readonly layerVisible = this.deckOverlayStateService.layerVisible;
 
+  // Local component state
+  readonly activeMap: WritableSignal<BaseMaps> = signal('mapbox');
+  readonly currentMapType: WritableSignal<GoogleMapStyles> = signal("roadmap");
+  readonly isAdmin: Signal<boolean> = this.authService.isAdmin;
 
-  // NOTE:This is currently unused
-  currentEventLineData$?:
-    Observable<HttpResponse<LineStringFeatureCollection<LineStringPropertiesV1>[] | null>>;
-  currentEventRequest?: EventRequest;
+  // Observables for responsive design
+  readonly smallScreen$ = this.breakpointObserver
+    .observe([Breakpoints.XSmall, Breakpoints.Small])
+    .pipe(map((state: BreakpointState) => state.matches));
 
-  currentMarker?: bigint;
-  currentStudies?: Map<bigint, StudyDTO>;
+  readonly XSmallScreen$ = this.breakpointObserver
+    .observe([Breakpoints.XSmall])
+    .pipe(map((state: BreakpointState) => state.matches));
 
-  currentMapType: GoogleMapStyles = "roadmap";
-
-  currentLayer: WritableSignal<LayerTypes> = signal(LayerTypes.LineLayer);
-  displayedEvents?: EventJsonDTO[];
-
-  currentStudy?: StudyDTO;
-  studyEventMessage?: StudyDTO;
-
-  currentChunkInfo?: EventMetadata;
-  currentStreamStatus?: StreamStatus;
-  currentControlOptions?: ControlChange;
-
-  @ViewChild('sidenav', { static: true }) sidenav!: MatSidenav;
-  @ViewChild('rightSidenav', { static: true }) rightNav!: MatSidenav;
-  @ViewChild('eventComponent') event!: EventsComponent;
-
-  leftButtonFlag: WritableSignal<boolean> = signal(false);
-  rightButtonFlag: WritableSignal<boolean> = signal(true);
-
-  leftPanelOpened: WritableSignal<boolean> = signal(true);
-  rightPanelOpened: WritableSignal<boolean> = signal(false);
-
-  radioGroupInitialized: WritableSignal<boolean> = signal(false);
-  markersVisible: WritableSignal<boolean> = signal(true);
-
-  // INFO:The following are dynamic styling which
-  // changes depending on the current screen size.
-  leftNavSmallStyle = {
+  // Styling objects
+  readonly leftNavSmallStyle = {
     "min-width": "100px",
     "max-width": "400px",
     "width": "100%",
-  }
+  };
 
-  leftNavLargeStyle = {
+  readonly leftNavLargeStyle = {
     "width": "400px",
-  }
+  };
 
-  //TODO: For now, experiment with the styling for the xtra small menu.
-  menuXSmallStyle = {
-    // "position": "relative",
+  readonly menuXSmallStyle = {
     "margin-top": "1.5em",
     "margin-right": "0.5em"
-  }
+  };
 
-  menuNormalStyle = {
+  readonly menuNormalStyle = {
     "position": "fixed",
     "left": "1em",
     "margin-top": "0.5em"
-  }
+  };
 
-  // TODO:Include a larger height for the aggregation layers.
-  rightNavStyle = {
+  readonly rightNavStyle = {
     "width": "700px",
     "margin-top": "13em",
-    // "top": "13em",
-    // "height": "40em",
     "height": "500px",
     "background-color": "rgba(0,0,0,0)",
   };
 
-  smallScreen$?: Observable<boolean>;
-  XSmallScreen$?: Observable<boolean>;
-
-  // TODO:The purpose of this signal is to check
-  XSmallScreenActive: WritableSignal<boolean> = signal(false);
-
-  // NOTE:An ngModel binding in order to set a default value for the radio group.
-  radioGroupValue: LayerTypes = LayerTypes.LineLayer;
   readonly layerMenuOptions = [
     ["Arc Layer", LayerTypes.ArcLayer],
     ["Line Layer", LayerTypes.LineLayer],
     ["Hexagon Layer", LayerTypes.HexagonLayer],
     ["Scatterplot Layer", LayerTypes.ScatterplotLayer],
     ["Screen Grid Layer", LayerTypes.ScreenGridLayer],
-    // ["Grid Layer", LayerTypes.GridLayer], // NOTE:not working.
     ["Heatmap Layer", LayerTypes.HeatmapLayer],
   ] as Array<[string, LayerTypes]>;
 
-  isAdmin: Signal<boolean>;
+  constructor() {
+    // Set up responsive design handling
+    this.smallScreen$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(isSmall => {
+        this.uiStateService.setScreenSize(isSmall, false);
+        if (isSmall && this.leftPanelOpen()) {
+          this.uiStateService.closeLeftPanel();
+        }
+      });
 
-  constructor(
-    private breakpointObserver: BreakpointObserver,
-    private router: Router,
-    private authService: AuthService) {
-    this.isAdmin = signal(false);
+    this.XSmallScreen$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(isExtraSmall => {
+        this.uiStateService.setScreenSize(this.isSmallScreen(), isExtraSmall);
+      });
+
+    // Initialize studies when component loads
+    this.moveBankService.getAllStudies()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(studies => {
+        const studiesMap = new Map<bigint, StudyDTO>();
+        studies.forEach(study => studiesMap.set(study.id, study));
+        this.mapStateService.setStudies(studiesMap);
+      });
   }
 
   ngOnInit(): void {
-    const breakpointObserver = this.breakpointObserver
-      .observe([Breakpoints.XSmall, Breakpoints.Small]).pipe(
-        map((state: BreakpointState) => {
-          return state.matches;
-        }),
-      );
-
-    firstValueFrom(breakpointObserver).then(value => {
-      if (value) {
-        this.closeSearchNav();
-        this.leftPanelOpened.set(false);
+    // Handle initial responsive state
+    firstValueFrom(this.smallScreen$).then(isSmall => {
+      if (isSmall) {
+        this.uiStateService.closeLeftPanel();
       }
     });
-
-    this.smallScreen$ = this.breakpointObserver
-      .observe([Breakpoints.XSmall, Breakpoints.Small]).pipe(
-        map((state: BreakpointState) => state.matches),
-      );
-
-    this.XSmallScreen$ = this.breakpointObserver
-      .observe([Breakpoints.XSmall]).pipe(
-        map((state: BreakpointState) => state.matches),
-      );
-
-    this.isAdmin = this.authService.getIsAdmin;
   }
 
-  ngOnDestroy(): void {
-    return;
-  }
-
+    // Navigation methods
   gotoAdminPage(): void {
-    // TODO:This requires verifications
     this.router.navigate(["/admin-page"]);
   }
 
@@ -268,170 +240,126 @@ export class TrackerViewComponent implements OnInit, OnDestroy {
     this.router.navigate(['/login']);
   }
 
-  loadMap(): void {
-    if (this.mapLoaded()) return;
-    switch (this.activeMap()) {
-      case "google":
-        break;
-
-      default:
-        return;
-    }
-  }
-
-  layerOptionSelected(option: MatRadioChange) {
+  // Layer selection
+  layerOptionSelected(option: MatRadioChange): void {
     const selectedLayer = option.value as LayerTypes;
-    this.selectedLayer(selectedLayer);
+    this.deckOverlayStateService.setCurrentLayer(selectedLayer);
   }
 
-  // INFO:Overlay controls.
-  selectedLayer(layer: LayerTypes) {
-    this.currentLayer.set(layer);
+  // Map state management
+  updateMapState(loaded: boolean): void {
+    this.uiStateService.setMapLoaded(loaded);
+    this.mapStateService.setMapLoaded(loaded);
   }
 
-  // INFO:Map and component state.
-  updateMapState(state: boolean): void {
-    this.mapLoaded.set(state);
-  }
-
-  initializeSearchNav(): void {
-    this.searchOpened.set(true);
-  }
-
-  // INFO:Events messages from the google maps component.
-  updateLineStringData(
-    event: Observable<HttpResponse<LineStringFeatureCollection<LineStringPropertiesV1>[] | null>>): void {
-    this.currentEventLineData$ = event;
-  }
-
-  updateCurrentEventRequest(request: EventRequest): void {
-    this.currentEventRequest = request;
-  }
-
+  // Study management
   updateCurrentStudy(study: StudyDTO): void {
-    if (study === undefined) {
-      return;
-    }
-    this.openRightNav();
-    this.currentStudy = study;
+    if (!study) return;
+
+    this.mapStateService.setCurrentStudy(study);
+    this.uiStateService.openRightPanel();
   }
 
-  // NOTE: This message comes from the google maps component and is received in the search component
-  // for it's autocomplete feature.
   updateCurrentStudies(studies: Map<bigint, StudyDTO>): void {
-    this.currentStudies = studies;
+    this.mapStateService.setStudies(studies);
   }
 
   updateCurrentMarkers(studyId: bigint): void {
-    if (!this.mapLoaded()) {
+    if (!this.mapLoaded()) return;
+    this.mapStateService.setFocusedStudy(studyId);
+  }
+
+  updateChunkMetadata(chunkInfo: EventMetadata): void {
+    this.mapStateService.setEventData(chunkInfo);
+  }
+
+  updateStreamState(streamStatus: StreamStatus): void {
+    this.mapStateService.setStreamStatus(streamStatus);
+  }
+
+  updateControlChanges(change: ControlChange): void {
+    this.deckOverlayStateService.applyControlChange(change);
+  }
+
+  // Map controls
+  setMapTypeGoogle(mapStyle: GoogleMapStyles): void {
+    const current = this.currentMapType();
+
+    if ((mapStyle === "roadmap" || mapStyle === "terrain") &&
+        (current === "terrain" || current === "roadmap")) {
       return;
     }
-    this.currentMarker = studyId;
-  }
-
-  updateChunkMetadata(chunkInfo: EventMetadata) {
-    // console.log(chunkInfo);
-    this.currentChunkInfo = chunkInfo;
-  }
-
-  updateStreamState(streamStatus: StreamStatus) {
-    this.currentStreamStatus = streamStatus;
-  }
-
-  // INFO: Map Controls
-  setMapTypeGoogle(mapStyle: GoogleMapStyles) {
-    if ((mapStyle === "roadmap" || mapStyle == "terrain") && (this.currentMapType == "terrain" || this.currentMapType == "roadmap")) {
+    if ((mapStyle === "satellite" || mapStyle === "hybrid") &&
+        (current === "hybrid" || current === "satellite")) {
       return;
     }
-    if ((mapStyle === "satellite" || mapStyle === "hybrid") && (this.currentMapType === "hybrid" || this.currentMapType === "satellite")) {
-      return;
-    }
-    this.currentMapType = mapStyle;
+
+    this.currentMapType.set(mapStyle);
   }
 
-  setMapTypeCheckbox(event: MatCheckboxChange) {
+  setMapTypeCheckbox(event: MatCheckboxChange): void {
     if (event.source.value === "roadmap") {
-      this.currentMapType = event.checked ? "terrain" : "roadmap";
+      this.currentMapType.set(event.checked ? "terrain" : "roadmap");
       return;
     }
-    this.currentMapType = event.checked ? "hybrid" : "satellite";
+    this.currentMapType.set(event.checked ? "hybrid" : "satellite");
   }
 
   setBaseMap(basemap: BaseMaps): void {
     if (this.activeMap() === basemap) return;
+
     this.resetGoogleMap();
     this.activeMap.set(basemap);
-    // NOTE:Certain other flags such as the rightButtonFlag and leftButtonFlag will need
-    // to be looked at again to check if they do not break.
-    this.markersVisible.set(true);
-    this.mapLoaded.set(false);
+    this.mapStateService.setPointsVisible(true);
+    this.uiStateService.setMapLoaded(false);
+    this.mapStateService.setMapLoaded(false);
   }
 
   resetGoogleMap(): void {
-    this.currentMapType = "roadmap";
+    this.currentMapType.set("roadmap");
   }
 
-  // INFO: Left and right sidenav controls.
+  // Panel controls - now using service methods
   closeRightNav(): void {
-    this.rightNav.close();
-    this.rightButtonFlag.set(true);
-    this.rightPanelOpened.set(false);
+    this.uiStateService.closeRightPanel();
   }
 
   openRightNav(): void {
-    if (this.rightNav.opened) {
-      return;
-    }
-    this.rightPanelOpened.set(true);
-    this.rightNav.open().then(() => {
-      this.rightButtonFlag.set(false);
-    });
+    this.uiStateService.openRightPanel();
   }
 
   closeSearchNav(): void {
-    this.sidenav.close();
-    this.leftButtonFlag.set(true);
-    this.leftPanelOpened.set(false);
+    this.uiStateService.closeLeftPanel();
   }
 
   openSearchNav(): void {
-    this.leftPanelOpened.set(true);
-    this.sidenav.open().then(() => {
-      this.leftButtonFlag.set(false);
-    });
+    this.uiStateService.openLeftPanel();
   }
 
   toggleSearchNav(): void {
-    if (this.leftPanelOpened()) {
-      this.closeSearchNav();
-    } else {
-      this.openSearchNav();
-    }
+    this.uiStateService.toggleLeftPanel();
   }
 
   toggleEventNav(): void {
-    if (this.rightPanelOpened()) {
-      this.closeRightNav();
-    } else {
-      this.openRightNav();
-    }
+    this.uiStateService.toggleRightPanel();
   }
 
+  // Marker visibility
   toggleMarkerVisibility(): boolean {
-    this.markersVisible.update(prev => !prev);
-    return this.markersVisible();
+    this.mapStateService.togglePointsVisibility();
+    return this.pointsVisible();
   }
 
   markerToggleLabel(): string {
-    if (this.markersVisible()) {
-      return "Remove markers";
-    } else {
-      return "Add markers";
-    }
+    return this.pointsVisible() ? "Remove markers" : "Add markers";
   }
 
-  updateControlChanges(change: ControlChange): void {
-    this.currentControlOptions = change;
+  // Template getters for backward compatibility
+  get radioGroupValue(): LayerTypes {
+    return this.currentLayer();
   }
 
+  set radioGroupValue(value: LayerTypes) {
+    this.deckOverlayStateService.setCurrentLayer(value);
+  }
 }

@@ -96,15 +96,12 @@ namespace PersonalSiteAPI.Services
                 });
         }
         
-        
-        // TODO: Change this method to accept 
         public async Task<List<string>> GetWordsWithPrefix(string prefix="", long? maxCount = 10, bool allowedRestricted = false)
         {
             return await Task.FromResult(
                 _autoCompleteService.GetAllWordsWithPrefix(prefix, maxCount, allowedRestricted).Select(charArray => string.Join("", charArray)).ToList()
             );
         }
-        // Restrict this function
         public async Task<ApiTokenResultDTO?> GetApiToken()
         {
             SecretCacheItem? secretCache = _secretsCache.GetCachedSecret(_configuration["ConnectionStrings:AWSKeyVault2ARN"]);
@@ -164,7 +161,6 @@ namespace PersonalSiteAPI.Services
             }
         }
 
-        // TODO: Validation should occur in the controller method.
         public async Task<HttpResponseMessage?> DirectRequestEvents(EventRequest request)
         {
             var parameters = new Dictionary<string, string?>();
@@ -450,9 +446,6 @@ namespace PersonalSiteAPI.Services
             return responseStr.Contains("License Terms:");
         }
 
-        // NOTE: This method is untested
-        // This method assumes that the old response contains some license terms
-        // Otherwise the same response be received
         private async Task<HttpResponseMessage> GetPermissionForDirectRead(
             HttpRequestMessage oldRequest,
             HttpResponseMessage oldResponse)

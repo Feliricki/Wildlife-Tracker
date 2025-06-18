@@ -16,8 +16,12 @@
 
 // NOTE:The width of the sidenav is 450px.
 #search-form {
-  margin-left: 1em;
-  margin-top: 1em;
+  margin-left: 1em; margin-top: 1em;
+}
+
+#sort-select {
+  margin-left: 1rem;
+  /* margin-top: 1rem; */
 }
 
 .content-first-row {
@@ -33,10 +37,6 @@ table {
   max-height: calc(100vh - 1em);
 }
 
-.paginator {
-  position: sticky;
-  bottom: 0;
-}
 
 .mini-button {
   position: relative;
@@ -46,32 +46,9 @@ table {
 }
 
 .spinner {
-  // position: fixed;
   display: flex;
   justify-content: center;
   align-items: center;
-}
-
-.close-button-container {
-  display: flex;
-  justify-content: right;
-  height:4em;
-  button {
-    margin-top: 5px;
-  }
-}
-
-.close-button {
-  margin-top: 0.5em;
-}
-
-.close-button-fab {
-  position: fixed;
-  z-index: 100;
-  top: 45vh;
-  left: 370px;
-  background-color: white;
-  color: black;
 }
 
 .column-header {

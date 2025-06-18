@@ -63,13 +63,6 @@
             <mat-checkbox [formControlName]="j" (click)="$event.stopPropagation()" (change)="toggleRow(j)"
               [id]="j"></mat-checkbox>
           </td>
-          <!--- TODO: Move the button to a sticky element at the end of the table tag -->
-          <!-- <td mat-footer-cell *matFooterCellDef> -->
-          <!--   <button mat-raised-button class="submit-button" [disabled]="TableState() !== 'loaded' || eventForm.invalid" -->
-          <!--     color="primary" type="submit"> -->
-          <!--     Submit -->
-          <!--   </button> -->
-          <!-- </td> -->
           <mat-progress-bar mode="indeterminate"></mat-progress-bar>
         </ng-container>
 

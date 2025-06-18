@@ -10,7 +10,6 @@ import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
 import { JsonResponseData } from './JsonResults/JsonDataResponse';
 import { EventRequest } from './EventRequest';
 
-// type PointFeature<TProp> = GeoJSON.Feature<GeoJSON.Point, TProp>;
 type PointFeatureCollection<TProp> = GeoJSON.FeatureCollection<GeoJSON.Point, TProp>;
 
 @Injectable({

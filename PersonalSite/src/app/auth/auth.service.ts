@@ -20,7 +20,6 @@ export class AuthService {
   public isAdmin = this._isAdmin.asReadonly();
 
   constructor(private httpClient: HttpClient) {
-    console.log("authService constructor");
   }
 
   hasAdminAuthorization(): Observable<boolean> {
@@ -49,11 +48,10 @@ export class AuthService {
   }
 
   init(): Observable<boolean> {
-    console.log("Initializing authService");
     if (this.isAuthenticated())
       this.setAuthStatus(true);
 
-    // INFO:we don't care about the result. Just that it updates the
+    // we don't care about the result. Just that it updates the
     // the _isAdmin signal appropriately
     return this.hasAdminAuthorization();
   }

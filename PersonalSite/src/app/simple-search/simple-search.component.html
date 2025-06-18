@@ -2,7 +2,7 @@
 
 <div class="table-container">
 
-  @if (studies === undefined){
+  @if (!studies()){
   <div class="unloaded">
     <button class="close-button" mat-icon-button (click)="emitCloseComponentMessage()" aria-label="Close Search Menu">
       <mat-icon>close</mat-icon></button>
@@ -13,15 +13,12 @@
   </div>
   }
 
-  <table mat-table [dataSource]="studies" [trackBy]="trackStudy" class="mat-elevation-z8 dense-5" *ngIf="studies">
+  <table mat-table [dataSource]="studies() ?? []" [trackBy]="trackStudy" class="mat-elevation-z8 dense-5" *ngIf="studies()">
     <!-- Name -->
     <ng-container matColumnDef="name" class="cell-container">
 
       <th mat-header-cell *matHeaderCellDef class="cell-header">
-        <div class="first-row">
-
-          <form [formGroup]="searchForm">
-
+        <div class="first-row"> <form [formGroup]="searchForm">
             <mat-form-field class="dense-5" id="search-form" appearance="outline">
 
               <button matPrefix mat-icon-button aria-label="Search" (click)="loadData(Filter.value)">
@@ -51,52 +48,27 @@
               }
 
             </mat-form-field>
+
+          <mat-form-field appearance="outline" id="sort-select">
+            <mat-label>Sort By</mat-label>
+            <mat-select  formControlName="sortColumn" (change)="selectSortBy($event)">
+              <mat-option value="name">Name</mat-option>
+              <mat-option value="timestampFirstDeployedLocation">First Deployment Date</mat-option>
+              <mat-option value="timestampLastDeployedLocation">Last Deployment Date</mat-option>
+            </mat-select>
+          </mat-form-field>
+
           </form>
 
-          <span class="spacer"></span>
-          <button class="close-button" mat-icon-button (click)="emitCloseComponentMessage()"
-            aria-label="Close Search Menu">
-            <mat-icon>close</mat-icon></button>
-        </div>
 
-        <!-- NOTE: Consider if the following input fields can be included. -->
-        <!-- <div class="search-container" *ngIf="studies"> -->
-        <!-- <div data-simplebar class="search-container"> -->
-        <!---->
-        <!--   <form [formGroup]="searchForm" class="dense-3"> -->
-        <!---->
-        <!--     <div class="first-row"> -->
-        <!---->
-        <!--       <button style="visibility: hidden;"></button> -->
-        <!---->
-        <!---->
-        <!--     </div> -->
-        <!---->
-        <!--     <div class="second-row" style="display: flex"> -->
-        <!---->
-        <!---->
-        <!--     </div> -->
-        <!---->
-        <!--   </form> -->
-        <!--   <mat-form-field class="dropList"> -->
-        <!--     <mat-label>Sort Order</mat-label> -->
-        <!--     <mat-select class="drop-selector" #mat_select value="asc" formControlName="dropDownList" -->
-        <!--       (selectionChange)="sortData(mat_select.value)"> -->
-        <!--       <mat-option value="asc">Ascending</mat-option> -->
-        <!--       <mat-option value="desc">Descending</mat-option> -->
-        <!--     </mat-select> -->
-        <!--   </mat-form-field> -->
-        <!-- </div> -->
-        <!---->
-        <!-- <div> -->
-        <!--   <b class="column-header">Studies</b> -->
-        <!-- </div> -->
-        <!-- <mat-divider></mat-divider> -->
+          <!-- TODO: This form field is still messed up -->
+
+        </div>
 
       </th>
 
       <td mat-cell *matCellDef="let study; let j = index;" class="study-header-cell">
-        <mat-expansion-panel #ExpansionPanel [ngStyle]="(screenChange | async) ? smallHeaderStyle : largeHeaderStyle"
+        <mat-expansion-panel #ExpansionPanel [ngStyle]="screenIsSmall() ? smallHeaderStyle : largeHeaderStyle"
           id="expansion-panel" class="mat-elevation-z0">
           <mat-expansion-panel-header collapsedHeight="auto" expandedHeight="auto">
 
@@ -111,7 +83,7 @@
 
             <!-- TODO: Create a custom pipe to convert to local date format -->
 
-            <div class="expansion-content" [ngStyle]="(screenChange | async) ? smallContentStyle : largeContentStyle">
+            <div class="expansion-content" [ngStyle]="screenIsSmall() ? smallContentStyle : largeContentStyle">
 
               <!-- TODO:Remove the close button and make a fab button on the side of the navigation bar. -->
               <div class="content-first-row">

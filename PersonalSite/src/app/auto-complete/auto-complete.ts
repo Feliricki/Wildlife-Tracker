@@ -18,8 +18,6 @@ class CaseInsensitiveMap<T, U> extends Map<T, U> {
 
   override has(key: T): boolean {
     if (typeof key === 'string') {
-      // key = key.toLocaleLowerCase() as T;
-      // key = this.normalizeAccents(key) as T;
       key = this.normalizeAccents(key).toLocaleLowerCase() as T;
     }
     return super.has(key);
@@ -171,7 +169,6 @@ class Trie {
     }
 
     dfs(start);
-    console.log(allWords);
     return allWords;
   }
 }

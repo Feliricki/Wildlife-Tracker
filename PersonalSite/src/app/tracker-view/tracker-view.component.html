@@ -3,8 +3,8 @@
 
 @if (!(smallScreen$ | async)) {
 <button mat-mini-fab [hidden]="!mapLoaded()" class="left-toggle-button" (click)="toggleSearchNav()"
-  [@leftPanelOpened]="leftPanelOpened()">
-  @if (leftPanelOpened()) {
+  [@leftPanelOpened]="leftPanelOpen()">
+  @if (leftPanelOpen()) {
   <mat-icon>chevron_left</mat-icon>
   } @else {
   <mat-icon>chevron_right</mat-icon>
@@ -14,8 +14,8 @@
 
 @if (!(smallScreen$ | async) && mapLoaded()) {
 <button mat-mini-fab [hidden]="!mapLoaded()" class="right-toggle-button" (click)="toggleEventNav()"
-  [@rightPanelOpened]="rightPanelOpened()">
-  @if (rightPanelOpened()) {
+  [@rightPanelOpened]="rightPanelOpen()">
+  @if (rightPanelOpen()) {
   <mat-icon>chevron_right</mat-icon>
   } @else {
   <mat-icon>chevron_left</mat-icon>
@@ -24,7 +24,7 @@
 } @else {
 
 <!-- TODO:This button needs a enter animation. -->
-@if (!rightNav.opened && !sidenav.opened){
+@if (!rightPanelOpen() && !leftPanelOpen()){
 <button mat-fab [hidden]="!mapLoaded()" @rightToggleClick class="right-toggle-button-small" (click)="openRightNav()">
   <mat-icon>chevron_left</mat-icon>
 </button>
@@ -33,30 +33,26 @@
 
 <mat-sidenav-container class="sidenav-container" [hasBackdrop]="false">
 
-  <mat-sidenav #sidenav mode="over" [opened]="true" [fixedInViewport]="true" class="sidenav" [disableClose]="true"
+  <mat-sidenav mode="over" [opened]="leftPanelOpen()" [fixedInViewport]="true" class="sidenav" [disableClose]="true"
     [ngStyle]="(XSmallScreen$ | async) ? leftNavSmallStyle : leftNavLargeStyle">
 
     <div class="search-container">
 
-      @if (sidenav.opened || searchOpened()) {
-      <app-simple-search [hidden]="!searchOpened" [allStudies]="currentStudies" (closeComponent)="closeSearchNav()"
-        (componentInitialized)="initializeSearchNav()"
-        (panToMarkerEvent)="updateCurrentMarkers($event)"></app-simple-search>
+      @if (leftPanelOpen()) {
+      <app-simple-search>
+      </app-simple-search>
       }
 
     </div>
   </mat-sidenav>
   <mat-sidenav-content class="sidenav-content">
 
-    <!-- TODO: Decide on the styling for the normal case. -->
     <!-- NOTE: This is another sidenav within the outer sidenav -->
-    <mat-sidenav class="right-sidenav" [ngStyle]="(smallScreen$ | async) ? {} : rightNavStyle" #rightSidenav
-      [opened]="false" position="end" [disableClose]="true" mode="over" [fixedInViewport]="true">
+    <mat-sidenav class="right-sidenav" [ngStyle]="(smallScreen$ | async) ? {} : rightNavStyle"
+      [opened]="rightPanelOpen()" position="end" [disableClose]="true" mode="over" [fixedInViewport]="true">
 
-      <app-events #eventComponent (eventRequestEmitter)="updateCurrentEventRequest($event)"
-        (closeRightNavEmitter)="closeRightNav()" [currentStudy]="currentStudy" [currentEventData]="currentChunkInfo"
-        [streamStatus]="currentStreamStatus" [currentSelectedLayer]="currentLayer()"
-        (controlOptionsEmitter)="updateControlChanges($event)"></app-events>
+      <app-events>
+      </app-events>
 
     </mat-sidenav>
 
@@ -169,8 +165,9 @@
             }
 
 
-            <button mat-mini-fab matRipple class="marker-toggle" (click)="toggleMarkerVisibility()" color="primary">
-              @if (!markersVisible()) {
+            <button mat-mini-fab matRipple class="marker-toggle" (click)="toggleMarkerVisibility()" color="primary"
+              [matTooltip]="markerToggleLabel()">
+              @if (!pointsVisible()) {
               <mat-icon>location_on</mat-icon>
               } @else {
               <mat-icon>location_off</mat-icon>
@@ -215,8 +212,8 @@
       </mat-toolbar>
       }
 
-      @if (leftButtonFlag() === true && (smallScreen$ | async)) {
-      <button mat-fab [hidden]="!leftButtonFlag()" @leftToggleClick (click)="openSearchNav()" class="toggle-button">
+      @if (leftPanelOpen() === false && (smallScreen$ | async)) {
+      <button mat-fab [hidden]="!mapLoaded()" @leftToggleClick (click)="openSearchNav()" class="toggle-button">
         <mat-icon>chevron_right</mat-icon>
       </button>
       }
@@ -225,19 +222,11 @@
       @switch (activeMap()) {
 
       @case ("google") {
-      <app-google-map [pathEventData$]="currentEventLineData$" (mapStateEmitter)="updateMapState($event)"
-        (studiesEmitter)="updateCurrentStudies($event)" (studyEmitter)="updateCurrentStudy($event)"
-        [focusedMarker]="currentMarker" [eventRequest]="currentEventRequest" [mapType]="currentMapType"
-        [selectedLayer]="currentLayer()" (chunkInfoEmitter)="updateChunkMetadata($event)"
-        (streamStatusEmitter)="updateStreamState($event)" [markersVisible]="markersVisible()"
-        [deckOverlayControls]="currentControlOptions">
+      <app-google-map>
       </app-google-map>
       }
       @case ("mapbox") {
-      <app-mapbox (mapStateEmitter)="updateMapState($event)" (studyEmitter)="updateCurrentStudy($event)"
-        (studiesEmitter)="updateCurrentStudies($event)" (chunkInfoEmitter)="updateChunkMetadata($event)"
-        [focusedPoint]="currentMarker" [eventRequest]="currentEventRequest" [selectedLayer]="currentLayer()"
-        [pointsVisible]="markersVisible()" [deckOverlayControls]="currentControlOptions">
+      <app-mapbox>
       </app-mapbox>
       }
       @default {

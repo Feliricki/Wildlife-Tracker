@@ -1,9 +1,9 @@
-import { Component, OnInit, ViewChild, signal, WritableSignal, Output, EventEmitter, Input, OnChanges, SimpleChanges, AfterViewInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, signal, WritableSignal, ChangeDetectionStrategy, inject, DestroyRef } from '@angular/core';
 import { StudyService } from '../studies/study.service';
 import { StudyDTO } from '../studies/study';
 import { Observable, Subject, reduce, distinctUntilChanged, debounceTime, map, catchError, of, concat, EMPTY } from 'rxjs';
-import { FormGroup, FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { MatPaginator, PageEvent, MatPaginatorModule } from '@angular/material/paginator';
+import { FormControl, FormsModule, ReactiveFormsModule, FormBuilder } from '@angular/forms';
+import { PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table'
 import { ENAAPIService } from '../ENA-API/ena-api.service';
@@ -21,7 +21,12 @@ import { AutoComplete } from '../auto-complete/auto-complete';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/layout';
+import { MatSelectModule } from '@angular/material/select';
 
+// Import state services
+import { UIStateService } from '../services/ui-state.service';
+import { MapStateService } from '../services/map-state.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 interface WikiLinks {
   title: string;
@@ -42,11 +47,25 @@ interface WikiLinks {
     NgStyle, NgFor, MatPaginatorModule, MatDividerModule,
     AsyncPipe, DatePipe, MatProgressSpinnerModule,
     MatRadioModule, MatButtonModule, MatAutocompleteModule,
-    ]
+    MatSelectModule
+  ]
 })
-export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, OnDestroy {
+export class SimpleSearchComponent implements OnInit {
+  // Inject services
+  private readonly studyService = inject(StudyService);
+  private readonly enaService = inject(ENAAPIService);
+  private readonly wikipediaService = inject(WikipediaSearchService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly fb = inject(FormBuilder);
+  private readonly uiStateService = inject(UIStateService);
+  private readonly mapStateService = inject(MapStateService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  studies: MatTableDataSource<StudyDTO> | undefined;
+  // State from services
+  readonly allStudies = this.mapStateService.studies;
+  readonly isSmallScreen = this.uiStateService.isSmallScreen;
+
+  studies: WritableSignal<MatTableDataSource<StudyDTO> | undefined> = signal(undefined);
   displayedColumns = ["name"];
 
   panelExpanded: boolean[] | undefined;
@@ -56,34 +75,29 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
 
   defaultPageIndex = 0;
   defaultPageSize = 20;
-
   defaultSortColumn = "name";
   defaultFilterColumn = "name";
   filterTextChanged: Subject<string> = new Subject<string>();
 
+  // UI signals
+  screenIsSmall: WritableSignal<boolean> = signal(false);
   currentOptions: WritableSignal<string[]> = signal([]);
   studiesLoaded: WritableSignal<boolean> = signal(false);
+  studyNames: WritableSignal<string[]> = signal([]);
 
-  // This form group is the source of truth
-  searchForm = new FormGroup({
-    filterQuery: new FormControl<string>("", { nonNullable: true }),
-    dropDownList: new FormControl<"asc" | "desc">("asc", { nonNullable: true }),
+  // Pagination state
+  paginatorLength: WritableSignal<number> = signal(0);
+  paginatorPageIndex: WritableSignal<number> = signal(0);
+  paginatorPageSize: WritableSignal<number> = signal(20);
+
+  searchForm = this.fb.nonNullable.group({
+    filterQuery: "",
+    dropDownList: this.fb.nonNullable.control<"asc" | "desc">("asc"),
+    sortColumn: "name",
+    filterColumn: "name",
   });
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-
-  // NOTE: This message is sent to the tracker component and is then sent to the map component
-  @Output() panToMarkerEvent = new EventEmitter<bigint>();
-  @Output() componentInitialized = new EventEmitter<true>();
-  @Output() closeComponent = new EventEmitter<true>();
-
-  @Input() allStudies?: Map<bigint, StudyDTO>;
-  studyNames: string[] = [];
-
-  // We can use the breakpoint observer to change the expanded and collapsed height dynamically.
-  breakpointMatches: WritableSignal<boolean> = signal(false);
-  screenChange?: Observable<boolean>;
-
+  // Styling for display of text content
   smallHeaderStyle = {
     'min-width': '80px',
     'max-width': '350px',
@@ -92,7 +106,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
 
   largeHeaderStyle = {
     'width': '350px',
-    'word-break' : 'break-word'
+    'word-break': 'break-word'
   }
 
   smallContentStyle = {
@@ -106,18 +120,37 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
     'word-break': 'break-word'
   }
 
-  constructor(
-    private studyService: StudyService,
-    private enaService: ENAAPIService,
-    private wikipediaService: WikipediaSearchService,
-    private breakpointObserver: BreakpointObserver,
-  ) {
-    return;
+  constructor() {
+    this.setupStateSubscriptions();
+  }
+
+  private setupStateSubscriptions(): void {
+    // Watch for studies changes from the map state service
+    this.mapStateService.studies$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(studies => {
+        if (studies && studies.size > 0) {
+          const studyNamesArray = Array.from(studies.values()).map(study => study.name);
+          this.studyNames.set(studyNamesArray);
+          this.initializeAutoComplete(studyNamesArray);
+        }
+      });
+
+    // Set up screen size observation
+    this.breakpointObserver
+      .observe([Breakpoints.XSmall, Breakpoints.Small])
+      .pipe(
+        map((state: BreakpointState) => state.matches),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(isSmall => {
+        this.uiStateService.setScreenSize(isSmall, false);
+        this.screenIsSmall.set(isSmall);
+      });
   }
 
   currentDate(): Date {
-    const date = new Date();
-    return date;
+    return new Date();
   }
 
   ngOnInit(): void {
@@ -127,51 +160,16 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
     }
 
     this.loadData();
-    this.screenChange = this.breakpointObserver
-      .observe([Breakpoints.XSmall, Breakpoints.Small]).pipe(
-        map((state: BreakpointState) => {
-          this.breakpointMatches.set(state.matches)
-          return state.matches;
-        }),
-      );
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    for (const propertyName in changes) {
-      const currentValue = changes[propertyName].currentValue;
-      if (currentValue === undefined) {
-        continue;
-      }
-      switch (propertyName) {
-        // INFO: This component recieves studies retreived from the map component to use autocomplete.
-        case "allStudies":
-          this.allStudies = currentValue as Map<bigint, StudyDTO>;
-          this.studyNames = Array.from(this.allStudies.values()).map(value => value.name);
-          this.initializeAutoComplete(this.studyNames);
-          break;
-        default:
-          break;
-      }
-    }
-  }
-
-  ngAfterViewInit(): void {
-    this.componentInitialized.emit(true);
-  }
-
-  ngOnDestroy(): void {
-    return;
   }
 
   emitCloseComponentMessage(): void {
-    this.closeComponent.emit(true);
+    this.uiStateService.closeLeftPanel();
   }
 
   getAutoCompleteOptions(query: string): string[] {
     return this.autoComplete?.getWordsWithPrefix(query, 5) ?? [];
   }
 
-  // NOTE: The list of studies are initialized only once.
   initializeAutoComplete(words: string[]): void {
     if (this.autoComplete !== undefined) {
       return;
@@ -182,7 +180,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
   trackStudy(index: number, item: StudyDTO): string {
     return `${item.id}`;
   }
-
 
   hasLocation(study: StudyDTO): boolean {
     if (!this.studies) {
@@ -200,32 +197,46 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
         .pipe(
           debounceTime(100),
           distinctUntilChanged(),
+          takeUntilDestroyed(this.destroyRef)
         ).subscribe({
-
           next: (query) => {
             this.currentOptions.set(this.getAutoCompleteOptions(query));
           },
-          error: err => console.log(err)
+          error: err => console.error(err)
         });
     }
     this.filterTextChanged.next(text);
   }
 
   panToMarker(studyId: bigint): void {
-    this.panToMarkerEvent.emit(studyId);
-    // TODO: This message emits for smaller screens.
-    if (this.breakpointMatches()) {
-      this.emitCloseComponentMessage();
+    // Update the focused study in the map state service
+    this.mapStateService.setFocusedStudy(studyId);
+
+    // Get the study and set it as current
+    const studies = this.allStudies();
+    const study = studies.get(studyId);
+    if (study) {
+      this.mapStateService.setCurrentStudy(study);
+      this.uiStateService.openRightPanel();
+    }
+
+    // Close search panel on small screens
+    if (this.isSmallScreen()) {
+      this.uiStateService.closeLeftPanel();
     }
   }
 
   // getters
-  get filterQuery(): FormControl<string> {
+  get getFilterQuery(): FormControl<string> {
     return this.searchForm.controls.filterQuery;
   }
 
-  get dropDownList(): FormControl<"asc" | "desc"> {
+  get getDropDownList(): FormControl<"asc" | "desc"> {
     return this.searchForm.controls.dropDownList;
+  }
+
+  get getSortColumn(): FormControl<string> {
+    return this.searchForm.controls.sortColumn;
   }
 
   getTaxa(taxaStr: string): Observable<string> {
@@ -235,9 +246,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
     }
 
     const combined$ = concat(...taxaList.map(taxon => {
-
       return this.enaService.getCommonName(taxon.trim()).pipe(
-
         map(taxonIds => {
           if (taxonIds.length > 0) {
             return [taxon, taxonIds[0].commonName ?? null];
@@ -250,7 +259,6 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
           return of([taxon, null]);
         }),
       );
-
     }));
 
     return combined$.pipe(
@@ -258,7 +266,7 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
         if (value[1] !== null) {
           acc.push(`${value[0]} (${value[1]})`);
         } else {
-          acc.push(`${value[0]}`)
+          acc.push(`${value[0]}`);
         }
         return acc;
       }, [] as string[]),
@@ -268,26 +276,22 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
     );
   }
 
-
   searchWikipedia(taxaStr: string): Observable<WikiLinks[]> {
     const taxaList = taxaStr.trim().split(',');
     if (!taxaStr || taxaList.length === 0) {
       return of([]);
     }
-    // This function ensures that requests are done in sequence to avoid overloading the external server
+
     const results = concat(...taxaList.map(taxa => {
       return this.wikipediaService.searchTitles(taxa).pipe(
-
         map(responses => {
           const ret: WikiLinks[] = [];
-
           responses[1].forEach((value, index) => {
             const obj: WikiLinks = { title: value, link: responses[3][index] };
             ret.push(obj);
           });
           return ret;
         }),
-
         catchError((err) => {
           console.error(err)
           return of([]);
@@ -295,17 +299,15 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
       );
     }));
 
-
     return results.pipe(
-      // Combine all emitted results into one list
       reduce((acc, value) => {
         acc.push(...value);
         return acc;
-      }, [] as WikiLinks[]));
+      }, [] as WikiLinks[])
+    );
   }
 
   isExpanded(index: number): boolean {
-
     if (!this.panelExpanded) {
       return false;
     }
@@ -314,84 +316,94 @@ export class SimpleSearchComponent implements OnInit, OnChanges, AfterViewInit, 
       && this.panelExpanded[index];
   }
 
+  selectSortBy(obj: object) {
+    console.log("Sorting by " + obj);
+    const pageEvent = new PageEvent();
+    pageEvent.pageIndex = 0;
+    pageEvent.pageSize = this.paginatorPageSize();
+    this.getData(pageEvent);
+  }
+
   sortData(ordering: "asc" | "desc"): void {
     this.searchForm.controls.dropDownList.setValue(ordering);
 
     const pageEvent = new PageEvent();
     pageEvent.pageIndex = 0;
-    pageEvent.pageSize = this.paginator?.pageSize ?? this.defaultPageSize;
+    pageEvent.pageSize = this.paginatorPageSize();
     this.getData(pageEvent);
   }
 
   clearInput() {
-    if (this.filterQuery.value !== ""){
-      this.filterQuery.setValue("");
+    if (this.getFilterQuery.value !== "") {
+      this.getFilterQuery.setValue("");
       this.loadData();
     }
-  }
-
-  loadData(query?: string) {
-    if (query) {
-      this.filterQuery.setValue(query);
-    }
-    const pageEvent = new PageEvent();
-    pageEvent.pageIndex = this.defaultPageIndex;
-    pageEvent.pageSize = this.defaultPageSize
-    this.getData(pageEvent);
   }
 
   selectOption(event: MatAutocompleteSelectedEvent) {
     this.loadData(event.option.viewValue);
   }
 
-  // look up rates of API usage vs bing's api
+  loadData(query?: string) {
+    if (query) {
+      this.getFilterQuery.setValue(query);
+    }
+
+    const pageEvent = new PageEvent();
+    pageEvent.pageIndex = this.defaultPageIndex;
+    pageEvent.pageSize = this.defaultPageSize
+    this.getData(pageEvent);
+  }
+
   getData(event: PageEvent) {
     const pageIndex = event.pageIndex;
     const pageSize = event.pageSize;
-    // sortColumn should always be 'name'
-    const sortColumn = this.defaultSortColumn;
-    const sortOrder = this.dropDownList.value;
-    // filterColumn should alwawys be 'name'
-    const filterColumn = this.defaultFilterColumn;
-    const filterQuery = this.filterQuery.value;
 
-    // TODO: Test loading speed with local database.
+    const sortOrder = this.searchForm.controls.dropDownList.value;
+    const sortColumn = this.searchForm.controls.sortColumn.value;
+
+    const filterColumn = this.searchForm.controls.filterColumn.value;
+    const filterQuery = this.searchForm.controls.filterQuery.value;
+
     this.studyService.getStudies(
       pageIndex,
       pageSize,
       sortColumn,
       sortOrder,
       filterColumn,
-      filterQuery).
-      subscribe({
+      filterQuery
+    ).pipe()
+      .subscribe({
         next: apiResult => {
           this.studiesLoaded.set(true);
 
-          // NOTE:This is undefined if the component is conditionally active.
-            this.paginator.length = apiResult.totalCount;
-            this.paginator.pageIndex = apiResult.pageIndex;
-            this.paginator.pageSize = apiResult.pageSize;
+          // Update pagination state
+          this.paginatorLength.set(apiResult.totalCount);
+          this.paginatorPageIndex.set(apiResult.pageIndex);
+          this.paginatorPageSize.set(apiResult.pageSize);
 
-
-          this.studies = new MatTableDataSource(apiResult.data);
+          this.studies.set(new MatTableDataSource(apiResult.data));
           this.commonNames$ = [];
           this.wikipediaLinks$ = [];
 
-          for (let i = 0; i < Math.min(this.paginator.pageSize, apiResult.data.length); i++) {
-
-            if (this.studies.data[i].taxonIds) {
-              this.commonNames$.push(this.getTaxa(this.studies.data[i].taxonIds ?? ""));
-              this.wikipediaLinks$.push(this.searchWikipedia(this.studies.data[i].taxonIds ?? ""));
+          for (let i = 0; i < Math.min(this.paginatorPageSize(), apiResult.data.length); i++) {
+            if (this.studies()?.data[i].taxonIds) {
+              this.commonNames$.push(this.getTaxa(this.studies()?.data[i].taxonIds ?? ""));
+              this.wikipediaLinks$.push(this.searchWikipedia(this.studies()?.data[i].taxonIds ?? ""));
             } else {
               this.commonNames$.push(undefined);
               this.wikipediaLinks$.push(undefined);
             }
           }
+
+          // Update studies in the map state service
+          const studiesMap = new Map<bigint, StudyDTO>();
+          apiResult.data.forEach(study => studiesMap.set(study.id, study));
+          this.mapStateService.setStudies(studiesMap);
         },
         error: error => {
           console.error(error);
         }
-      }
-      );
+      });
   }
 }

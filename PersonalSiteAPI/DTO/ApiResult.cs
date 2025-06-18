@@ -1,18 +1,7 @@
-﻿using System.Collections;
-using System.Globalization;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
+﻿using Microsoft.EntityFrameworkCore;
 using System.Linq.Dynamic.Core;
 using System.Reflection;
-using System.Linq.Expressions;
-using PersonalSiteAPI.DTO.MoveBankAttributes;
-using System.Linq;
 
-//using System.Linq.
-//using EFCore.BulkExtensions;
-
-// TODO: Test functionality
-// Performance data validation in the controller methods
 namespace PersonalSiteAPI.DTO
 {
     public class ApiResult<T>
@@ -52,6 +41,8 @@ namespace PersonalSiteAPI.DTO
             FilterQuery = filterQuery;
         }
 
+
+        // This method is used in case of a cache hit
         public static ApiResult<T> Create(
             IEnumerable<T> source,
             int pageIndex,
@@ -61,9 +52,9 @@ namespace PersonalSiteAPI.DTO
             string? filterColumn = null,
             string? filterQuery = null)
         {
+            Console.WriteLine("Calling apiCreate Create (cache hit)");
             var list = source.ToList();
             var queryable = list.AsQueryable();
-            Console.WriteLine("Creating apiResult synchronously");            
 
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery) && IsValidProperty(filterColumn))
             {
@@ -114,43 +105,24 @@ namespace PersonalSiteAPI.DTO
             string? filterQuery = null
             )
         {
-            Console.WriteLine("Creating apiResult asynchronously.");            
-            Console.WriteLine($"filtercolumn = {filterColumn} filterquery = {filterQuery} isValidProperty({filterColumn ?? "N/A"}) = {IsValidProperty(filterColumn ?? "")}");
+            Console.WriteLine("Calling ApiResult CreateAsync");
+
+            // If the filterColumn and the filterQuery has been set then filter using said query
+            // Tentatively, filterColumn will always be the 'name' column
             if (!string.IsNullOrEmpty(filterColumn) && !string.IsNullOrEmpty(filterQuery)
                 && IsValidProperty(filterColumn))
             {                
-                Console.WriteLine($"Async Prefix search: Checking if {filterColumn} start with {filterQuery} (Case insensitive)");
-                //source = source.Where(      
-                //   string.Format("{0}.Contains(@0, @1)", filterColumn), filterQuery, StringComparison.OrdinalIgnoreCase);
-
+                // Checking if filterColumn starts with filterQuery (case insensitive)
                 source = source.Where(
                     string.Format("{0}.Contains(@0)", filterColumn), filterQuery);
 
-                //Console.WriteLine(source.GetType().ToString());
-
-                //var filterQueryConstant = Expression.Constant(filterQuery);
-                //var filterQueryParameters = Expression.Parameter(typeof(string), filterQuery);
-
-                //Expression<Func<string, bool>> stringExpression = (a) => a.StartsWith(filterQuery, StringComparison.InvariantCultureIgnoreCase);
-                //source = source.Where(sourceVal => typeof(sourceVal) == typeof(string));
-
-                //if (typeof(IQueryable<StudyDTO>) == source.GetType())
-                //{
-                //     Console.WriteLine("Source is of type IQueryable<StudyDTO> in CreateAsync method in ApiResult.");
-                //    Expression<Func<StudyDTO, bool>> stringExpression = (a) => a.Name.StartsWith(filterQuery, StringComparison.InvariantCultureIgnoreCase);
-                //    source = source.Where(stringExpression);
-                //    source = source.Where(
-                //        string.Format("{0}.StartsWith(@0, @1)", filterColumn), filterQuery, StringComparison.InvariantCultureIgnoreCase);
-                //}
             }
 
             var count = await source.CountAsync();
-            Console.WriteLine($"The number of records is {count}");
 
             if (!string.IsNullOrEmpty(sortColumn) && !string.IsNullOrEmpty(sortOrder)
                                                   && IsValidProperty(sortColumn))
             {
-                Console.WriteLine($"Sorting: Column={sortColumn} Order={sortOrder}");
                 sortOrder = !string.IsNullOrEmpty(sortOrder)
                     && sortOrder.ToUpper() == "ASC"
                     ? "ASC"
@@ -167,7 +139,6 @@ namespace PersonalSiteAPI.DTO
                 .Skip(pageIndex * pageSize)
                 .Take(pageSize);
 
-            Console.WriteLine("Creating the final list");
             List<T> data = await source.ToListAsync();
             return new ApiResult<T>(
                 data,

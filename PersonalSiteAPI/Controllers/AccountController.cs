@@ -1,15 +1,10 @@
-﻿// using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PersonalSiteAPI.Models;
 using System.IdentityModel.Tokens.Jwt;
 using PersonalSiteAPI.Services;
 using PersonalSiteAPI.DTO;
 using PersonalSiteAPI.Constants;
-using Newtonsoft.Json;
-// using static System.Net.WebRequestMethods;
-// using System.ComponentModel.DataAnnotations;
-// using System.Text.Json;
 
 namespace PersonalSiteAPI.Controllers
 {
