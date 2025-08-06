@@ -1,12 +1,12 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Starts both the PersonalSite frontend and PersonalSiteAPI backend in development mode.
+    Starts both the WildlifeTracker frontend and WildlifeTrackerAPI backend in development mode.
 
 .DESCRIPTION
     This script mimics Visual Studio's behavior by running both projects concurrently:
-    - PersonalSiteAPI (.NET 8.0) on https://localhost:40443 and http://localhost:40080
-    - PersonalSite (Angular 18) on https://localhost:4200 with SSL certificates
+    - WildlifeTrackerAPI (.NET 8.0) on https://localhost:40443 and http://localhost:40080
+    - WildlifeTracker (Angular 18) on https://localhost:4200 with SSL certificates
     
     The Angular app is configured to proxy API calls to the backend automatically.
 
@@ -60,10 +60,10 @@ function Test-Command {
 }
 
 function Start-Backend {
-    Write-ColorText "🚀 Starting PersonalSiteAPI (.NET 8.0)..." $InfoColor
+    Write-ColorText "🚀 Starting WildlifeTrackerAPI (.NET 8.0)..." $InfoColor
     
-    if (-not (Test-Path "PersonalSiteAPI/PersonalSiteAPI.csproj")) {
-        Write-ColorText "❌ Error: PersonalSiteAPI.csproj not found. Make sure you're running this from the project root." $ErrorColor
+    if (-not (Test-Path "WildlifeTrackerAPI/WildlifeTrackerAPI.csproj")) {
+        Write-ColorText "❌ Error: WildlifeTrackerAPI.csproj not found. Make sure you're running this from the project root." $ErrorColor
         exit 1
     }
     
@@ -72,7 +72,7 @@ function Start-Backend {
         exit 1
     }
     
-    Set-Location "PersonalSiteAPI"
+    Set-Location "WildlifeTrackerAPI"
     
     if ($NoWatch) {
         Write-ColorText "▶️  Running: dotnet run" $InfoColor
@@ -87,10 +87,10 @@ function Start-Backend {
 }
 
 function Start-Frontend {
-    Write-ColorText "🌐 Starting PersonalSite (Angular 18)..." $InfoColor
+    Write-ColorText "🌐 Starting WildlifeTracker (Angular 18)..." $InfoColor
     
-    if (-not (Test-Path "PersonalSite/package.json")) {
-        Write-ColorText "❌ Error: package.json not found in PersonalSite directory." $ErrorColor
+    if (-not (Test-Path "WildlifeTracker/package.json")) {
+        Write-ColorText "❌ Error: package.json not found in WildlifeTracker directory." $ErrorColor
         exit 1
     }
     
@@ -99,7 +99,7 @@ function Start-Frontend {
         exit 1
     }
     
-    Set-Location "PersonalSite"
+    Set-Location "WildlifeTracker"
     
     # Check if node_modules exists
     if (-not (Test-Path "node_modules")) {
@@ -124,8 +124,8 @@ Write-ColorText "🎯 Wildlife Tracker Development Startup Script" $InfoColor
 Write-ColorText "===============================================" $InfoColor
 
 # Check if we're in the right directory
-if (-not (Test-Path "PersonalSite.sln")) {
-    Write-ColorText "❌ Error: PersonalSite.sln not found. Please run this script from the project root directory." $ErrorColor
+if (-not (Test-Path "WildlifeTracker.sln")) {
+    Write-ColorText "❌ Error: WildlifeTracker.sln not found. Please run this script from the project root directory." $ErrorColor
     exit 1
 }
 

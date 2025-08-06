@@ -3,9 +3,9 @@
 # =============================================================================
 # Wildlife Tracker Development Startup Script (Unix/Linux/macOS)
 # =============================================================================
-# Starts both the PersonalSite frontend and PersonalSiteAPI backend
-# - PersonalSiteAPI (.NET 8.0) on https://localhost:40443 and http://localhost:40080  
-# - PersonalSite (Angular 18) on https://localhost:4200 with SSL certificates
+# Starts both the WildlifeTracker frontend and WildlifeTrackerAPI backend
+# - WildlifeTrackerAPI (.NET 8.0) on https://localhost:40443 and http://localhost:40080  
+# - WildlifeTracker (Angular 18) on https://localhost:4200 with SSL certificates
 # =============================================================================
 
 set -e  # Exit on any error
@@ -29,8 +29,8 @@ check_command() {
 }
 
 # Check if we're in the right directory
-if [ ! -f "PersonalSite.sln" ]; then
-    print_color "❌ Error: PersonalSite.sln not found. Please run this script from the project root directory." "$RED"
+if [ ! -f "WildlifeTracker.sln" ]; then
+    print_color "❌ Error: WildlifeTracker.sln not found. Please run this script from the project root directory." "$RED"
     exit 1
 fi
 
@@ -42,20 +42,20 @@ check_command "dotnet" ".NET 8.0 SDK"
 check_command "npm" "Node.js"
 
 # Check if projects exist
-if [ ! -f "PersonalSiteAPI/PersonalSiteAPI.csproj" ]; then
-    print_color "❌ Error: PersonalSiteAPI.csproj not found." "$RED"
+if [ ! -f "WildlifeTrackerAPI/WildlifeTrackerAPI.csproj" ]; then
+    print_color "❌ Error: WildlifeTrackerAPI.csproj not found." "$RED"
     exit 1
 fi
 
-if [ ! -f "PersonalSite/package.json" ]; then
-    print_color "❌ Error: package.json not found in PersonalSite directory." "$RED"
+if [ ! -f "WildlifeTracker/package.json" ]; then
+    print_color "❌ Error: package.json not found in WildlifeTracker directory." "$RED"
     exit 1
 fi
 
 # Function to start backend
 start_backend() {
-    print_color "🚀 Starting PersonalSiteAPI (.NET 8.0)..." "$CYAN"
-    cd PersonalSiteAPI
+    print_color "🚀 Starting WildlifeTrackerAPI (.NET 8.0)..." "$CYAN"
+    cd WildlifeTrackerAPI
     
     # Start backend in background
     if [ "$1" = "no-watch" ]; then
@@ -74,8 +74,8 @@ start_backend() {
 
 # Function to start frontend
 start_frontend() {
-    print_color "🌐 Starting PersonalSite (Angular 18)..." "$CYAN"
-    cd PersonalSite
+    print_color "🌐 Starting WildlifeTracker (Angular 18)..." "$CYAN"
+    cd WildlifeTracker
     
     # Check if node_modules exists
     if [ ! -d "node_modules" ]; then

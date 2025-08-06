@@ -4,9 +4,9 @@ This document explains how to run the Wildlife Tracker application in developmen
 
 ## Project Structure
 
-- **PersonalSite/** - Angular 18 frontend application
-- **PersonalSiteAPI/** - .NET 8.0 backend API
-- **PersonalSiteAPI.Tests/** - Backend unit tests
+- **WildlifeTracker/** - Angular 18 frontend application
+- **WildlifeTrackerAPI/** - .NET 8.0 backend API
+- **WildlifeTrackerAPI.Tests/** - Backend unit tests
 
 ## Prerequisites
 
@@ -66,13 +66,13 @@ If you prefer to run each service manually:
 
 **Terminal 1 - Backend API:**
 ```bash
-cd PersonalSiteAPI
+cd WildlifeTrackerAPI
 dotnet watch run
 ```
 
 **Terminal 2 - Frontend:**
 ```bash
-cd PersonalSite
+cd WildlifeTracker
 npm install  # First time only
 npm start
 ```
@@ -111,7 +111,7 @@ Once both services are running:
 
 **Frontend fails to start:**
 - Ensure Node.js is installed: `node --version`
-- Install dependencies: `cd PersonalSite && npm install`
+- Install dependencies: `cd WildlifeTracker && npm install`
 - Clear npm cache: `npm cache clean --force`
 
 **SSL Certificate Issues:**
@@ -121,21 +121,21 @@ Once both services are running:
 
 **API Proxy Issues:**
 - The frontend is configured to proxy API calls to the backend
-- Proxy configuration is in `PersonalSite/src/proxy.conf.js`
+- Proxy configuration is in `WildlifeTracker/src/proxy.conf.js`
 - Ensure backend is running before starting frontend
 
 ### Port Conflicts
 
 If the default ports are in use, you can modify:
 
-**Backend ports** - Edit `PersonalSiteAPI/Properties/launchSettings.json`:
+**Backend ports** - Edit `WildlifeTrackerAPI/Properties/launchSettings.json`:
 ```json
 {
   "applicationUrl": "https://localhost:YOUR_HTTPS_PORT;http://localhost:YOUR_HTTP_PORT"
 }
 ```
 
-**Frontend proxy** - Edit `PersonalSite/src/proxy.conf.js`:
+**Frontend proxy** - Edit `WildlifeTracker/src/proxy.conf.js`:
 ```javascript
 {
   "target": "https://localhost:YOUR_BACKEND_PORT"
@@ -146,19 +146,19 @@ If the default ports are in use, you can modify:
 
 ```bash
 # Build backend
-cd PersonalSiteAPI
+cd WildlifeTrackerAPI
 dotnet build --configuration Release
 
 # Build frontend
-cd PersonalSite
+cd WildlifeTracker
 npm run build
 ```
 
 ## Database Setup
 
 If the application uses a database:
-1. Update connection strings in `PersonalSiteAPI/appsettings.Development.json`
-2. Run migrations: `cd PersonalSiteAPI && dotnet ef database update`
+1. Update connection strings in `WildlifeTrackerAPI/appsettings.Development.json`
+2. Run migrations: `cd WildlifeTrackerAPI && dotnet ef database update`
 
 ## Environment Variables
 

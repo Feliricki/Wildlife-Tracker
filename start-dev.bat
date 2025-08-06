@@ -4,9 +4,9 @@ setlocal EnableDelayedExpansion
 REM =============================================================================
 REM Wildlife Tracker Development Startup Script (Batch Version)
 REM =============================================================================
-REM Starts both the PersonalSite frontend and PersonalSiteAPI backend
-REM - PersonalSiteAPI (.NET 8.0) on https://localhost:40443 and http://localhost:40080  
-REM - PersonalSite (Angular 18) on https://localhost:4200 with SSL certificates
+REM Starts both the WildlifeTracker frontend and WildlifeTrackerAPI backend
+REM - WildlifeTrackerAPI (.NET 8.0) on https://localhost:40443 and http://localhost:40080  
+REM - WildlifeTracker (Angular 18) on https://localhost:4200 with SSL certificates
 REM =============================================================================
 
 echo.
@@ -14,8 +14,8 @@ echo 🎯 Wildlife Tracker Development Startup Script
 echo ===============================================
 
 REM Check if we're in the right directory
-if not exist "PersonalSite.sln" (
-    echo ❌ Error: PersonalSite.sln not found. Please run this script from the project root directory.
+if not exist "WildlifeTrackerProject.sln" (
+    echo ❌ Error: WildlifeTrackerProject.sln not found. Please run this script from the project root directory.
     pause
     exit /b 1
 )
@@ -37,22 +37,22 @@ if errorlevel 1 (
 )
 
 REM Check if backend project exists
-if not exist "PersonalSiteAPI\PersonalSiteAPI.csproj" (
-    echo ❌ Error: PersonalSiteAPI.csproj not found.
+if not exist "WildlifeTrackerAPI\WildlifeTrackerAPI.csproj" (
+    echo ❌ Error: WildlifeTrackerAPI.csproj not found.
     pause
     exit /b 1
 )
 
 REM Check if frontend project exists  
-if not exist "PersonalSite\package.json" (
-    echo ❌ Error: package.json not found in PersonalSite directory.
+if not exist "WildlifeTracker\package.json" (
+    echo ❌ Error: package.json not found in WildlifeTracker directory.
     pause
     exit /b 1
 )
 
-echo 🚀 Starting PersonalSiteAPI (.NET 8.0)...
-cd PersonalSiteAPI
-start "PersonalSiteAPI Backend" cmd /k "echo ▶️ Backend API starting... && dotnet watch run"
+echo 🚀 Starting WildlifeTrackerAPI (.NET 8.0)...
+cd WildlifeTrackerAPI
+start "WildlifeTrackerAPI Backend" cmd /k "echo ▶️ Backend API starting... && dotnet watch run"
 cd ..
 
 echo ✅ Backend started on https://localhost:40443 and http://localhost:40080
@@ -60,8 +60,8 @@ echo ✅ Backend started on https://localhost:40443 and http://localhost:40080
 REM Give backend a moment to start
 timeout /t 3 /nobreak >nul
 
-echo 🌐 Starting PersonalSite (Angular 18)...
-cd PersonalSite
+echo 🌐 Starting WildlifeTracker (Angular 18)...
+cd WildlifeTracker
 
 REM Check if node_modules exists and install if needed
 if not exist "node_modules" (
@@ -75,7 +75,7 @@ if not exist "node_modules" (
     )
 )
 
-start "PersonalSite Frontend" cmd /k "echo ▶️ Frontend starting with SSL... && npm start"
+start "WildlifeTracker Frontend" cmd /k "echo ▶️ Frontend starting with SSL... && npm start"
 cd ..
 
 echo ✅ Frontend will start on https://localhost:4200 (may take a moment to compile)
