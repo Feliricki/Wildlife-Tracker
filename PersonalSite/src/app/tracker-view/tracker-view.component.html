@@ -23,13 +23,14 @@
 </button>
 } @else {
 
-<!-- TODO:This button needs a enter animation. -->
 @if (!rightPanelOpen() && !leftPanelOpen()){
 <button mat-fab [hidden]="!mapLoaded()" @rightToggleClick class="right-toggle-button-small" (click)="openRightNav()">
   <mat-icon>chevron_left</mat-icon>
 </button>
 }
 }
+
+
 
 <mat-sidenav-container class="sidenav-container" [hasBackdrop]="false">
 

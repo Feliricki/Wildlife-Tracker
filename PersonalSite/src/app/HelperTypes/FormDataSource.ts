@@ -1,7 +1,7 @@
 import { CollectionViewer, DataSource, SelectionModel } from "@angular/cdk/collections";
 import { FormArray, FormControl } from "@angular/forms";
 import { StudyService } from "../studies/study.service";
-import { BehaviorSubject, Observable, catchError, concat, finalize, map, of, tap } from "rxjs";
+import { BehaviorSubject, Observable, catchError, concat, finalize, map, of, tap, toArray } from "rxjs";
 import { IndividualJsonDTO } from "../studies/JsonResults/IndividualJsonDTO";
 import { Signal, WritableSignal, computed, signal } from "@angular/core";
 import { TagJsonDTO } from "../studies/JsonResults/TagJsonDTO";
@@ -20,11 +20,25 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
   private currentAnimals = signal(new Map<string, IndividualJsonDTO>());
   private currentTaggedAnimals = signal(new Map<string, TagJsonDTO>());
 
+  // This is the subject that is used to update the form array.
   private sourceSubject$: BehaviorSubject<FormArray<FormControl<boolean>>>;
   private selectionModel = new SelectionModel<number>(true, []);
 
-  private hasValue: WritableSignal<boolean> = signal(false);
+  // Dedicated signal for tracking selection state - this is reactive!
+  private selectedIndices = signal(new Set<number>());
 
+  private isPartiallySelected = computed(() => {
+    const totalCount = this.formArray().controls.length;
+    const selectedCount = this.selectedIndices().size;
+    return totalCount > 0 && selectedCount > 0 && selectedCount < totalCount;
+  });
+
+  private isAllSelected = computed(() => {
+    const totalCount = this.formArray().controls.length;
+    const selectedCount = this.selectedIndices().size;
+    return totalCount > 0 && selectedCount === totalCount;
+  });
+  
   constructor(
     private readonly studyService: StudyService,
     readonly formArrayInput: FormArray<FormControl<boolean>>) {
@@ -55,92 +69,56 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
   // 2) Then the signal containing the current individuals and the tagged animals are updated with their values from the http response.
   // 3) Finally the loading state is updated and the form is sent to the behavior subject to update the final source.
   getAnimalData(studyId: bigint, sortOrder: "asc" | "desc" = "asc"): void {
-    // console.log("Getting animal data in formDataSource");
     this.dataState.set("loading");
     this.dataState$.next("loading");
-
-    this.formArray().clear();
-    this.selectionModel.clear();
-    this.currentSource.set([]);
-    this.currentAnimals.set(new Map<string, IndividualJsonDTO>);
-    this.currentTaggedAnimals.set(new Map<string, TagJsonDTO>);
-
-    this.hasValue.set(false);
-    this.sourceSubject$.next(this.formArray());
 
     const individuals = this.studyService.jsonRequest("individual", studyId, sortOrder);
     const taggedAnimals = this.studyService.jsonRequest("tag", studyId, sortOrder);
     const combined = concat(individuals, taggedAnimals);
 
     combined.pipe(
-      map(jsonDtos => {
+      toArray(),
+      map(results => {
+        const individuals = results[0] as IndividualJsonDTO[];
+        const taggedAnimals = results[1] as TagJsonDTO[];
 
-        let animals = jsonDtos
-          .filter(val => val.type === "individual") as IndividualJsonDTO[];
+        const filteredIndividuals = individuals.filter(val => val.LocalIdentifier && val.LocalIdentifier.length > 0);
+        const filteredTaggedAnimals = taggedAnimals.filter(val => val.LocalIdentifier && val.LocalIdentifier.length > 0);
 
-        animals = animals
-          .filter(val => val.LocalIdentifier !== null && val.LocalIdentifier !== undefined)
-          .filter(val => val.LocalIdentifier.length > 0);
-
-        let taggedAnimals = jsonDtos.filter(elem => elem.type === "tag") as TagJsonDTO[];
-        taggedAnimals = taggedAnimals
-          .filter(val => val.LocalIdentifier !== null && val.LocalIdentifier !== undefined)
-          .filter(val => val.LocalIdentifier.length > 0);
-
-        return [animals, taggedAnimals] as [IndividualJsonDTO[], TagJsonDTO[]];
+        return [filteredIndividuals, filteredTaggedAnimals] as [IndividualJsonDTO[], TagJsonDTO[]];
       }),
+      tap(([individuals, taggedAnimals]) => {
+        // Clear the form array and the selection model for the new data
+        this.formArray().clear();
+        this.selectionModel.clear();
+        this.selectedIndices.set(new Set<number>());
+        
 
-      tap(tuple => {
+        const newAnimals = new Map<string, IndividualJsonDTO>();
+        const newTagged = new Map<string, TagJsonDTO>();
 
-        const newAnimals = this.currentAnimals();
-        const newTagged = this.currentTaggedAnimals();
-
-        tuple[0].forEach((individual) => {
-          newAnimals.set(individual.LocalIdentifier, individual);
-        });
-
-        tuple[1].forEach((individual) => {
-          newTagged.set(individual.LocalIdentifier, individual);
-        });
+        individuals.forEach(individual => newAnimals.set(individual.LocalIdentifier, individual));
+        taggedAnimals.forEach(individual => newTagged.set(individual.LocalIdentifier, individual));
 
         this.currentAnimals.set(newAnimals);
         this.currentTaggedAnimals.set(newTagged);
       }),
-
       catchError((err) => {
         console.error(err);
         this.dataState.set("error");
         this.dataState$.next("error");
-        return of([[], []]) as Observable<[IndividualJsonDTO[], TagJsonDTO[]]>;
+        return of([[], []] as [IndividualJsonDTO[], TagJsonDTO[]]);
       }),
-      map(tuple => {
-        // INFO:Currently this observable will release 2 outputs in the case where there is no error.
-        // The first output will contain individuals only and the second output will contain tagged individuals.
-        // The current source has been updated to include tagged and untagged individuals
-        const formControls: FormControl<boolean>[] = [];
-        const newEntries = tuple[0].length + tuple[1].length;
-
-        this.currentSource.update(prev => {
-          const ret = prev.concat(tuple[0]).concat(tuple[1]);
-          return ret;
-        });
-
-        for (let i = 0; i < newEntries; i++) {
-          const newFormControl = new FormControl<boolean>({ value: false, disabled: true }, { nonNullable: true });
-          formControls.push(newFormControl);
-        }
-
+      map(([individuals, taggedAnimals]) => {
+        this.currentSource.set([...individuals, ...taggedAnimals]);
+        const formControls = this.currentSource().map(() => new FormControl<boolean>({ value: false, disabled: true }, { nonNullable: true }));
         return formControls;
       }),
-
       finalize(() => {
-        this.dataState.set("loaded")
+        this.dataState.set("loaded");
         this.dataState$.next("loaded");
-        this.formArray().controls.forEach(control => {
-          control.enable;
-        })
+        this.formArray().controls.forEach(control => control.enable());
       })
-
     ).subscribe({
       next: forms => {
         forms.forEach(form => this.formArray().push(form));
@@ -152,44 +130,65 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
   }
 
   toggleAllRows() {
-
-    if (this.IsAllSelected()) {
-
+    if (this.isAllSelected()) {
+      // Deselect all
       this.selectionModel.clear();
-
-      const prevVal = this.formArray().value;
-      this.formArray().setValue(prevVal.map(() => false));
-      this.formArray.set(this.formArray());
-
-      this.hasValue.set(this.selectionModel.hasValue());
-      return;
+      this.selectedIndices.set(new Set<number>());
+      
+      for (let i = 0; i < this.TableSize(); i++) {
+        const control = this.formArray().controls[i];
+        if (control) {
+          control.setValue(false);
+        }
+      }
+    } else {
+      // Select all
+      const allIndices = new Set<number>();
+      for (let i = 0; i < this.TableSize(); i++) {
+        this.selectionModel.select(i);
+        allIndices.add(i);
+        const control = this.formArray().controls[i];
+        if (control) {
+          control.setValue(true);
+        }
+      }
+      this.selectedIndices.set(allIndices);
     }
-
-    for (let i = 0; i < this.TableSize(); i++) {
-      this.selectionModel.select(i);
-      const curForm = this.formArray().controls[i];
-      this.setFormValue(curForm, this.selectionModel.isSelected(i));
-    }
-    this.hasValue.set(this.selectionModel.hasValue());
-    this.formArray.set(this.formArray());
   }
 
-  //TODO:This method is incomplete as it does not get aupdated correctly when new info is added.
   get IsAllSelected(): Signal<boolean> {
-    return computed(() => this.FormArray().controls.length === this.selectionModel.selected.length);
+    return this.isAllSelected;
   }
 
   toggleRow(index: number): void {
     if (this.dataState() !== "loaded") {
       return;
     }
+    
     this.selectionModel.toggle(index);
-    this.hasValue.set(this.selectionModel.hasValue());
+    const isSelected = this.selectionModel.isSelected(index);
+    
+    // Update the form control value
+    const control = this.formArray().controls[index];
+    if (control) {
+      control.setValue(isSelected);
+    }
+    
+    // Update the selectedIndices signal
+    this.selectedIndices.update(current => {
+      const newSet = new Set(current);
+      if (isSelected) {
+        newSet.add(index);
+      } else {
+        newSet.delete(index);
+      }
+      return newSet;
+    });
   }
 
   toggleFormHelper(form: FormControl<boolean>) {
     const prevVal = form.value;
-    form.setValue(!prevVal);
+    this.setFormValue(form, !prevVal);
   }
 
   setFormValue(form: FormControl<boolean>, newVal: boolean) {
@@ -202,12 +201,12 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
         console.error(`index ${index} was out of bounds.`);
         return false;
       }
-      return this.formArray().controls[index].value;
+      return this.selectedIndices().has(index);
     });
   }
 
   isToggled(): boolean {
-    return this.selectionModel.hasValue();
+    return this.selectedIndices().size > 0;
   }
 
   isTagged(localIdentifier: string): Signal<boolean> {
@@ -222,8 +221,8 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     return computed(() => this.formArray());
   }
 
-  get HasValue(): Signal<boolean> {
-    return computed(() => this.hasValue());
+  get IsPartiallySelected(): Signal<boolean> {
+    return this.isPartiallySelected;
   }
 
   get TableState(): Signal<SourceState> {
@@ -244,19 +243,16 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
 
   get taggedAndSelectedIndividuals(): Signal<string[]> {
     return computed(() => {
-      if (this.currentSource().length !== this.formArray().length) {
-        return [];
-      }
-
       const individuals: string[] = [];
-      const controlValues = this.formArray().value;
-      const size = this.currentSource().length;
-      for (let i = 0; i < size; i++) {
-        const individual = this.currentSource()[i];
-        if (controlValues[i] === true) {
-          individuals.push(individual.LocalIdentifier);
+      const selectedSet = this.selectedIndices();
+      const sources = this.currentSource();
+      
+      selectedSet.forEach(index => {
+        if (index >= 0 && index < sources.length) {
+          individuals.push(sources[index].LocalIdentifier);
         }
-      }
+      });
+      
       return individuals;
     })
   }

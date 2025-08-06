@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { EventRequest } from '../studies/EventRequest';
 import * as signalR from '@microsoft/signalr';
-import { LineStringFeature, LineStringPropertiesV2 } from './GeoJsonTypes';
+import { AnimalMovementLineFeature, AnimalMovementEvent } from './deckgl-types';
 
 @Injectable({
   providedIn: 'root'
@@ -19,7 +19,7 @@ export class SignalrClientService {
   }
 
   // This function needs to be tested with varying number of results and number of events.
-  public getStreamResult(request: EventRequest): signalR.IStreamResult<LineStringFeature<LineStringPropertiesV2>> {
-    return this.connection.stream<LineStringFeature<LineStringPropertiesV2>>("StreamEvents", JSON.stringify(request));
+  public getStreamResult(request: EventRequest): signalR.IStreamResult<AnimalMovementLineFeature<AnimalMovementEvent>> {
+    return this.connection.stream<AnimalMovementLineFeature<AnimalMovementEvent>>("StreamEvents", JSON.stringify(request));
   }
 }

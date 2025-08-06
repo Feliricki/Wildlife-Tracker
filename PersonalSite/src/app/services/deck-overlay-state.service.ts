@@ -10,7 +10,7 @@ import {
   PathForms,
   AggregationForms
 } from '../tracker-view/OverlayOptions';
-import { ControlChange } from '../events/events.component';
+import { ControlChange } from '../events/animal-data-panel.component';
 import { EventRequest } from '../studies/EventRequest';
 
 export interface DeckOverlayState {

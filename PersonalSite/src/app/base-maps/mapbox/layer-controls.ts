@@ -75,19 +75,14 @@ export function setSourceLayers(
     source: source,
     filter: ['has', 'point_count'],
     paint: {
-      // Use step expressions (https://docs.mapbox.com/style-spec/reference/expressions/#step)
-      // with three steps to implement three types of circles:
-      //   * Blue, 20px circles when point count is less than 50
-      //   * Yellow, 30px circles when point count is between 50 and 100
-      //   * Pink, 40px circles when point count is greater than or equal to 100
       'circle-color': [
         'step',
         ['get', 'point_count'],
-        '#51bbd6',
+        '#fdda24', // Plasma (toned-down): Golden Amber for low density
         50,
-        '#f1f075',
+        '#cd4a7e', // Plasma: Vivid magenta/red for medium density
         100,
-        '#f28cb1'
+        '#7201a8'  // Plasma: Deep purple for high density
       ],
       'circle-radius': [
         'step',
@@ -97,7 +92,14 @@ export function setSourceLayers(
         30,
         100,
         40
-      ]
+      ],
+      'circle-stroke-width': [
+        'case',
+        ['boolean', ['feature-state', 'hover'], false],
+        2,
+        0
+      ],
+      'circle-stroke-color': '#ffffff'
     }
   });
 
@@ -110,6 +112,17 @@ export function setSourceLayers(
       'text-field': ['get', 'point_count_abbreviated'],
       'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
       'text-size': 12,
+    },
+    paint: {
+      'text-color': [
+        'step',
+        ['get', 'point_count'],
+        '#000000', // Black text for yellow clusters
+        50,
+        '#ffffff', // White text for magenta and purple clusters
+        100,
+        '#ffffff'
+      ]
     }
   });
 
@@ -119,7 +132,7 @@ export function setSourceLayers(
     source: source,
     filter: ["!", ["has", "point_count"]],
     paint: {
-      'circle-color': '#11b4da',
+      'circle-color': '#7A0403', // Plasma: Deep, dark red for individual markers
       'circle-radius': 8,
       'circle-stroke-width': 2,
       'circle-stroke-color': '#fff' // white outline

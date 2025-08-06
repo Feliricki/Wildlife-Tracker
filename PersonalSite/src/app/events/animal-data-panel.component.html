@@ -1,0 +1,57 @@
+<!-- Main container for the entire component -->
+<div class="events">
+
+  <!-- Mobile View -->
+  @if (screenChange | async) {
+    <mat-tab-group class="events__mobile" animationDuration="0">
+      <mat-tab label="Animals" class="events__mobile-tab">
+        <button mat-icon-button (click)="closeRightNav()" class="events__mobile-close-button">
+          <mat-icon>close</mat-icon>
+        </button>
+        <app-event-form [eventForm]="eventForm" [tableSource]="tableSource" [eventProfilesOptions]="eventProfilesOptions"
+          [selectedEventProfile]="selectedEventProfile" [currentLocationSensors]="currentLocationSensors" [isMobile]="true"
+          [displayedColumns]="displayedColumns" [IsPartiallySelected]="IsPartiallySelected" [isAllSelected]="isAllSelected"
+          [TableState]="TableState" [getIndividual]="getIndividual" [trackById]="trackById" [toggleAllRows]="toggleAllRows"
+          [toggleRow]="toggleRow" (submit)="submitForm()">
+        </app-event-form>
+      </mat-tab>
+      <mat-tab label="Control Panel" class="events__mobile-tab">
+        <button mat-icon-button (click)="closeRightNav()" class="events__mobile-close-button">
+          <mat-icon>close</mat-icon>
+        </button>
+        <app-control-panel [currentActiveForms]="currentActiveForms" [currentActiveLayer]="currentActiveLayer"
+          [currentEventData]="currentEventData" [pathForms]="pathForms" [pointForms]="pointForms"
+          [aggregationForms]="aggregationForms" [ColorRangeThemes]="ColorRangeThemes" [isMobile]="true"
+          (pathControlChange)="pathControlChange($event.value, $event.option)"
+          (pointControlChange)="pointControlChange($event.value, $event.option, $event.colorChange)"
+          (aggregationControlChange)="aggregationControlChange($event.value, $event.option)">
+        </app-control-panel>
+      </mat-tab>
+    </mat-tab-group>
+  } @else {
+    <!-- Desktop View -->
+    <div class="events__desktop">
+
+      <mat-card class="events__desktop-form-card">
+        <mat-card-content>
+          <app-event-form [eventForm]="eventForm" [tableSource]="tableSource"
+            [eventProfilesOptions]="eventProfilesOptions" [selectedEventProfile]="selectedEventProfile"
+            [currentLocationSensors]="currentLocationSensors" [isMobile]="false" [displayedColumns]="displayedColumns"
+            [IsPartiallySelected]="IsPartiallySelected" [isAllSelected]="isAllSelected" [TableState]="TableState"
+            [getIndividual]="getIndividual" [trackById]="trackById" [toggleAllRows]="toggleAllRows"
+            [toggleRow]="toggleRow" (submit)="submitForm()">
+          </app-event-form>
+        </mat-card-content>
+      </mat-card>
+      <div class="events__desktop-control-panel-card">
+        <app-control-panel [currentActiveForms]="currentActiveForms" [currentActiveLayer]="currentActiveLayer"
+          [currentEventData]="currentEventData" [pathForms]="pathForms" [pointForms]="pointForms"
+          [aggregationForms]="aggregationForms" [ColorRangeThemes]="ColorRangeThemes" [isMobile]="false"
+          (pathControlChange)="pathControlChange($event.value, $event.option)"
+          (pointControlChange)="pointControlChange($event.value, $event.option, $event.colorChange)"
+          (aggregationControlChange)="aggregationControlChange($event.value, $event.option)">
+        </app-control-panel>
+      </div>
+    </div>
+  }
+</div>

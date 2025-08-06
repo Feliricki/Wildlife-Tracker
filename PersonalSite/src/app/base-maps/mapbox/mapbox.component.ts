@@ -33,7 +33,7 @@ type MapState =
     standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
-        AsyncPipe, MatProgressSpinnerModule, MatButtonModule,
+        MatProgressSpinnerModule, MatButtonModule,
     ],
     templateUrl: './mapbox.component.html',
     styleUrl: './mapbox.component.css'
@@ -62,6 +62,7 @@ export class MapboxComponent implements OnInit, OnDestroy {
     // deck.gl
     layerControl?: LayerControl;
     deckOverlay?: DeckOverlayController;
+    hoveredClusterId: number | string | null = null;
 
     // subscriptions
     streamStatusSub?: Subscription;
@@ -104,17 +105,17 @@ export class MapboxComponent implements OnInit, OnDestroy {
                 }
             })
 
-        // Subscribe to event requests
+        // Subscribe to event requests - only handle if mapbox is active
         this.deckOverlayStateService.eventRequest$
             .pipe(
                 takeUntilDestroyed(this.destroyRef),
                 distinctUntilChanged()
             )
-            .subscribe(request => {
-                if (request) {
-                    this.handleEventRequest(request);
-                }
-            })
+                    .subscribe(request => {
+            if (request && this.mapStateService.mapType() === 'mapbox') {
+                this.handleEventRequest(request);
+            }
+        })
     }
 
     ngOnDestroy(): void {
@@ -242,14 +243,37 @@ export class MapboxComponent implements OnInit, OnDestroy {
                             this.movingToPoint.set(false);
                         })
 
-                        this.map.on('mouseenter', 'clusters', () => {
-                            if (!this.map) return;
+                        this.map.on('mouseenter', 'clusters', (e) => {
+                            if (!this.map || !e.features || e.features.length === 0) return;
                             this.map.getCanvas().style.cursor = 'pointer';
+
+                            if (this.hoveredClusterId !== null) {
+                                this.map.setFeatureState(
+                                    { source: 'studies', id: this.hoveredClusterId },
+                                    { hover: false }
+                                );
+                            }
+
+                            this.hoveredClusterId = e.features[0].id ?? null;
+                            if (this.hoveredClusterId !== null) {
+                                this.map.setFeatureState(
+                                    { source: 'studies', id: this.hoveredClusterId },
+                                    { hover: true }
+                                );
+                            }
                         });
 
                         this.map.on('mouseleave', 'clusters', () => {
                             if (!this.map) return;
                             this.map.getCanvas().style.cursor = '';
+
+                            if (this.hoveredClusterId !== null) {
+                                this.map.setFeatureState(
+                                    { source: 'studies', id: this.hoveredClusterId },
+                                    { hover: false }
+                                );
+                            }
+                            this.hoveredClusterId = null;
                         });
 
                         this.map.on('mouseenter', 'unclustered-point', () => {

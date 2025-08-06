@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { TrackerViewComponent } from '../tracker-view/tracker-view.component';
+import { MapDashboardComponent } from '../tracker-view/tracker-view.component';
 // import {RouterOutlet} from "@angular/router";
 
 @Component({
@@ -7,7 +7,7 @@ import { TrackerViewComponent } from '../tracker-view/tracker-view.component';
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css'],
   standalone: true,
-  imports: [TrackerViewComponent]
+  imports: [MapDashboardComponent]
 })
 export class HomeComponent {
   // @ViewChild(GoogleMap, { static: false }) map: GoogleMap;

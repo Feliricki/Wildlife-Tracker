@@ -1,16 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { TrackerViewComponent } from './tracker-view.component';
+import { MapDashboardComponent } from './tracker-view.component';
 
 describe('SideNavComponent', () => {
-  let component: TrackerViewComponent;
-  let fixture: ComponentFixture<TrackerViewComponent>;
+  let component: MapDashboardComponent;
+  let fixture: ComponentFixture<MapDashboardComponent>;
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [TrackerViewComponent]
+      imports: [MapDashboardComponent]
     });
-    fixture = TestBed.createComponent(TrackerViewComponent);
+    fixture = TestBed.createComponent(MapDashboardComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

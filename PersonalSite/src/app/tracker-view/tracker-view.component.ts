@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, OnInit, Signal, WritableSignal, signal, inject, DestroyRef } from '@angular/core';
-import { MapComponent } from '../base-maps/google maps/google-map.component';
+import { GoogleMapViewComponent } from '../base-maps/google maps/google-map.component';
 import { SimpleSearchComponent } from '../simple-search/simple-search.component';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
-import { ControlChange, EventsComponent } from '../events/events.component';
+import { ControlChange, AnimalDataPanelComponent } from '../events/animal-data-panel.component';
 import { StudyDTO } from '../studies/study';
 import { MatIconModule } from '@angular/material/icon';
 import { animate, style, transition, trigger, state } from '@angular/animations';
@@ -45,12 +45,12 @@ type BaseMaps = 'google' | 'mapbox' | 'arcgis';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    EventsComponent,
+    AnimalDataPanelComponent,
     MapboxComponent,
     MatSidenavModule,
     MatButtonModule,
     SimpleSearchComponent,
-    MapComponent,
+    GoogleMapViewComponent,
     MatIconModule,
     NgStyle,
     AsyncPipe,
@@ -94,18 +94,18 @@ type BaseMaps = 'google' | 'mapbox' | 'arcgis';
     ]),
 
     trigger('rightPanelOpened', [
-      state("true", style({ left: "calc(100vw - 700px - 1rem)" })),
-      state("false", style({ left : "calc(100vw - 2.75rem)" })),
+      state("true", style({ right: "calc(800px - 30px)" })), // Adjusted to move button further right
+      state("false", style({ right : "0.3em" })), // Match left button's screen edge distance
       transition('true => false', [
-        animate('300ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(700px - 1.75rem))' }))
+        animate('300ms cubic-bezier(0, 0, 0, 1)')
       ]),
       transition('false => true', [
-        animate('325ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(-700px + 1.75rem))' }))
+        animate('325ms cubic-bezier(0, 0, 0, 1)')
       ]),
     ])
   ]
 })
-export class TrackerViewComponent implements OnInit {
+export class MapDashboardComponent implements OnInit {
   // Inject services
   private readonly uiStateService = inject(UIStateService);
   private readonly mapStateService = inject(MapStateService);
@@ -172,7 +172,7 @@ export class TrackerViewComponent implements OnInit {
   };
 
   readonly rightNavStyle = {
-    "width": "700px",
+    "width": "800px",
     "margin-top": "13em",
     "height": "500px",
     "background-color": "rgba(0,0,0,0)",
@@ -215,6 +215,13 @@ export class TrackerViewComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Ensure map type signals are synchronized (only for supported types)
+    const activeMapType = this.activeMap();
+    
+    if (activeMapType === 'google' || activeMapType === 'mapbox') {
+      this.mapStateService.setMapType(activeMapType);
+    }
+    
     // Handle initial responsive state
     firstValueFrom(this.smallScreen$).then(isSmall => {
       if (isSmall) {
@@ -310,6 +317,12 @@ export class TrackerViewComponent implements OnInit {
 
     this.resetGoogleMap();
     this.activeMap.set(basemap);
+    
+    // Keep both signals synchronized (only for supported types)
+    if (basemap === 'google' || basemap === 'mapbox') {
+      this.mapStateService.setMapType(basemap);
+    }
+    
     this.mapStateService.setPointsVisible(true);
     this.uiStateService.setMapLoaded(false);
     this.mapStateService.setMapLoaded(false);

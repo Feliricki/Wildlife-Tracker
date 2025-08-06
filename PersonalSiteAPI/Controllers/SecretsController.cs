@@ -29,7 +29,6 @@ namespace PersonalSiteAPI.Controllers
         {
             try
             {
-                _logger.LogDebug("Attempting to retrieve secrets from amazon configurations");
                 GetSecretValueRequest request = new GetSecretValueRequest
                 {
                     SecretId = "WebSiteKeys",

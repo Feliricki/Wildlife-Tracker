@@ -107,6 +107,7 @@ namespace PersonalSiteAPI.Services
             SecretCacheItem? secretCache = _secretsCache.GetCachedSecret(_configuration["ConnectionStrings:AWSKeyVault2ARN"]);
             GetSecretValueResponse? secretValue = await secretCache.GetSecretValue(new CancellationToken());
 
+
             var secretObj = JsonSerializer.Deserialize<ApiTokenResultDTO>(secretValue.SecretString);
             DateTime? expirationDate = GetDateTime(secretObj?.ExpirationDate!);
 
@@ -114,7 +115,7 @@ namespace PersonalSiteAPI.Services
             {
                 return secretObj;
             }            
-            // INFO: Rotations are scheduled for the first of every month so this code should never be reached.
+
             var rotationRequest = new RotateSecretRequest()
             {
                 SecretId = "MoveBankSecrets",
@@ -438,12 +439,6 @@ namespace PersonalSiteAPI.Services
                 return true;
             }
             return false;
-        }
-
-        private static bool HasLicenseTerms(byte[] content)
-        {
-            string responseStr = System.Text.Encoding.UTF8.GetString(content);
-            return responseStr.Contains("License Terms:");
         }
 
         private async Task<HttpResponseMessage> GetPermissionForDirectRead(

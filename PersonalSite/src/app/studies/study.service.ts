@@ -9,8 +9,7 @@ import { EventOptions } from './EventOptions';
 import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
 import { JsonResponseData } from './JsonResults/JsonDataResponse';
 import { EventRequest } from './EventRequest';
-
-type PointFeatureCollection<TProp> = GeoJSON.FeatureCollection<GeoJSON.Point, TProp>;
+import { AnimalLocationPointCollection } from '../deckGL/deckgl-types';
 
 @Injectable({
   providedIn: 'root'
@@ -58,12 +57,12 @@ export class StudyService {
     return this.httpClient.get<StudyDTO[]>(url);
   }
 
-  getAllStudiesGeoJSON<TProp>(): Observable<PointFeatureCollection<TProp>> {
+  getAllStudiesGeoJSON<TProp>(): Observable<AnimalLocationPointCollection<TProp>> {
     const url = environment.baseUrl + "api/MoveBank/GetAllStudies";
     const params = new HttpParams()
       .set("geojsonFormat", "true");
 
-    return this.httpClient.get<PointFeatureCollection<TProp>>(url, { params: params });
+    return this.httpClient.get<AnimalLocationPointCollection<TProp>>(url, { params: params });
   }
 
   // TODO: Test this function

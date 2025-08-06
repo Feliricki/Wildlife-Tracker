@@ -3,7 +3,7 @@ import { distinctUntilChanged, forkJoin, from, Observable, skip } from 'rxjs';
 import { StudyService } from '../../studies/study.service';
 import { StudyDTO } from '../../studies/study';
 import { Loader } from '@googlemaps/js-api-loader';
-import { AsyncPipe } from '@angular/common';
+
 import { CustomRenderer1 } from './renderers';
 import { MarkerClusterer, SuperClusterAlgorithm, SuperClusterOptions } from '@googlemaps/markerclusterer';
 import { JsonResponseData } from '../../studies/JsonResults/JsonDataResponse';
@@ -38,11 +38,11 @@ type MapState =
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    AsyncPipe, MatButtonModule, MatProgressBarModule,
+    MatButtonModule, MatProgressBarModule,
     MatIconModule, MatProgressSpinnerModule,
   ]
 })
-export class MapComponent implements  AfterViewInit {
+export class GoogleMapViewComponent implements  AfterViewInit {
   // Inject services
   private readonly uiStateService = inject(UIStateService);
   private readonly mapStateService = inject(MapStateService);
@@ -129,7 +129,7 @@ export class MapComponent implements  AfterViewInit {
     this.deckOverlayStateService.eventRequest$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(request => {
-        if (request){
+        if (request && this.mapStateService.mapType() === 'google'){
           this.handleEventRequest(request);
         }
       });

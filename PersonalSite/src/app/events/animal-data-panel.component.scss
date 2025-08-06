@@ -1,0 +1,29 @@
+.events {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.events__desktop {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  padding: 1rem;
+  height: 100%;
+  overflow: hidden;
+}
+
+.events__desktop-form-card {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.events__desktop-control-panel-card {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background-color: #fff;
+  border-radius: 4px;
+  padding: 1rem;
+}

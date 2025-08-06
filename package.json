@@ -1,5 +1,20 @@
 {
-  "dependencies": {
-    "deck.gl": "^8.9.33"
+  "name": "wildlife-tracker",
+  "version": "1.0.0",
+  "description": "Wildlife Tracker - Full Stack Development Environment",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:frontend\"",
+    "dev:api": "cd PersonalSiteAPI && dotnet watch run",
+    "dev:frontend": "cd PersonalSite && npm start",
+    "dev:api-only": "cd PersonalSiteAPI && dotnet watch run",
+    "dev:frontend-only": "cd PersonalSite && npm start",
+    "install:frontend": "cd PersonalSite && npm install",
+    "install:all": "npm run install:frontend",
+    "build": "npm run build:api && npm run build:frontend",
+    "build:api": "cd PersonalSiteAPI && dotnet build",
+    "build:frontend": "cd PersonalSite && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }

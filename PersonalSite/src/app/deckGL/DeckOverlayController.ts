@@ -1,42 +1,36 @@
 import { GoogleMapsOverlay } from '@deck.gl/google-maps/typed';
 import { MapboxOverlay } from '@deck.gl/mapbox/typed';
-// import { TripsLayer } from '@deck.gl/geo-layers/typed';
-import {
-  ArcLayer,
-  ArcLayerProps,
-  LineLayer,
-  LineLayerProps,
-  PathLayer,
-  PathLayerProps,
-  ScatterplotLayer,
-  ScatterplotLayerProps
-} from '@deck.gl/layers/typed';
-import { Color, Layer, LayerProps, PickingInfo } from '@deck.gl/core/typed';
-import { handleFeatures, randomColor } from './deck-gl.worker';
-import { LineStringFeatureCollection, LineStringPropertiesV2 } from "./GeoJsonTypes";
-import { BinaryLineStringResponse, NumericPropsResponse, OptionalAttributes, WorkerFetchRequest } from "./MessageTypes";
+import { Layer, LayerProps, PickingInfo } from '@deck.gl/core/typed';
+import { ArcLayerProps } from '@deck.gl/layers/typed';
+import { LineLayerProps } from '@deck.gl/layers/typed';
+import { PathLayerProps } from '@deck.gl/layers/typed';
+import { ScatterplotLayerProps } from '@deck.gl/layers/typed';
 import { EventRequest } from "../studies/EventRequest";
 import { BinaryAttribute, BinaryLineFeatures, BinaryPointFeatures, BinaryPolygonFeatures } from '@loaders.gl/schema';
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
-import {
-  GridLayer,
-  GridLayerProps,
-  HeatmapLayer,
-  HeatmapLayerProps,
-  HexagonLayer,
-  HexagonLayerProps,
-  ScreenGridLayer,
-  ScreenGridLayerProps
-} from '@deck.gl/aggregation-layers/typed';
+import { GridLayerProps, HeatmapLayerProps, HexagonLayerProps, ScreenGridLayerProps } from '@deck.gl/aggregation-layers/typed';
 import { EventMetadata } from '../events/EventsMetadata';
 import mapboxgl from 'mapbox-gl';
-import { ControlChange } from '../events/events.component';
+import { ControlChange } from '../events/animal-data-panel.component';
 import { environment } from 'src/environments/environment';
+import {
+    BinaryAnimalMovementLineResponse,
+    AnimalMovementEvent,
+    DeckGlRenderingAttributes,
+    MovementDataFetchRequest,
+    AnimalMovementLineCollection
+} from './deckgl-types';
+import { LayerFactory } from './layer-factory';
+import { DataProcessor } from './data-processor';
+import { handleFeatures } from './deck-gl.worker';
+
+
+type Color = [number, number, number] | [number, number, number, number];
 
 // This is the type returned by the geoJsonToBinary function.
 type BinaryFeatureWithAttributes = {
   points?: BinaryPointFeatures;
-  lines: BinaryLineFeatures & OptionalAttributes;
+  lines: BinaryLineFeatures & DeckGlRenderingAttributes;
   polygons?: BinaryPolygonFeatures;
 };
 
@@ -167,8 +161,47 @@ export class DeckOverlayController {
   // TODO:Consider if received chunks can appended to their corresponding layer going by individual.
   // If it's possible to pull this off then I should consider making a layer for each individual
   // and one large layer containing all the individual's event data.
-  cumulativeData: BinaryLineStringResponse<object> =
-    this.emptyBinaryLineStringResponse("AggregatedEvents");
+  cumulativeData: BinaryAnimalMovementLineResponse<object> =
+    DataProcessor.emptyBinaryAnimalMovementLineResponse("AggregatedEvents");
+
+  handleBinaryResponse(binaryData: BinaryAnimalMovementLineResponse<AnimalMovementEvent>): void {
+    const binaryLineFeatures = DataProcessor.processBinaryData(binaryData);
+    const [pointsFeatures, polygonFeatures] = DataProcessor.BinaryFeaturesPlaceholder();
+
+    this.dataChunks.push({ points: pointsFeatures, lines: binaryLineFeatures, polygons: polygonFeatures });
+    this.contentArray.push(binaryLineFeatures.content.contentArray);
+
+    this.currentIndividuals.update(prev => {
+      prev.add(binaryLineFeatures.individualLocalIdentifier);
+      return prev;
+    });
+
+    this.currentMetaData.update(prev => {
+      return {
+        numberOfEvents: prev.numberOfEvents + binaryLineFeatures.length,
+        numberOfIndividuals: this.currentIndividuals().size,
+        currentIndividuals: this.currentIndividuals(),
+        layer: this.currentLayer,
+        pathWidth: prev.pathWidth,
+        widthUnits: prev.widthUnits,
+        textLayer: prev.textLayer,
+      } as EventMetadata;
+    });
+
+    let layers: Array<Layer<object> | null> = [];
+    if (this.isAggregationLayer(this.currentLayer)) {
+      layers = [this.createActiveLayer(
+        this.currentLayer,
+                    DataProcessor.processBinaryData(this.cumulativeData as BinaryAnimalMovementLineResponse<AnimalMovementEvent>), 0)];
+    } else {
+      layers = this.dataChunks.map((chunk, index) => this.createActiveLayer(this.currentLayer, chunk.lines, index));
+    }
+
+    this.currentLayers = layers;
+    this.deckOverlay?.setProps({
+      layers: layers
+    });
+  }
 
   dataChunks: Array<BinaryFeatureWithAttributes> = [];
   currentLayers: Array<Layer | null> = [];
@@ -180,7 +213,7 @@ export class DeckOverlayController {
   currentIndividuals: WritableSignal<Set<string>> = signal(new Set());
 
   currentLayer: LayerTypes = LayerTypes.LineLayer;
-  currentData: Array<BinaryLineFeatures & OptionalAttributes> = [];
+  currentData: Array<BinaryLineFeatures & DeckGlRenderingAttributes> = [];
   // aggregationLayerActive: WritableSignal<boolean> = signal(false);
 
   tooltipEnabled: boolean = true;
@@ -302,6 +335,7 @@ export class DeckOverlayController {
   constructor(map: google.maps.Map | mapboxgl.Map, layer: LayerTypes) {
     this.map = map;
     this.currentLayer = layer;
+    this.cumulativeData = DataProcessor.emptyBinaryAnimalMovementLineResponse("AggregatedEvents");
 
     if (typeof Worker !== 'undefined') {
       this.webWorker = new Worker(new URL('./deck-gl.worker', import.meta.url));
@@ -310,16 +344,9 @@ export class DeckOverlayController {
         switch (message.data.type) {
 
           case "BinaryLineString":
-            this.cumulativeData = this.mergeBinaryResponse(this.cumulativeData, message.data as BinaryLineStringResponse<LineStringPropertiesV2>);
-            this.handleBinaryResponse(message.data as BinaryLineStringResponse<LineStringPropertiesV2>);
+            this.cumulativeData = DataProcessor.mergeBinaryResponse(this.cumulativeData, message.data as BinaryAnimalMovementLineResponse<AnimalMovementEvent>);
+            this.handleBinaryResponse(message.data as BinaryAnimalMovementLineResponse<AnimalMovementEvent>);
             break;
-
-          // TODO:
-          // Target: (n^2) runtime. O(n) space complexity
-          // This causes memory usage to rise
-          // case "AggregatedEvents":
-          //   break;
-
           case "StreamEnded":
             this.streamStatus.set("standby");
             break;
@@ -333,7 +360,6 @@ export class DeckOverlayController {
         }
       }
     } else {
-      // NOTE:Fallback to fetch api.
       console.error("Web worker api not supported.");
     }
   }
@@ -355,13 +381,16 @@ export class DeckOverlayController {
     this.dataChunks = [];
     this.contentArray = [];
     this.currentLayers = [];
-    this.cumulativeData = this.emptyBinaryLineStringResponse("AggregatedEvents");
-    this.individualColors.clear();
+    this.cumulativeData = DataProcessor.emptyBinaryAnimalMovementLineResponse("AggregatedEvents");
+    LayerFactory.clearColors();
     this.currentMetaData.set(structuredClone(this.MetadataDefaultOptions));
     this.currentIndividuals.set(new Set());
     this.deckOverlay?.finalize();
-
-    console.log("Releasing all release in deckOvelayController.");
+    
+    // Clean up web worker connections
+    if (this.webWorker) {
+      this.webWorker.postMessage({ type: "Cleanup" });
+    }
   }
 
   createOverlay(overlayType: OverlayTypes): GoogleMapsOverlay | MapboxOverlay {
@@ -457,7 +486,7 @@ export class DeckOverlayController {
       basemap.map.addControl(this.deckOverlay);
     }
 
-    const workerRequest: WorkerFetchRequest = {
+    const workerRequest: MovementDataFetchRequest = {
       type: "FetchRequest",
       request: request,
     };
@@ -470,11 +499,10 @@ export class DeckOverlayController {
 
       this.sendFetchRequest(request).then(lineStringResponse => {
         if (lineStringResponse === null) return;
-        // const responses = lineStringResponse as Array<[BinaryLineStringResponse<LineStringPropertiesV2>, ArrayBufferLike[]]>;
 
         for (const response of lineStringResponse){
           if (response === null) continue;
-          this.cumulativeData = this.mergeBinaryResponse(this.cumulativeData, response[0]);
+          this.cumulativeData = DataProcessor.mergeBinaryResponse(this.cumulativeData, response[0]);
           this.handleBinaryResponse(response[0]);
         }
       });
@@ -485,7 +513,6 @@ export class DeckOverlayController {
   async sendFetchRequest(request: EventRequest)
   {
     try {
-
       const response = await fetch(environment.baseUrl + "api/MoveBank/GetEventData", {
         method: "POST",
         headers: {
@@ -503,7 +530,7 @@ export class DeckOverlayController {
         })
       });
 
-      const collections = await response.json() as Array<LineStringFeatureCollection<LineStringPropertiesV2>>;
+      const collections = await response.json() as Array<AnimalMovementLineCollection<AnimalMovementEvent>>;
 
       const lineStringResponses = collections.map((collection, index) => {
         return handleFeatures({
@@ -585,7 +612,7 @@ export class DeckOverlayController {
       layers = [
         this.createActiveLayer(
           layer,
-          this.processBinaryData(this.cumulativeData as BinaryLineStringResponse<LineStringPropertiesV2>), 0)
+          DataProcessor.processBinaryData(this.cumulativeData as BinaryAnimalMovementLineResponse<AnimalMovementEvent>), 0)
       ];
 
     } else {
@@ -608,594 +635,20 @@ export class DeckOverlayController {
     return this.aggregationLayers.has(layer);
   }
 
-  // NOTE:This method create a layer for a single chunk of data.
-  createActiveLayer(layer: LayerTypes, data: BinaryLineFeatures & OptionalAttributes, layerId: number): Layer | null {
+  createActiveLayer(layer: LayerTypes, data: BinaryLineFeatures & DeckGlRenderingAttributes, layerId: number): Layer | null {
     this.currentLayer = layer;
-
-    switch (layer) {
-
-      case LayerTypes.ArcLayer:
-        return this.createArcLayer(data, layerId);
-
-      case LayerTypes.ScatterplotLayer:
-        return this.createScatterplotLayer(data, layerId);
-
-      case LayerTypes.HexagonLayer:
-        return this.createHexagonLayer(data, layerId);
-
-      case LayerTypes.LineLayer:
-        return this.createLineLayer(data, layerId);
-
-      case LayerTypes.ScreenGridLayer:
-        return this.createScreenGridLayer(data, layerId);
-
-      case LayerTypes.GridLayer:
-        return this.createGridLayer(data, layerId);
-
-      // NOTE:Heatmap layer is temporarily removed until it stops falling back to CPU aggregation.
-      case LayerTypes.HeatmapLayer:
-        return this.createHeatmapLayer(data, layerId);
-      default:
-        return null;
+    const newLayer = LayerFactory.createLayer(layer, data, layerId);
+    if (newLayer) {
+        return newLayer.clone({
+            visible: this.currentLayer === layer,
+            pickable: this.currentLayer === layer
+        });
     }
+    return newLayer;
   }
 
   getCoordinateHelper(info: PickingInfo) {
     return `position: ${info.coordinate}`;
   }
 
-  // TODO:This method will merge the incoming chunks of data and merge them with the stored cumulative data.
-  // INFO:Target runtime: O(n) space complexity: O(n)
-  mergeBinaryResponse(prev: BinaryLineStringResponse<object>, cur: BinaryLineStringResponse<LineStringPropertiesV2>)
-    : BinaryLineStringResponse<LineStringPropertiesV2> {
-    if (prev.length === 0) {
-      return cur;
-    }
-
-    const prevPositions = new Float32Array(prev.position.value);
-    const curPositions = new Float32Array(cur.position.value);
-    const mergedPositions = {
-      size: cur.position.size,
-      value: new Float32Array(prevPositions.length + curPositions.length) // NOTE: This constructor allocated the needed memory.
-    };
-    mergedPositions.value.set(prevPositions);
-    mergedPositions.value.set(curPositions, prevPositions.length);
-
-    const prevPathIndices = new Uint16Array(prev.pathIndices.value);
-    const curPathIndices = new Uint16Array(cur.pathIndices.value);
-    const mergedPathIndices = {
-      size: cur.pathIndices.size,
-      value: new Uint16Array(prevPathIndices.length + curPathIndices.length),
-    };
-    mergedPathIndices.value.set(prevPathIndices);
-    mergedPathIndices.value.set(curPathIndices, prevPathIndices.length);
-
-    return {
-      type: "AggregatedEvents",
-      featureId: cur.featureId,
-      globalFeatureIds: cur.globalFeatureIds,
-      position: mergedPositions,
-      index: 0,
-      pathIndices: mergedPathIndices,
-      length: prev.length + cur.length,
-      content: cur.content,
-      colors: cur.colors,
-      individualLocalIdentifier: "N/A",
-      numericProps: cur.numericProps,
-    };
-  }
-
-  processBinaryData(binaryData: BinaryLineStringResponse<LineStringPropertiesV2>): BinaryLineFeatures & OptionalAttributes {
-    const binaryLineFeatures: BinaryLineFeatures & OptionalAttributes = {
-      type: "LineString",
-      featureIds: { size: binaryData.featureId.size, value: new Uint16Array(binaryData.featureId.value) },
-      globalFeatureIds: { size: binaryData.globalFeatureIds.size, value: new Uint16Array(binaryData.globalFeatureIds.value) },
-      positions: { size: binaryData.position.size, value: new Float32Array(binaryData.position.value) },
-      pathIndices: { size: binaryData.pathIndices.size, value: new Uint16Array(binaryData.pathIndices.value) },
-      length: binaryData.length,
-      content: binaryData.content,
-      colors: { size: binaryData.colors.size, value: new Uint8Array(binaryData.colors.value) },
-      individualLocalIdentifier: binaryData.individualLocalIdentifier,
-      numericProps: this.numericPropsHelper(binaryData.numericProps),
-      properties: [],
-    };
-    return binaryLineFeatures;
-  }
-
-  // NOTE: This method is called when the web worker finishes processing the requested event data.
-  handleBinaryResponse(binaryData: BinaryLineStringResponse<LineStringPropertiesV2>): void {
-    const binaryLineFeatures = this.processBinaryData(binaryData);
-    const [pointsFeatures, polygonFeatures] = this.BinaryFeaturesPlaceholder();
-
-    this.dataChunks.push({ points: pointsFeatures, lines: binaryLineFeatures, polygons: polygonFeatures });
-    this.contentArray.push(binaryLineFeatures.content.contentArray);
-
-    this.currentIndividuals.update(prev => {
-      prev.add(binaryLineFeatures.individualLocalIdentifier);
-      return prev;
-    });
-
-    // console.log(`Current number of individuals is ${this.currentIndividuals().size}`);
-
-    this.currentMetaData.update(prev => {
-      return {
-        numberOfEvents: prev.numberOfEvents + binaryLineFeatures.length,
-        numberOfIndividuals: this.currentIndividuals().size,
-        currentIndividuals: this.currentIndividuals(),
-        layer: this.currentLayer,
-        pathWidth: prev.pathWidth,
-        widthUnits: prev.widthUnits,
-        textLayer: prev.textLayer,
-      } as EventMetadata;
-    });
-
-
-    let layers: Array<Layer<object> | null> = [];
-    if (this.isAggregationLayer(this.currentLayer)) {
-      // TODO:Test this function using various aggregation layers.
-      // NOTE: All of the positions and pathIndices up unitl this point are used in a single layer.
-      // console.log("Creating aggregation layer in deckOverlaycontroller");
-      layers = [this.createActiveLayer(
-        this.currentLayer,
-        this.processBinaryData(this.cumulativeData as BinaryLineStringResponse<LineStringPropertiesV2>), 0)];
-    } else {
-      layers = this.dataChunks.map((chunk, index) => this.createActiveLayer(this.currentLayer, chunk.lines, index));
-    }
-
-    this.currentLayers = layers;
-    this.deckOverlay?.setProps({
-      layers: layers
-    });
-  }
-
-  setAppropriateLayers() {
-    return;
-  }
-
-  numericPropsHelper(props: NumericPropsResponse<LineStringPropertiesV2>) {
-    return {
-      sourceTimestamp: {
-        size: props.sourceTimestamp.size,
-        value: new Float64Array(props.sourceTimestamp.value)
-      },
-      destinationTimestamp: {
-        size: props.destinationTimestamp.size,
-        value: new Float64Array(props.destinationTimestamp.value)
-      },
-      distanceKm: {
-        size: props.distanceKm.size,
-        value: new Float64Array(props.distanceKm.value)
-      },
-      distanceTravelledKm: {
-        size: props.distanceTravelledKm.size,
-        value: new Float64Array(props.distanceTravelledKm.value)
-      }
-    } as { [key: string]: BinaryAttribute };
-  }
-
-  // NOTE: This helper method builds an empty points and line binaryFeaturesObjects.
-  BinaryFeaturesPlaceholder(): [BinaryPointFeatures, BinaryPolygonFeatures] {
-    return [
-      {
-        type: "Point",
-        featureIds: { size: 1, value: new Uint16Array() },
-        globalFeatureIds: { size: 1, value: new Uint16Array() },
-        positions: { size: 2, value: new Float32Array() },
-        numericProps: {},
-        properties: []
-      }, {
-        type: "Polygon",
-        featureIds: { size: 1, value: new Uint16Array() },
-        globalFeatureIds: { size: 1, value: new Uint16Array() },
-        positions: { size: 2, value: new Float32Array() },
-        polygonIndices: { size: 1, value: new Uint16Array() },
-        primitivePolygonIndices: { size: 1, value: new Uint16Array() },
-        numericProps: {},
-        properties: []
-      }];
-  }
-
-  createAllLayers(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
-    return [
-      this.createArcLayer(binaryFeatures, layerId),
-      this.createLineLayer(binaryFeatures, layerId),
-      this.createScatterplotLayer(binaryFeatures, layerId)
-    ];
-  }
-
-  setOptionsHelper(props: LayerProps, layerType: "point" | "path" | "aggregation") {
-
-    let entries = Object.entries(this.defaultPathOptions);
-    if (layerType === "point") {
-      entries = Object.entries(this.defaultPointOptions);
-    } else if (layerType === "path") {
-      entries = Object.entries(this.defaultPathOptions);
-    } else {
-      entries = Object.entries(this.defaultAggregationOptions);
-    }
-    entries.forEach(([key, value]) => {
-      if (layerType === "path") {
-        const casted = props as PathLikeLayerProps;
-        casted[key as keyof PathLikeLayerProps] = value;
-      }
-      else if (layerType === "point") {
-        const casted = props as PointLayerProps;
-        casted[key as keyof PointLayerProps] = value;
-      }
-      else {
-        const casted = props as AggregationLayerProps;
-        casted[key as keyof AggregationLayerProps] = value;
-      }
-    });
-  }
-
-  createArcLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
-    const BYTE_SIZE = 4;
-    const positions = binaryFeatures.positions;
-    const positionSize = positions.size;
-    const entrySize = positionSize * 2 * BYTE_SIZE;
-    const colors = this.getColorHelper(binaryFeatures.individualLocalIdentifier);
-
-    const arcLayerProps: ArcLayerProps =
-    {
-      id: `${LayerTypes.ArcLayer}-${layerId}`,
-      data: {
-        length: binaryFeatures.length,
-        attributes: {
-          getSourcePosition: {
-            value: new Float32Array(positions.value),
-            size: positionSize,
-            stride: entrySize,
-            offset: 0,
-          },
-          getTargetPosition: {
-            value: new Float32Array(positions.value),
-            size: positionSize,
-            stride: entrySize,
-            offset: entrySize / 2,
-          },
-          individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier)
-        },
-      },
-      getSourceColor: colors[0],
-      getTargetColor: colors[1],
-      autoHighlight: true,
-      colorFormat: "RGBA",
-      pickable: this.currentLayer === LayerTypes.ArcLayer,
-      visible: this.currentLayer === LayerTypes.ArcLayer,
-      updateTriggers: {
-        visible: this.currentLayer,
-        pickable: this.currentLayer
-      }
-    }
-
-    this.setOptionsHelper(arcLayerProps, "path");
-    return new ArcLayer(arcLayerProps);
-  }
-  // INFO: I can forget about this layer for now. Basically the same as line layer.
-  createPathLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
-    const BYTE_SIZE = 4;
-    const positions = binaryFeatures.positions;
-    const positionSize = positions.size;
-    const entrySize = positionSize * 2 * BYTE_SIZE;
-
-    const startIndices: number[] = [0];
-    for (let i = 0; i < binaryFeatures.length - 1; i++) {
-      const lastIndex = startIndices[startIndices.length + 1] + binaryFeatures.positions.size;
-      startIndices.push(lastIndex);
-    }
-
-    const pathLayerProps = {
-      id: `${LayerTypes.PathLayer}-${layerId}`,
-      data: {
-        length: binaryFeatures.length,
-        attributes: {
-          getPath: {
-            value: new Float32Array(binaryFeatures.positions.value),
-            size: binaryFeatures.positions.size,
-            stride: entrySize,
-            offset: 0,
-          },
-          startIndices: new Uint16Array(startIndices),
-          getColor: {
-            value: new Float32Array(binaryFeatures.colors.value),
-            size: binaryFeatures.colors.size,
-            stride: BYTE_SIZE * binaryFeatures.colors.size
-          },
-        },
-        individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier),
-      },
-      pickable: this.currentLayer === LayerTypes.PathLayer,
-      visible: this.currentLayer === LayerTypes.PathLayer,
-      positionFormat: "XY",
-      _pathType: 'open',
-      updateTriggers: {
-        visible: this.currentLayer,
-        pickable: this.currentLayer,
-      },
-    };
-    this.setOptionsHelper(pathLayerProps as PathLayerProps, "path");
-
-    return new PathLayer();
-  }
-
-  createScatterplotLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
-    const BYTE_SIZE = 4;
-    const positions = binaryFeatures.positions;
-    const positionSize = positions.size;
-    const entrySize = positionSize * 2 * BYTE_SIZE;
-
-    const scatterplotProps: ScatterplotLayerProps = {
-      id: `${LayerTypes.ScatterplotLayer}-${layerId}`,
-      data: {
-        length: binaryFeatures.length,
-        attributes: {
-          getPosition: {
-            value: new Float32Array(positions.value),
-            size: positionSize,
-            stride: entrySize,
-            offset: 0,
-          },
-          individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier),
-        },
-      },
-      radiusScale: 30,
-      getRadius: 4,
-      opacity: 0.8,
-      radiusMinPixels: 1.0,
-      getFillColor: [255, 0, 30],
-      autoHighlight: true,
-      pickable: this.currentLayer === LayerTypes.ScatterplotLayer,
-      visible: this.currentLayer === LayerTypes.ScatterplotLayer,
-      updateTriggers: {
-        visible: this.currentLayer,
-        pickable: this.currentLayer
-      },
-    };
-    this.setOptionsHelper(scatterplotProps, "point");
-    return new ScatterplotLayer(scatterplotProps);
-  }
-
-  createHeatmapLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
-    const BYTE_SIZE = 4;
-    const positions = binaryFeatures.positions;
-    const positionSize = positions.size;
-    const entrySize = positionSize * 2 * BYTE_SIZE;
-
-    const heatmapProps = {
-      id: `${LayerTypes.HeatmapLayer}-${layerId}`,
-      data: {
-        length: binaryFeatures.length,
-        attributes: {
-          getPosition: {
-            value: new Float32Array(positions.value),
-            size: positionSize, // = 2
-            stride: entrySize,
-            offset: 0,
-          },
-          individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier),
-        },
-      },
-      // pickable: this.currentLayer === LayerTypes.HeatmapLayer,
-      pickable: false,
-      aggregation: "SUM" as const,
-      radiusPixels: 30,
-      intensity: 1,
-      threshold: 0.3,
-      // weightsTextureSize: 512,
-      visible: this.currentLayer === LayerTypes.HeatmapLayer,
-      getWeight: 1,
-      updateTriggers: {
-        visible: this.currentLayer,
-        pickable: this.currentLayer
-      },
-    };
-
-    return new HeatmapLayer(heatmapProps);
-  }
-
-  // TODO: Include adjustable settings for max elevation, colors, and hexagon dimensions such as width.
-  createHexagonLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
-    const BYTE_SIZE = 4;
-    const positions = binaryFeatures.positions;
-    const positionSize = positions.size;
-    const entrySize = positionSize * 2 * BYTE_SIZE;
-
-    const hexagonLayerProps = {
-      id: `${LayerTypes.HexagonLayer}-${layerId}`,
-      data: {
-        length: binaryFeatures.length,
-        attributes: {
-          getPosition: {
-            value: new Float32Array(positions.value),
-            size: positionSize,
-            stride: entrySize,
-            offset: 0,
-          },
-          individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier),
-        },
-      },
-      elevationRange: [0, 3000] as [number, number],
-      radius: 1000,
-      // colorRange: this.colorRange,
-      pickable: this.currentLayer === LayerTypes.HexagonLayer,
-      visible: this.currentLayer === LayerTypes.HexagonLayer,
-      autoHighlight: true,
-      extruded: true,
-      updateTriggers: {
-        visible: this.currentLayer,
-        pickable: this.currentLayer
-      },
-    };
-    this.setOptionsHelper(hexagonLayerProps, "aggregation");
-    return new HexagonLayer(hexagonLayerProps);
-  }
-
-  createGridLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
-    const BYTE_SIZE = 4;
-    const positions = binaryFeatures.positions;
-    const positionSize = positions.size;
-    const entrySize = positionSize * 2 * BYTE_SIZE;
-
-    const gridProps = {
-      id: `${LayerTypes.GridLayer}-${layerId}`,
-      data: {
-        length: binaryFeatures.length,
-        attributes: { // TODO:Check if aggregation is supported with binary data.
-          getPosition: {
-            value: new Float32Array(positions.value),
-            size: positionSize,
-            stride: entrySize,
-            offset: 0,
-          }
-        },
-        individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier)
-      },
-      pickable: this.currentLayer === LayerTypes.GridLayer,
-      visible: this.currentLayer === LayerTypes.GridLayer,
-      updateTriggers: {
-        visible: this.currentLayer,
-        pickable: this.currentLayer,
-      },
-    };
-    this.setOptionsHelper(gridProps, "aggregation");
-    return new GridLayer(gridProps);
-  }
-
-  createScreenGridLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
-    const BYTE_SIZE = 4;
-    const positions = binaryFeatures.positions;
-    const positionSize = positions.size;
-    const entrySize = positionSize * 2 * BYTE_SIZE;
-
-    const screengridProps = {
-      id: `${LayerTypes.ScreenGridLayer}-${layerId}`,
-      data: {
-        length: binaryFeatures.length,
-        attributes: {
-          getPosition: {
-            value: new Float32Array(positions.value),
-            size: positionSize,
-            stride: entrySize,
-            offset: 0,
-          }
-        },
-        individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier),
-      },
-      pickable: this.currentLayer === LayerTypes.ScreenGridLayer,
-      visible: this.currentLayer === LayerTypes.ScreenGridLayer,
-      cellSizePixels: 20, // TODO: Make this adjustable.
-      opacity: 0.8,
-      updateTriggers: {
-        visible: this.currentLayer,
-        pickable: this.currentLayer,
-      }
-    };
-
-    this.setOptionsHelper(screengridProps, "aggregation");
-    return new ScreenGridLayer(screengridProps);
-  }
-
-  createLineLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
-    const BYTE_SIZE = 4;
-    const positions = binaryFeatures.positions;
-    const positionSize = positions.size;
-    const entrySize = positionSize * 2 * BYTE_SIZE; // 2 positions *  2 coordinates * number of bytes.
-    const colors = this.getColorHelper(binaryFeatures.individualLocalIdentifier);
-
-    const lineLayerProps: LineLayerProps =
-    {
-      id: `${LayerTypes.LineLayer}-${layerId}`,
-      data: {
-        length: binaryFeatures.length,
-        attributes: {
-          getSourcePosition: {
-            value: new Float32Array(positions.value),
-            size: positionSize,
-            stride: entrySize,
-            offset: 0
-          },
-          getTargetPosition: {
-            value: new Float32Array(positions.value),
-            size: positionSize,
-            stride: entrySize,
-            offset: entrySize / 2
-          },
-          individualLocalIdentifier: this.textEncoder.encode(binaryFeatures.individualLocalIdentifier),
-        },
-      },
-      colorFormat: "RGBA",
-      pickable: this.currentLayer === LayerTypes.LineLayer,
-      visible: this.currentLayer === LayerTypes.LineLayer,
-      getColor: colors[0],
-      autoHighlight: true,
-      updateTriggers: {
-        visible: this.currentLayer,
-        pickable: this.currentLayer
-      }
-    }
-
-    this.setOptionsHelper(lineLayerProps, "path");
-    return new LineLayer(lineLayerProps);
-  }
-
-  getColorHelper(animal: string): [Color, Color] {
-    const color = this.individualColors.get(animal);
-    if (color !== undefined) {
-      return color;
-    }
-    const newColor = [randomColor(), randomColor()] as [Color, Color];
-    this.individualColors.set(animal, newColor);
-    return newColor;
-  }
-
-  // TODO: Look up the actual values for the typedArrays by printing the
-  // messagePack parsed values on the .
-  emptyBinaryLineStringResponse(
-    responseType: "BinaryLineString" | "AggregatedEvents"
-  ): BinaryLineStringResponse<object> {
-    return {
-      type: responseType,
-      index: 0,
-      length: 0,
-      individualLocalIdentifier: "none",
-      featureId: { size: 3, value: new Uint8Array() },
-      globalFeatureIds: { size: 3, value: new Uint16Array() },
-      pathIndices: { size: 3, value: new Int8Array() },
-      numericProps: {
-        distanceTravelledKm: { size: 3, value: new Float64Array() },
-        sourceTimestamp: { size: 3, value: new Float64Array() },
-        destinationTimestamp: { size: 3, value: new Float64Array() },
-        distanceKm: { size: 3, value: new Float64Array() },
-      },
-      position: { size: 3, value: new Float32Array() },
-      colors: { size: 3, value: new Uint8Array() },
-      content: { contentArray: [] }
-    };
-  }
-
-// TODO: Implement this layer as a the path layer in the tracker view component.
-// This should default to a path layer.
-// createGeoJsonLayer(binaryFeatures: BinaryLineFeatures & OptionalAttributes, layerId: number) {
-//   const placeholders = this.BinaryFeaturesPlaceholder();
-//   return new GeoJsonLayer({
-//     id: `${LayerTypes.GeoJsonLayer}-${layerId}`,
-//     data: { lines: binaryFeatures, points: placeholders[0], polygons: placeholders[1] },
-//     pointType: "circle",
-//     stroked: true,
-//     filled: true,
-//     colorFormat: "RGBA",
-//     getFillColor: [160, 160, 180, 200],
-//     getLineColor: this.getColorHelper(binaryFeatures.individualLocalIdentifier)[0],
-//     getLineWidth: 1,
-//     lineWidthMinPixels: 1,
-//     autoHighlight: true,
-//     pickable: this.currentLayer === LayerTypes.GeoJsonLayer || this.currentLayer === LayerTypes.PathLayer,
-//     visible: this.currentLayer === LayerTypes.GeoJsonLayer || this.currentLayer === LayerTypes.PathLayer,
-//     updateTriggers: {
-//       visible: this.currentLayer,
-//       pickable: this.currentLayer
-//     }
-//   })
-// }
 }

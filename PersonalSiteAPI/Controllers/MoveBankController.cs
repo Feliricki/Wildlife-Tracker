@@ -208,6 +208,7 @@ namespace PersonalSiteAPI.Controllers
                         filterColumn,
                         filterQuery);
                 }
+                
 
                 var dataSource = source.ProjectToType<StudyDTO>();
                 ApiResult<StudyDTO> apiResult = await ApiResult<StudyDTO>.CreateAsync(
@@ -234,7 +235,7 @@ namespace PersonalSiteAPI.Controllers
                 return apiResult;
             }
             catch (Exception e)
-            {
+            {   
                 //Console.WriteLine(e.Message);
                 _logger.LogError(e.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError);

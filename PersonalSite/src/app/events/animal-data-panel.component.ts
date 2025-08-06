@@ -37,7 +37,7 @@ import { EventRequest } from '../studies/EventRequest';
 import { MatCardModule } from '@angular/material/card';
 import { MatBadgeModule } from '@angular/material/badge';
 import { LayerTypes } from '../deckGL/DeckOverlayController';
-import { LayerTypesHelper } from '../deckGL/OverlayOption';
+import { LayerTypesHelper } from '../deckGL/deckgl-helpers';
 import { PointForms, PathForms, AggregationForms } from '../tracker-view/OverlayOptions';
 import { MatGridListModule } from '@angular/material/grid-list';
 import { MtxColorpickerModule } from '@ng-matero/extensions/colorpicker';
@@ -45,6 +45,7 @@ import { DeckOverlayStateService } from '../services/deck-overlay-state.service'
 import { UIStateService } from '../services/ui-state.service';
 import { MapStateService } from '../services/map-state.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { AnimalSelectionFormComponent, VisualizationControlsComponent } from './components';
 
 export type RGBAColor = [number, number, number, number];
 export type Color = [number, number, number] | RGBAColor;
@@ -102,12 +103,13 @@ export interface EventProfile {
         MatSlideToggleModule, MatSliderModule, MatProgressBarModule,
         MatCardModule, MatCheckboxModule, MatFormFieldModule,
         MatInputModule, MatGridListModule, MtxColorpickerModule,
+        AnimalSelectionFormComponent, VisualizationControlsComponent,
     ],
-    templateUrl: './events.component.html',
+    templateUrl: './animal-data-panel.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    styleUrl: './events.component.scss'
+    styleUrl: './animal-data-panel.component.scss'
 })
-export class EventsComponent implements OnInit {
+export class AnimalDataPanelComponent implements OnInit {
     // Inject services
     private readonly studyService = inject(StudyService);
     private readonly formBuilder = inject(FormBuilder);
@@ -255,6 +257,7 @@ export class EventsComponent implements OnInit {
     screenChange?: Observable<boolean>;
     extraSmallScreenChange?: Observable<boolean>;
     screenChangeSignal: WritableSignal<boolean> = signal(false);
+    private isSubmitting = false;
 
     currentIndividuals: WritableSignal<string[]> = signal([]);
     badgeHidden: boolean = true;
@@ -266,12 +269,16 @@ export class EventsComponent implements OnInit {
     private setupStateSubscriptions(): void {
         // Watch for current study changes
         this.mapStateService.currentStudy$
-            .pipe(takeUntilDestroyed(this.destroyRef))
+            .pipe(
+                distinctUntilChanged((prev, curr) => prev?.id === curr?.id),
+                takeUntilDestroyed(this.destroyRef)
+            )
             .subscribe(study => {
                 if (study) {
-                    this.eventForm.disable();
+                    this.eventForm.enable();
                     this.currentLocationSensors.set(filterForLocationsSensors(study.sensorTypeIds));
                     this.tableSource.getAnimalData(study.id, this.currentSortOrder);
+                    this.uiStateService.openRightPanel();
                 }
             });
 
@@ -283,7 +290,6 @@ export class EventsComponent implements OnInit {
                     case "standby":
                         break;
                     case "streaming":
-                        this.currentIndividuals.set([]);
                         break;
                     case "error":
                         this.currentIndividuals.set([]);
@@ -432,15 +438,15 @@ export class EventsComponent implements OnInit {
             tap(value => {
                 switch (value) {
                     case "loading":
-                        this.eventForm.disable();
+                        this.CheckboxForm.disable();
                         break;
                     case "loaded":
                         this.eventForm.markAsPristine();
-                        this.eventForm.enable();
+                        this.CheckboxForm.enable();
                         this.sensorForm.setValue(this.currentLocationSensors().at(0) ?? null);
                         break;
                     case "error":
-                        this.eventForm.disable();
+                        this.CheckboxForm.disable();
                         break;
                     case "initial":
                         this.eventForm.disable();
@@ -643,8 +649,8 @@ export class EventsComponent implements OnInit {
         return this.tableSource.isTagged(localIdentifier);
     }
 
-    get hasValue(): Signal<boolean> {
-        return computed(() => this.tableSource.HasValue() && this.TableState() === "loaded");
+    get IsPartiallySelected(): Signal<boolean> {
+        return this.tableSource.IsPartiallySelected;
     }
 
     get Individuals(): Signal<Map<string, IndividualJsonDTO>> {
@@ -656,6 +662,11 @@ export class EventsComponent implements OnInit {
     }
 
     submitForm() {
+        // Prevent duplicate submissions
+        if (this.isSubmitting) {
+            return;
+        }
+        
         if (this.eventForm.invalid) {
             return;
         }
@@ -665,6 +676,9 @@ export class EventsComponent implements OnInit {
             return;
         }
 
+        // Set submitting flag to prevent duplicates
+        this.isSubmitting = true;
+        
         const studyId = study.id;
         const localIdentifiers = this.tableSource.taggedAndSelectedIndividuals() as NonEmptyArray<string>;
         const sensor = this.sensorForm.value;
@@ -688,8 +702,13 @@ export class EventsComponent implements OnInit {
     }
 
     sendFetchRequest(request: EventRequest): void {
-        // Use the service to handle the request instead of emitting
+        this.currentIndividuals.set([]);
         this.deckOverlayStateService.setEventRequest(request);
+        
+        // Reset submitting flag after a short delay to prevent rapid resubmissions
+        setTimeout(() => {
+            this.isSubmitting = false;
+        }, 1000);
     }
 
     timeStampHelper(date: Date | null): bigint | undefined {
