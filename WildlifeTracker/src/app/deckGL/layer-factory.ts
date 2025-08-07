@@ -3,30 +3,24 @@ import {
     ArcLayerProps,
     LineLayer,
     LineLayerProps,
-    PathLayer,
-    PathLayerProps,
     ScatterplotLayer,
     ScatterplotLayerProps
-} from '@deck.gl/layers/typed';
+} from '@deck.gl/layers';
 import {
     GridLayer,
-    GridLayerProps,
     HeatmapLayer,
-    HeatmapLayerProps,
     HexagonLayer,
-    HexagonLayerProps,
     ScreenGridLayer,
-    ScreenGridLayerProps
-} from '@deck.gl/aggregation-layers/typed';
-import { Color, Layer, LayerProps } from '@deck.gl/core/typed';
+    HeatmapLayerProps,
+    HexagonLayerProps,
+    ScreenGridLayerProps,
+    GridLayerProps
+} from '@deck.gl/aggregation-layers';
+import { Color, Layer } from '@deck.gl/core';
 import { LayerTypes } from './DeckOverlayController';
-import { BinaryLineFeatures } from '@loaders.gl/schema';
-import { DeckGlRenderingAttributes } from './deckgl-types';
+import { BinaryLineFeature, DeckGlRenderingAttributes, BinaryPointFeature } from './deckgl-types';
 import { randomColor } from './deck-gl.worker';
 
-type PointLayerProps = Partial<ScatterplotLayerProps>;
-type PathLikeLayerProps = Partial<PathLayerProps & LineLayerProps & ArcLayerProps>;
-type AggregationLayerProps = Partial<HexagonLayerProps & ScreenGridLayerProps & GridLayerProps>;
 
 export class LayerFactory {
 
@@ -34,30 +28,30 @@ export class LayerFactory {
 
     public static createLayer(
         layerType: LayerTypes,
-        data: BinaryLineFeatures & DeckGlRenderingAttributes,
-        layerId: number
+        data: (BinaryLineFeature & DeckGlRenderingAttributes) | BinaryPointFeature,
+        layerId: number,
     ): Layer | null {
         switch (layerType) {
             case LayerTypes.ArcLayer:
-                return this.createArcLayer(data, layerId);
+                return this.createArcLayer(data as BinaryLineFeature & DeckGlRenderingAttributes, layerId);
             case LayerTypes.ScatterplotLayer:
-                return this.createScatterplotLayer(data, layerId);
-            case LayerTypes.HexagonLayer:
-                return this.createHexagonLayer(data, layerId);
+                return this.createScatterplotLayer(data as BinaryLineFeature & DeckGlRenderingAttributes, layerId);
+            // case LayerTypes.HexagonLayer:
+            //     return this.createHexagonLayer(data as BinaryPointFeature, layerId, aggregationOptions);
             case LayerTypes.LineLayer:
-                return this.createLineLayer(data, layerId);
+                return this.createLineLayer(data as BinaryLineFeature & DeckGlRenderingAttributes, layerId);
             case LayerTypes.ScreenGridLayer:
-                return this.createScreenGridLayer(data, layerId);
+                return this.createScreenGridLayer(data as BinaryPointFeature & DeckGlRenderingAttributes, layerId);
             case LayerTypes.GridLayer:
-                return this.createGridLayer(data, layerId);
+                return this.createGridLayer(data as BinaryPointFeature, layerId);
             case LayerTypes.HeatmapLayer:
-                return this.createHeatmapLayer(data, layerId);
+                return this.createHeatmapLayer(data as BinaryPointFeature & DeckGlRenderingAttributes, layerId);
             default:
                 return null;
         }
     }
 
-    private static createArcLayer(binaryFeatures: BinaryLineFeatures & DeckGlRenderingAttributes, layerId: number): ArcLayer {
+    private static createArcLayer(binaryFeatures: BinaryLineFeature & DeckGlRenderingAttributes, layerId: number): ArcLayer {
         const BYTE_SIZE = 4;
         const positions = binaryFeatures.positions;
         const positionSize = positions.size;
@@ -93,7 +87,7 @@ export class LayerFactory {
         return new ArcLayer(arcLayerProps);
     }
 
-    private static createScatterplotLayer(binaryFeatures: BinaryLineFeatures & DeckGlRenderingAttributes, layerId: number): ScatterplotLayer {
+    private static createScatterplotLayer(binaryFeatures: BinaryLineFeature & DeckGlRenderingAttributes, layerId: number): ScatterplotLayer {
         const BYTE_SIZE = 4;
         const positions = binaryFeatures.positions;
         const positionSize = positions.size;
@@ -123,7 +117,7 @@ export class LayerFactory {
         return new ScatterplotLayer(scatterplotProps);
     }
 
-    private static createHeatmapLayer(binaryFeatures: BinaryLineFeatures & DeckGlRenderingAttributes, layerId: number): HeatmapLayer {
+    private static createHeatmapLayer(binaryFeatures: BinaryPointFeature & DeckGlRenderingAttributes, layerId: number): HeatmapLayer {
         const BYTE_SIZE = 4;
         const positions = binaryFeatures.positions;
         const positionSize = positions.size;
@@ -153,35 +147,21 @@ export class LayerFactory {
         return new HeatmapLayer(heatmapProps);
     }
 
-    private static createHexagonLayer(binaryFeatures: BinaryLineFeatures & DeckGlRenderingAttributes, layerId: number): HexagonLayer<Float32Array> {
-        const BYTE_SIZE = 4;
-        const positions = binaryFeatures.positions;
-        const positionSize = positions.size;
-        const entrySize = positionSize * 2 * BYTE_SIZE;
-
-        const hexagonLayerProps = {
-            id: `${LayerTypes.HexagonLayer}-${layerId}`,
-            data: {
-                length: binaryFeatures.length,
-                attributes: {
-                    getPosition: {
-                        value: new Float32Array(positions.value),
-                        size: positionSize,
-                        stride: entrySize,
-                        offset: 0,
-                    },
-                },
-            },
-            elevationRange: [0, 3000] as [number, number],
-            radius: 1000,
-            pickable: true,
-            autoHighlight: true,
-            extruded: true,
-        };
-        return new HexagonLayer(hexagonLayerProps);
+    // Temporarily disabled due to compilation issues and user request.
+    private static createHexagonLayer(
+        binaryFeatures: BinaryPointFeature,
+        layerId: number,
+        aggregationOptions?: Partial<HexagonLayerProps>
+    ): HexagonLayer | null {
+        // Temporarily disabled due to compilation issues and user request.
+        return null;
     }
 
-    private static createGridLayer(binaryFeatures: BinaryLineFeatures & DeckGlRenderingAttributes, layerId: number): GridLayer {
+    private static createGridLayer(
+        binaryFeatures: BinaryPointFeature, 
+        layerId: number,
+        aggregationOptions?: Partial<GridLayerProps>
+    ): GridLayer {
         const BYTE_SIZE = 4;
         const positions = binaryFeatures.positions;
         const positionSize = positions.size;
@@ -190,7 +170,7 @@ export class LayerFactory {
         const gridProps = {
             id: `${LayerTypes.GridLayer}-${layerId}`,
             data: {
-                length: binaryFeatures.length,
+                length: positions.value.byteLength / (positionSize * 4),
                 attributes: {
                     getPosition: {
                         value: new Float32Array(positions.value),
@@ -200,12 +180,14 @@ export class LayerFactory {
                     }
                 },
             },
+            colorRange: aggregationOptions?.colorRange,
+            gpuAggregation: aggregationOptions?.gpuAggregation !== undefined ? aggregationOptions.gpuAggregation : true,
             pickable: true,
         };
         return new GridLayer(gridProps);
     }
 
-    private static createScreenGridLayer(binaryFeatures: BinaryLineFeatures & DeckGlRenderingAttributes, layerId: number): ScreenGridLayer {
+    private static createScreenGridLayer(binaryFeatures: BinaryPointFeature & DeckGlRenderingAttributes, layerId: number): ScreenGridLayer {
         const BYTE_SIZE = 4;
         const positions = binaryFeatures.positions;
         const positionSize = positions.size;
@@ -231,7 +213,7 @@ export class LayerFactory {
         return new ScreenGridLayer(screengridProps);
     }
 
-    private static createLineLayer(binaryFeatures: BinaryLineFeatures & DeckGlRenderingAttributes, layerId: number): LineLayer {
+    private static createLineLayer(binaryFeatures: BinaryLineFeature & DeckGlRenderingAttributes, layerId: number): LineLayer {
         const BYTE_SIZE = 4;
         const positions = binaryFeatures.positions;
         const positionSize = positions.size;

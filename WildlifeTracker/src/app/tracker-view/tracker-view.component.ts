@@ -39,71 +39,65 @@ export type GoogleMapStyles =
 type BaseMaps = 'google' | 'mapbox' | 'arcgis';
 
 @Component({
-  selector: 'app-tracker-view',
-  templateUrl: './tracker-view.component.html',
-  styleUrls: ['./tracker-view.component.scss'],
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    AnimalDataPanelComponent,
-    MapboxComponent,
-    MatSidenavModule,
-    MatButtonModule,
-    SimpleSearchComponent,
-    GoogleMapViewComponent,
-    MatIconModule,
-    NgStyle,
-    AsyncPipe,
-    MatToolbarModule,
-    MatButtonToggleModule,
-    MatMenuModule,
-    MatDividerModule,
-    MatChipsModule,
-    MatCheckboxModule,
-    MatRippleModule,
-    MatTooltipModule,
-    MatRadioModule,
-    FormsModule,
-  ],
-  animations: [
-    trigger('leftToggleClick', [
-      transition('void => *', [
-        style({ transform: 'translateX(-100%)' }),
-        animate('.3s ease-in'),
-      ]),
-    ]),
-
-    trigger('rightToggleClick', [
-      transition('void => *', [
-        style({ transform: 'translateX(100%)' }),
-        animate('.3s ease-in'),
-      ]),
-    ]),
-
-    trigger('leftPanelOpened', [
-      state('true', style({ left: 'calc(400px - 1.5em)' })),
-      state('false', style({ left: '.3em' })),
-
-      transition('true => false', [
-        animate('300ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(-400px + 1.5em + .3em))' })),
-      ]),
-
-      transition('false => true', [
-        animate('325ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(400px - 1.5em - .3em))' })),
-      ]),
-    ]),
-
-    trigger('rightPanelOpened', [
-      state("true", style({ right: "calc(800px - 30px)" })), // Adjusted to move button further right
-      state("false", style({ right : "0.3em" })), // Match left button's screen edge distance
-      transition('true => false', [
-        animate('300ms cubic-bezier(0, 0, 0, 1)')
-      ]),
-      transition('false => true', [
-        animate('325ms cubic-bezier(0, 0, 0, 1)')
-      ]),
-    ])
-  ]
+    selector: 'app-tracker-view',
+    templateUrl: './tracker-view.component.html',
+    styleUrls: ['./tracker-view.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        AnimalDataPanelComponent,
+        MapboxComponent,
+        MatSidenavModule,
+        MatButtonModule,
+        SimpleSearchComponent,
+        GoogleMapViewComponent,
+        MatIconModule,
+        NgStyle,
+        AsyncPipe,
+        MatToolbarModule,
+        MatButtonToggleModule,
+        MatMenuModule,
+        MatDividerModule,
+        MatChipsModule,
+        MatCheckboxModule,
+        MatRippleModule,
+        MatTooltipModule,
+        MatRadioModule,
+        FormsModule,
+    ],
+    animations: [
+        trigger('leftToggleClick', [
+            transition('void => *', [
+                style({ transform: 'translateX(-100%)' }),
+                animate('.3s ease-in'),
+            ]),
+        ]),
+        trigger('rightToggleClick', [
+            transition('void => *', [
+                style({ transform: 'translateX(100%)' }),
+                animate('.3s ease-in'),
+            ]),
+        ]),
+        trigger('leftPanelOpened', [
+            state('true', style({ left: 'calc(400px - 1.5em)' })),
+            state('false', style({ left: '.3em' })),
+            transition('true => false', [
+                animate('300ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(-400px + 1.5em + .3em))' })),
+            ]),
+            transition('false => true', [
+                animate('325ms cubic-bezier(0, 0, 0, 1)', style({ transform: 'translate(calc(400px - 1.5em - .3em))' })),
+            ]),
+        ]),
+        trigger('rightPanelOpened', [
+            state("true", style({ right: "calc(800px - 30px)" })), // Adjusted to move button further right
+            state("false", style({ right: "0.3em" })), // Match left button's screen edge distance
+            transition('true => false', [
+                animate('300ms cubic-bezier(0, 0, 0, 1)')
+            ]),
+            transition('false => true', [
+                animate('325ms cubic-bezier(0, 0, 0, 1)')
+            ]),
+        ])
+    ]
 })
 export class MapDashboardComponent implements OnInit {
   // Inject services
@@ -181,7 +175,7 @@ export class MapDashboardComponent implements OnInit {
   readonly layerMenuOptions = [
     ["Arc Layer", LayerTypes.ArcLayer],
     ["Line Layer", LayerTypes.LineLayer],
-    ["Hexagon Layer", LayerTypes.HexagonLayer],
+    // ["Hexagon Layer", LayerTypes.HexagonLayer],
     ["Scatterplot Layer", LayerTypes.ScatterplotLayer],
     ["Screen Grid Layer", LayerTypes.ScreenGridLayer],
     ["Heatmap Layer", LayerTypes.HeatmapLayer],

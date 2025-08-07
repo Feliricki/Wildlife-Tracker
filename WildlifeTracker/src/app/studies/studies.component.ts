@@ -16,16 +16,15 @@ import { NgIf } from '@angular/common';
 
 
 @Component({
-  selector: 'app-studies',
-  templateUrl: './studies.component.html',
-  styleUrls: ['./studies.component.css'],
-  standalone: true,
-  imports: [NgIf,
-    MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatIconModule,
-    MatTableModule, MatSortModule,
-    MatPaginatorModule, DefaultPipe,
-    TruncatePipe]
+    selector: 'app-studies',
+    templateUrl: './studies.component.html',
+    styleUrls: ['./studies.component.css'],
+    imports: [NgIf,
+        MatFormFieldModule, MatInputModule,
+        MatButtonModule, MatIconModule,
+        MatTableModule, MatSortModule,
+        MatPaginatorModule, DefaultPipe,
+        TruncatePipe]
 })
 export class StudiesComponent implements OnInit, AfterViewInit, OnDestroy {
   public displayedColumns: string[] = ['name'];

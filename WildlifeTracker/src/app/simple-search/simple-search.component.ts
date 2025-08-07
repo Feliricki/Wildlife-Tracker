@@ -12,7 +12,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatOptionModule } from '@angular/material/core';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { NgIf, NgFor, AsyncPipe, DatePipe, NgStyle } from '@angular/common';
+import { NgIf, AsyncPipe, DatePipe, NgStyle } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -34,21 +34,20 @@ interface WikiLinks {
 }
 
 @Component({
-  selector: 'app-simple-search',
-  templateUrl: './simple-search.component.html',
-  styleUrls: ['./simple-search.component.scss'],
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    NgIf, MatTableModule, MatTooltipModule,
-    FormsModule, ReactiveFormsModule,
-    MatFormFieldModule, MatInputModule,
-    MatOptionModule, MatExpansionModule, MatIconModule,
-    NgStyle, NgFor, MatPaginatorModule, MatDividerModule,
-    AsyncPipe, DatePipe, MatProgressSpinnerModule,
-    MatRadioModule, MatButtonModule, MatAutocompleteModule,
-    MatSelectModule
-  ]
+    selector: 'app-simple-search',
+    templateUrl: './simple-search.component.html',
+    styleUrls: ['./simple-search.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        NgIf, MatTableModule, MatTooltipModule,
+        FormsModule, ReactiveFormsModule,
+        MatFormFieldModule, MatInputModule,
+        MatOptionModule, MatExpansionModule, MatIconModule,
+        NgStyle, MatPaginatorModule, MatDividerModule,
+        AsyncPipe, DatePipe, MatProgressSpinnerModule,
+        MatRadioModule, MatButtonModule, MatAutocompleteModule,
+        MatSelectModule
+    ]
 })
 export class SimpleSearchComponent implements OnInit {
   // Inject services

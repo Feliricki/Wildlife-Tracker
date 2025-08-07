@@ -37,21 +37,20 @@ interface AggregationControlChangeEvent {
 }
 
 @Component({
-  selector: 'app-control-panel',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatFormFieldModule,
-    MatSelectModule,
-    MatSliderModule,
-    MatTooltipModule,
-    MatCardModule,
-    MtxColorpickerModule,
-    MatInputModule
-  ],
-  template: `
+    selector: 'app-control-panel',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        MatFormFieldModule,
+        MatSelectModule,
+        MatSliderModule,
+        MatTooltipModule,
+        MatCardModule,
+        MtxColorpickerModule,
+        MatInputModule
+    ],
+    template: `
     <div class="control-panel">
       @switch (currentActiveForms()) {
         @case ("path") {
@@ -189,33 +188,33 @@ interface AggregationControlChangeEvent {
                 <div class="control-panel__slider-group">
                   <span>Radius: {{ getControl(aggregationForms, 'radiusPixels').value }}px</span>
                   <div class="control-panel__slider-container">
-                    <mat-slider class="control-panel__slider" min="1" max="100" thumbLabel>
+                    <mat-slider class="control-panel__slider" min="10" max="200" thumbLabel>
                       <input matSliderThumb [formControl]="getControl(aggregationForms, 'radiusPixels')">
                     </mat-slider>
                     <mat-form-field class="control-panel__slider-input dense-5">
-                      <input matInput type="number" min="1" max="100" [formControl]="getControl(aggregationForms, 'radiusPixels')">
+                      <input matInput type="number" min="10" max="200" [formControl]="getControl(aggregationForms, 'radiusPixels')">
                     </mat-form-field>
                   </div>
                 </div>
                 <div class="control-panel__slider-group">
                   <span>Intensity: {{ getControl(aggregationForms, 'intensity').value }}</span>
                   <div class="control-panel__slider-container">
-                    <mat-slider class="control-panel__slider" min="0" max="5" thumbLabel>
+                    <mat-slider class="control-panel__slider" min="0.1" max="10" step="0.1" thumbLabel>
                       <input matSliderThumb [formControl]="getControl(aggregationForms, 'intensity')">
                     </mat-slider>
                     <mat-form-field class="control-panel__slider-input dense-5">
-                      <input matInput type="number" min="0" max="5" [formControl]="getControl(aggregationForms, 'intensity')">
+                      <input matInput type="number" min="0.1" max="10" step="0.1" [formControl]="getControl(aggregationForms, 'intensity')">
                     </mat-form-field>
                   </div>
                 </div>
                 <div class="control-panel__slider-group">
                   <span>Threshold: {{ getControl(aggregationForms, 'threshold').value }}</span>
                   <div class="control-panel__slider-container">
-                    <mat-slider class="control-panel__slider" min="0" max="1" step="0.01" thumbLabel>
+                    <mat-slider class="control-panel__slider" min="0" max="0.5" step="0.01" thumbLabel>
                       <input matSliderThumb [formControl]="getControl(aggregationForms, 'threshold')">
                     </mat-slider>
                     <mat-form-field class="control-panel__slider-input dense-5">
-                      <input matInput type="number" min="0" max="1" step="0.01" [formControl]="getControl(aggregationForms, 'threshold')">
+                      <input matInput type="number" min="0" max="0.5" step="0.01" [formControl]="getControl(aggregationForms, 'threshold')">
                     </mat-form-field>
                   </div>
                 </div>
@@ -225,46 +224,46 @@ interface AggregationControlChangeEvent {
             @if(currentActiveLayer() === 6){
               <div class="control-panel__slider-section--grid">
                 <div class="control-panel__slider-group">
-                  <span>Radius: {{ getControl(aggregationForms, 'radius').value }}</span>
+                  <span>Radius: {{ getControl(aggregationForms, 'radius').value }}m</span>
                   <div class="control-panel__slider-container">
-                    <mat-slider class="control-panel__slider" min="10" max="1000" thumbLabel>
+                    <mat-slider class="control-panel__slider" min="100" max="5000" step="100" thumbLabel>
                       <input matSliderThumb [formControl]="getControl(aggregationForms, 'radius')">
                     </mat-slider>
                     <mat-form-field class="control-panel__slider-input dense-5">
-                      <input matInput type="number" min="10" max="1000" [formControl]="getControl(aggregationForms, 'radius')">
+                      <input matInput type="number" min="100" max="5000" step="100" [formControl]="getControl(aggregationForms, 'radius')">
                     </mat-form-field>
                   </div>
                 </div>
                 <div class="control-panel__slider-group">
                   <span>Coverage: {{ getControl(aggregationForms, 'coverage').value }}</span>
                   <div class="control-panel__slider-container">
-                    <mat-slider class="control-panel__slider" min="0" max="1" step="0.01" thumbLabel>
+                    <mat-slider class="control-panel__slider" min="0.1" max="1" step="0.05" thumbLabel>
                       <input matSliderThumb [formControl]="getControl(aggregationForms, 'coverage')">
                     </mat-slider>
                     <mat-form-field class="control-panel__slider-input dense-5">
-                      <input matInput type="number" min="0" max="1" step="0.01" [formControl]="getControl(aggregationForms, 'coverage')">
+                      <input matInput type="number" min="0.1" max="1" step="0.05" [formControl]="getControl(aggregationForms, 'coverage')">
                     </mat-form-field>
                   </div>
                 </div>
                 <div class="control-panel__slider-group">
-                  <span>Upper Percentile: {{ getControl(aggregationForms, 'upperPercentile').value }}</span>
+                  <span>Upper Percentile: {{ getControl(aggregationForms, 'upperPercentile').value }}%</span>
                   <div class="control-panel__slider-container">
-                    <mat-slider class="control-panel__slider" min="0" max="100" thumbLabel>
+                    <mat-slider class="control-panel__slider" min="50" max="100" step="5" thumbLabel>
                       <input matSliderThumb [formControl]="getControl(aggregationForms, 'upperPercentile')">
                     </mat-slider>
                     <mat-form-field class="control-panel__slider-input dense-5">
-                      <input matInput type="number" min="0" max="100" [formControl]="getControl(aggregationForms, 'upperPercentile')">
+                      <input matInput type="number" min="50" max="100" step="5" [formControl]="getControl(aggregationForms, 'upperPercentile')">
                     </mat-form-field>
                   </div>
                 </div>
                 <div class="control-panel__slider-group">
-                  <span>Lower Percentile: {{ getControl(aggregationForms, 'lowerPercentile').value }}</span>
+                  <span>Lower Percentile: {{ getControl(aggregationForms, 'lowerPercentile').value }}%</span>
                   <div class="control-panel__slider-container">
-                    <mat-slider class="control-panel__slider" min="0" max="100" thumbLabel>
+                    <mat-slider class="control-panel__slider" min="0" max="50" step="5" thumbLabel>
                       <input matSliderThumb [formControl]="getControl(aggregationForms, 'lowerPercentile')">
                     </mat-slider>
                     <mat-form-field class="control-panel__slider-input dense-5">
-                      <input matInput type="number" min="0" max="100" [formControl]="getControl(aggregationForms, 'lowerPercentile')">
+                      <input matInput type="number" min="0" max="50" step="5" [formControl]="getControl(aggregationForms, 'lowerPercentile')">
                     </mat-form-field>
                   </div>
                 </div>
@@ -275,11 +274,11 @@ interface AggregationControlChangeEvent {
               <div class="control-panel__slider-section">
                 <span>Cell Size: {{ getControl(aggregationForms, 'cellSizePixels').value }}px</span>
                 <div class="control-panel__slider-container">
-                  <mat-slider class="control-panel__slider" min="10" max="1000" thumbLabel>
+                  <mat-slider class="control-panel__slider" min="20" max="200" step="10" thumbLabel>
                     <input matSliderThumb [formControl]="getControl(aggregationForms, 'cellSizePixels')">
                   </mat-slider>
                   <mat-form-field class="control-panel__slider-input dense-5">
-                    <input matInput type="number" min="10" max="1000" [formControl]="getControl(aggregationForms, 'cellSizePixels')">
+                    <input matInput type="number" min="20" max="200" step="10" [formControl]="getControl(aggregationForms, 'cellSizePixels')">
                   </mat-form-field>
                 </div>
               </div>
@@ -289,7 +288,7 @@ interface AggregationControlChangeEvent {
       }
     </div>
   `,
-  styles: [`
+    styles: [`
     .control-panel {
       padding: 0;
     }
@@ -338,7 +337,7 @@ export class VisualizationControlsComponent implements OnInit, OnDestroy {
 
   @Output() pathControlChange = new EventEmitter<PathControlChangeEvent>();
   @Output() pointControlChange = new EventEmitter<PointControlChangeEvent>();
-  @Output() aggregationControlChange = new EventEmitter<AggregationControlChangeEvent>();
+  @Output() aggregationControlChange = new EventEmitter<AggregationControlChangeEvent & { fromFormControl?: boolean }>();
 
   private readonly destroyRef = inject(DestroyRef);
   private subscriptions: Subscription[] = [];
@@ -382,7 +381,7 @@ export class VisualizationControlsComponent implements OnInit, OnDestroy {
     ];
     aggregationControls.forEach(controlName => {
       if (this.aggregationForms.controls[controlName]) {
-        this.subscriptions.push(this.subscribeToControl<AggregationControlValue>(this.aggregationForms, controlName, this.onAggregationControlChange));
+        this.subscriptions.push(this.subscribeToControl<AggregationControlValue>(this.aggregationForms, controlName, (value, option) => this.onAggregationControlChange(value, option, true)));
       }
     });
   }
@@ -399,7 +398,6 @@ export class VisualizationControlsComponent implements OnInit, OnDestroy {
     ).subscribe(value => callback.call(this, value as T, controlName));
   }
 
-
   onPathControlChange(value: PathControlValue, option: string) {
     this.pathControlChange.emit({ value, option });
   }
@@ -408,8 +406,8 @@ export class VisualizationControlsComponent implements OnInit, OnDestroy {
     this.pointControlChange.emit({ value, option, colorChange });
   }
 
-  onAggregationControlChange(value: AggregationControlValue, option: string) {
-    this.aggregationControlChange.emit({ value, option });
+  onAggregationControlChange(value: AggregationControlValue, option: string, fromFormControl: boolean = false) {
+    this.aggregationControlChange.emit({ value, option, fromFormControl });
   }
 
   getControl(formGroup: FormGroup, controlName: string): FormControl {

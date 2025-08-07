@@ -11,15 +11,20 @@
       "prefix": "app",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:browser",
+          "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/personal-site",
+            "outputPath": {
+              "base": "dist/personal-site"
+            },
             "index": "src/index.html",
-            "main": "src/main.ts",
             "polyfills": [
               "zone.js"
             ],
             "tsConfig": "tsconfig.app.json",
+            "allowedCommonJsDependencies": [
+              "mapbox-gl",
+              "earcut"
+            ],
             "assets": [
               "src/favicon.ico",
               "src/assets",
@@ -30,16 +35,16 @@
               "src/styles.scss"
             ],
             "scripts": [],
-            "serviceWorker": true,
-            "ngswConfigPath": "ngsw-config.json",
-            "webWorkerTsConfig": "tsconfig.worker.json"
+            "serviceWorker": "ngsw-config.json",
+            "webWorkerTsConfig": "tsconfig.worker.json",
+            "browser": "src/main.ts"
           },
           "configurations": {
             "production": {
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1mb",
+                  "maximumWarning": "5mb",
                   "maximumError": "5mb"
                 },
                 {
@@ -51,9 +56,7 @@
               "outputHashing": "all"
             },
             "development": {
-              "buildOptimizer": false,
               "optimization": false,
-              "vendorChunk": true,
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true,

@@ -1,10 +1,9 @@
-import { BinaryAttribute, BinaryLineFeatures, BinaryPointFeatures, BinaryPolygonFeatures } from "@loaders.gl/schema";
-import { BinaryAnimalMovementLineResponse, AnimalMovementEvent, DeckGlRenderingAttributes, BinaryDataBuffer, BinaryAttributeMap } from "./deckgl-types";
+import { BinaryAnimalMovementLineResponse, AnimalMovementEvent, DeckGlRenderingAttributes, BinaryDataBuffer, BinaryAttributeMap, BinaryLineFeature, BinaryAttribute, BinaryPointFeature, BinaryPolygonFeature } from "./deckgl-types";
 
 export class DataProcessor {
 
     public static mergeBinaryResponse(
-        prev: BinaryAnimalMovementLineResponse<object>, 
+        prev: BinaryAnimalMovementLineResponse<object>,
         cur: BinaryAnimalMovementLineResponse<AnimalMovementEvent>
     ): BinaryAnimalMovementLineResponse<AnimalMovementEvent> {
         if (prev.length === 0) {
@@ -68,7 +67,7 @@ export class DataProcessor {
 
         // Merge numeric properties
         const mergedNumericProps = this.mergeNumericProps(
-            prev.numericProps as { [key: string]: BinaryDataBuffer }, 
+            prev.numericProps as { [key: string]: BinaryDataBuffer },
             cur.numericProps
         );
 
@@ -87,36 +86,62 @@ export class DataProcessor {
         };
     }
 
-    public static processBinaryData(binaryData: BinaryAnimalMovementLineResponse<AnimalMovementEvent>): BinaryLineFeatures & DeckGlRenderingAttributes {
+    public static aggregatePoints(
+        prev: BinaryPointFeature | null,
+        cur: BinaryLineFeature
+    ): BinaryPointFeature {
+        const prevPositions = prev ? new Float32Array(prev.positions.value) : new Float32Array();
+        const curPositions = new Float32Array(cur.positions.value);
+        
+        const mergedArray = new Float32Array(prevPositions.length + curPositions.length);
+        mergedArray.set(prevPositions);
+        mergedArray.set(curPositions, prevPositions.length);
+
+        const mergedPositions = {
+            size: cur.positions.size,
+            value: mergedArray
+        };
+
+        return {
+            type: "Point",
+            positions: mergedPositions,
+            featureIds: { size: 1, value: new Uint16Array() },
+            globalFeatureIds: { size: 1, value: new Uint16Array() },
+            numericProps: {},
+            properties: []
+        };
+    }
+
+    public static processBinaryData(binaryData: BinaryAnimalMovementLineResponse<AnimalMovementEvent>): BinaryLineFeature & DeckGlRenderingAttributes {
         // Validate input data
         if (!binaryData || binaryData.length === 0) {
             throw new Error('Invalid or empty binary data provided to processBinaryData');
         }
 
         try {
-            const binaryLineFeatures: BinaryLineFeatures & DeckGlRenderingAttributes = {
+            const binaryLineFeatures: BinaryLineFeature & DeckGlRenderingAttributes = {
                 type: "LineString",
-                featureIds: { 
-                    size: binaryData.featureId?.size || 1, 
-                    value: new Uint16Array(binaryData.featureId?.value || []) 
+                featureIds: {
+                    size: binaryData.featureId?.size || 1,
+                    value: new Uint16Array(binaryData.featureId?.value || [])
                 },
-                globalFeatureIds: { 
-                    size: binaryData.globalFeatureIds?.size || 1, 
-                    value: new Uint16Array(binaryData.globalFeatureIds?.value || []) 
+                globalFeatureIds: {
+                    size: binaryData.globalFeatureIds?.size || 1,
+                    value: new Uint16Array(binaryData.globalFeatureIds?.value || [])
                 },
-                positions: { 
-                    size: binaryData.position?.size || 3, 
-                    value: new Float32Array(binaryData.position?.value || []) 
+                positions: {
+                    size: binaryData.position?.size || 3,
+                    value: new Float32Array(binaryData.position?.value || [])
                 },
-                pathIndices: { 
-                    size: binaryData.pathIndices?.size || 1, 
-                    value: new Uint16Array(binaryData.pathIndices?.value || []) 
+                pathIndices: {
+                    size: binaryData.pathIndices?.size || 1,
+                    value: new Uint16Array(binaryData.pathIndices?.value || [])
                 },
                 length: binaryData.length,
                 content: binaryData.content || { contentArray: [] },
-                colors: { 
-                    size: binaryData.colors?.size || 3, 
-                    value: new Uint8Array(binaryData.colors?.value || []) 
+                colors: {
+                    size: binaryData.colors?.size || 3,
+                    value: new Uint8Array(binaryData.colors?.value || [])
                 },
                 individualLocalIdentifier: binaryData.individualLocalIdentifier || "unknown",
                 numericProps: this.numericPropsHelper(binaryData.numericProps as { [key: string]: BinaryDataBuffer } || {}),
@@ -130,21 +155,21 @@ export class DataProcessor {
     }
 
     private static mergeNumericProps(
-        prev: { [key: string]: BinaryDataBuffer }, 
+        prev: { [key: string]: BinaryDataBuffer },
         cur: { [key: string]: BinaryDataBuffer }
     ): { [key: string]: BinaryDataBuffer } {
         const merged: { [key: string]: BinaryDataBuffer } = {};
-        
+
         for (const key in cur) {
             if (prev[key] && cur[key]) {
                 // Create appropriate typed arrays based on the current data type
                 const prevArray = new Float64Array(prev[key].value);
                 const curArray = new Float64Array(cur[key].value);
                 const mergedArray = new Float64Array(prevArray.length + curArray.length);
-                
+
                 mergedArray.set(prevArray);
                 mergedArray.set(curArray, prevArray.length);
-                
+
                 merged[key] = {
                     size: cur[key].size,
                     value: mergedArray.buffer
@@ -154,16 +179,16 @@ export class DataProcessor {
                 merged[key] = cur[key];
             }
         }
-        
+
         return merged;
     }
 
     private static numericPropsHelper(props: { [key: string]: BinaryDataBuffer }): { [key: string]: BinaryAttribute } {
         const result: { [key: string]: BinaryAttribute } = {};
-        
+
         // Safely process each expected numeric property
         const expectedProps = ['sourceTimestamp', 'destinationTimestamp', 'distanceKm', 'distanceTravelledKm'];
-        
+
         for (const propName of expectedProps) {
             if (props[propName] && props[propName].value) {
                 result[propName] = {
@@ -172,11 +197,11 @@ export class DataProcessor {
                 };
             }
         }
-        
+
         return result;
     }
 
-    public static BinaryFeaturesPlaceholder(): [BinaryPointFeatures, BinaryPolygonFeatures] {
+    public static BinaryFeaturesPlaceholder(): [BinaryPointFeature, BinaryPolygonFeature] {
         return [
             {
                 type: "Point",

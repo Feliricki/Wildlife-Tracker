@@ -1,16 +1,14 @@
-import { GoogleMapsOverlay } from '@deck.gl/google-maps/typed';
-import { MapboxOverlay } from '@deck.gl/mapbox/typed';
-import { Layer, LayerProps, PickingInfo } from '@deck.gl/core/typed';
-import { ArcLayerProps } from '@deck.gl/layers/typed';
-import { LineLayerProps } from '@deck.gl/layers/typed';
-import { PathLayerProps } from '@deck.gl/layers/typed';
-import { ScatterplotLayerProps } from '@deck.gl/layers/typed';
+import { GoogleMapsOverlay } from '@deck.gl/google-maps';
+import { MapboxOverlay } from '@deck.gl/mapbox';
+import { Layer, LayerProps, PickingInfo } from '@deck.gl/core';
+import { ArcLayerProps } from '@deck.gl/layers';
+import { LineLayerProps } from '@deck.gl/layers';
+import { PathLayerProps } from '@deck.gl/layers';
+import { ScatterplotLayerProps } from '@deck.gl/layers';
 import { EventRequest } from "../studies/EventRequest";
-import { BinaryAttribute, BinaryLineFeatures, BinaryPointFeatures, BinaryPolygonFeatures } from '@loaders.gl/schema';
 import { computed, Signal, signal, WritableSignal } from '@angular/core';
-import { GridLayerProps, HeatmapLayerProps, HexagonLayerProps, ScreenGridLayerProps } from '@deck.gl/aggregation-layers/typed';
+import { GridLayerProps, HeatmapLayerProps, HexagonLayerProps, ScreenGridLayerProps } from '@deck.gl/aggregation-layers';
 import { EventMetadata } from '../events/EventsMetadata';
-import mapboxgl from 'mapbox-gl';
 import { ControlChange } from '../events/animal-data-panel.component';
 import { environment } from 'src/environments/environment';
 import {
@@ -18,7 +16,10 @@ import {
     AnimalMovementEvent,
     DeckGlRenderingAttributes,
     MovementDataFetchRequest,
-    AnimalMovementLineCollection
+    AnimalMovementLineCollection,
+    BinaryPointFeature,
+    BinaryLineFeature,
+    BinaryPolygonFeature
 } from './deckgl-types';
 import { LayerFactory } from './layer-factory';
 import { DataProcessor } from './data-processor';
@@ -29,9 +30,9 @@ type Color = [number, number, number] | [number, number, number, number];
 
 // This is the type returned by the geoJsonToBinary function.
 type BinaryFeatureWithAttributes = {
-  points?: BinaryPointFeatures;
-  lines: BinaryLineFeatures & DeckGlRenderingAttributes;
-  polygons?: BinaryPolygonFeatures;
+  points?: BinaryPointFeature;
+  lines: BinaryLineFeature & DeckGlRenderingAttributes;
+  polygons?: BinaryPolygonFeature;
 };
 
 type GoogleBaseMap = {
@@ -56,10 +57,10 @@ export enum LayerTypes {
   ContourLayer,
   GeoJsonLayer,
   GPUGridLayer,
-  GridLayer,
-  HeatmapLayer, // 5
-  HexagonLayer, // 6
-  IconLayer,
+      GridLayer,
+    HeatmapLayer, // 5
+    HexagonLayer,
+    IconLayer,
   LineLayer,
   PointCloudLayer,
   PathLayer,
@@ -152,17 +153,15 @@ export class DeckOverlayController {
   ]);
 
   readonly aggregationLayers = new Set<LayerTypes>([
-    LayerTypes.HeatmapLayer, LayerTypes.HexagonLayer, LayerTypes.ScreenGridLayer,
+    LayerTypes.HeatmapLayer, LayerTypes.ScreenGridLayer,
   ]);
 
   textDecoder = new TextDecoder();
   textEncoder = new TextEncoder();
 
-  // TODO:Consider if received chunks can appended to their corresponding layer going by individual.
-  // If it's possible to pull this off then I should consider making a layer for each individual
-  // and one large layer containing all the individual's event data.
   cumulativeData: BinaryAnimalMovementLineResponse<object> =
     DataProcessor.emptyBinaryAnimalMovementLineResponse("AggregatedEvents");
+  cumulativePoints: BinaryPointFeature | null = null;
 
   handleBinaryResponse(binaryData: BinaryAnimalMovementLineResponse<AnimalMovementEvent>): void {
     const binaryLineFeatures = DataProcessor.processBinaryData(binaryData);
@@ -188,11 +187,14 @@ export class DeckOverlayController {
       } as EventMetadata;
     });
 
-    let layers: Array<Layer<object> | null> = [];
+    this.cumulativePoints = DataProcessor.aggregatePoints(this.cumulativePoints, binaryLineFeatures);
+
+    let layers: Array<Layer | null> = [];
     if (this.isAggregationLayer(this.currentLayer)) {
+      if (!this.cumulativePoints) return;
       layers = [this.createActiveLayer(
         this.currentLayer,
-                    DataProcessor.processBinaryData(this.cumulativeData as BinaryAnimalMovementLineResponse<AnimalMovementEvent>), 0)];
+        this.cumulativePoints, 0)];
     } else {
       layers = this.dataChunks.map((chunk, index) => this.createActiveLayer(this.currentLayer, chunk.lines, index));
     }
@@ -213,7 +215,7 @@ export class DeckOverlayController {
   currentIndividuals: WritableSignal<Set<string>> = signal(new Set());
 
   currentLayer: LayerTypes = LayerTypes.LineLayer;
-  currentData: Array<BinaryLineFeatures & DeckGlRenderingAttributes> = [];
+  currentData: Array<BinaryLineFeature & DeckGlRenderingAttributes> = [];
   // aggregationLayerActive: WritableSignal<boolean> = signal(false);
 
   tooltipEnabled: boolean = true;
@@ -278,9 +280,15 @@ export class DeckOverlayController {
   }
 
   defaultAggregationOptions: Partial<HeatmapLayerProps & HexagonLayerProps & ScreenGridLayerProps & GridLayerProps> = {
+    // INFO: Heatmap specific options - updated with sensible defaults based on DeckGL docs
+    radiusPixels: 60, // Default is 30, but 60 provides better coverage for wildlife tracking
+    intensity: 1, // Default intensity value
+    threshold: 0.05, // Default threshold for fading effect
+    aggregation: 'SUM' as const, // Default aggregation method
+    
     // INFO: Hexagon specific options
     radius: 1000,
-    coverage: 1,
+    coverage: 0.8, // Slightly smaller than 1 for better visual separation
 
     // INFO:Hexagon and Grid Layer Options
     elevationRange: [0, 1000],
@@ -300,6 +308,9 @@ export class DeckOverlayController {
 
     // INFO: Grid Specific Options
     gpuAggregation: true, // TODO:This needs to be to true in actual layers.
+    
+    // INFO: ScreenGrid specific options
+    cellSizePixels: 50, // Updated from default to more reasonable size for wildlife data
 
     // NOTE: The following will go unused for now.
     // hexagonAggregator: d3-hexbin,
@@ -382,11 +393,12 @@ export class DeckOverlayController {
     this.contentArray = [];
     this.currentLayers = [];
     this.cumulativeData = DataProcessor.emptyBinaryAnimalMovementLineResponse("AggregatedEvents");
+    this.cumulativePoints = null;
     LayerFactory.clearColors();
     this.currentMetaData.set(structuredClone(this.MetadataDefaultOptions));
     this.currentIndividuals.set(new Set());
     this.deckOverlay?.finalize();
-    
+
     // Clean up web worker connections
     if (this.webWorker) {
       this.webWorker.postMessage({ type: "Cleanup" });
@@ -432,43 +444,44 @@ export class DeckOverlayController {
     this.currentActiveOverlay.set(overlay);
   }
 
-  // NOTE:This method is responsible for responding to user input from the control panel.
-  setLayerAttributes(change: ControlChange): void {
-    // NOTE:These options change the custom settings to pertaining to deck.gl layer props.
-    if (change.field === "toggleTooltip") {
-      this.setTooltip(change.change.value as boolean);
-      return;
-    }
-    switch (change.formType) {
-      case "point":
-        this.defaultPointOptions[change.field as keyof PointLayerProps] = change.change.value;
-        break;
-      case "path":
-        this.defaultPathOptions[change.field as keyof PathLikeLayerProps] = change.change.value;
-        break;
-      case "aggregation":
-        this.defaultAggregationOptions[change.field as keyof AggregationLayerProps] = change.change.value;
-        break;
-    }
-
-    const layers = this.currentLayers.map(layer => {
-      if (layer !== null) {
-        return this.setLayerAttributesHelper(change, layer);
-      }
-      return layer;
-    });
-
-    this.deckOverlay?.setProps({
-      layers: layers
-    });
-    this.currentLayers = layers;
+ // NOTE:This method is responsible for responding to user input from the control panel.
+ setLayerAttributes(change: ControlChange): void {
+  // NOTE:These options change the custom settings to pertaining to deck.gl layer props.
+  if (change.field === "toggleTooltip") {
+    this.setTooltip(change.change.value as boolean);
+    return;
+  }
+  switch (change.formType) {
+    case "point":
+      this.defaultPointOptions[change.field as keyof PointLayerProps] = change.change.value;
+      break;
+    case "path":
+      this.defaultPathOptions[change.field as keyof PathLikeLayerProps] = change.change.value;
+      break;
+    case "aggregation":
+      this.defaultAggregationOptions[change.field as keyof AggregationLayerProps] = change.change.value;
+      break;
   }
 
-  setLayerAttributesHelper(change: ControlChange, layer: Layer): Layer {
-    return layer.clone({
-      [change.field]: change.change.value
-    });
-  }
+  const layers = this.currentLayers.map(layer => {
+    if (layer !== null) {
+      return this.setLayerAttributesHelper(change, layer);
+    }
+    return layer;
+  });
+
+  this.deckOverlay?.setProps({
+    layers: layers
+  });
+  this.currentLayers = layers;
+}
+
+setLayerAttributesHelper(change: ControlChange, layer: Layer): Layer {
+  return layer.clone({
+    [change.field]: change.change.value
+  });
+}
+
 
   loadData(request: EventRequest, basemap: GoogleBaseMap | MapboxBaseMap):
     GoogleMapsOverlay | MapboxOverlay | undefined {
@@ -481,7 +494,6 @@ export class DeckOverlayController {
       this.deckOverlay.setMap(basemap.map);
     }
     else if (basemap.type === "mapbox") {
-      // NOTE:MapboxOverlay implements the IControl interface used for custom controls for Mapbox's map.
       this.deckOverlay = this.createOverlay(this.currentActiveOverlay()) as MapboxOverlay;
       basemap.map.addControl(this.deckOverlay);
     }
@@ -575,12 +587,6 @@ export class DeckOverlayController {
         <p>Latitude: ${info.coordinate?.at(1)}</p>
       `;
     }
-    else if (layerType === LayerTypes.HexagonLayer){
-      const layerObject = info.object as { points: unknown[] };
-      return `
-        <p>Events: ${layerObject.points.length}</p>
-      `;
-    }
     else if (layerType === LayerTypes.ScreenGridLayer){
       const layerObject = info.object as { cellCount: number };
       return `
@@ -609,10 +615,11 @@ export class DeckOverlayController {
 
     let layers: Array<Layer<object> | null> = [];
     if (this.isAggregationLayer(layer)) {
+      if (!this.cumulativePoints) return;
       layers = [
         this.createActiveLayer(
           layer,
-          DataProcessor.processBinaryData(this.cumulativeData as BinaryAnimalMovementLineResponse<AnimalMovementEvent>), 0)
+          this.cumulativePoints, 0)
       ];
 
     } else {
@@ -635,7 +642,7 @@ export class DeckOverlayController {
     return this.aggregationLayers.has(layer);
   }
 
-  createActiveLayer(layer: LayerTypes, data: BinaryLineFeatures & DeckGlRenderingAttributes, layerId: number): Layer | null {
+  createActiveLayer(layer: LayerTypes, data: (BinaryLineFeature & DeckGlRenderingAttributes) | BinaryPointFeature, layerId: number): Layer | null {
     this.currentLayer = layer;
     const newLayer = LayerFactory.createLayer(layer, data, layerId);
     if (newLayer) {

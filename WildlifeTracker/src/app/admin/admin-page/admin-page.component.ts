@@ -9,7 +9,6 @@ import { SnackbarComponent } from 'src/app/base-maps/snackbar.component';
 
 @Component({
     selector: 'app-admin-page',
-    standalone: true,
     imports: [
         MatButtonModule, MatIconModule
     ],

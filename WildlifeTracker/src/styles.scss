@@ -1,6 +1,12 @@
-/* You can add global styles to this file, and also import other style files */
-// __<<ngM2ThemingMigrationEscapedComment1>>__
 @use '@angular/material' as mat;
+
+/* You can add global styles to this file, and also import other style files */
+
+body > canvas:first-child {
+  display: none;
+}
+
+// __<<ngM2ThemingMigrationEscapedComment1>>__
 
 
 .dense-1 {

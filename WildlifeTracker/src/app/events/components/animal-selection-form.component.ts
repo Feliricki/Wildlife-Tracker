@@ -22,24 +22,23 @@ import { IndividualJsonDTO } from '../../studies/JsonResults/IndividualJsonDTO';
  * Several fields are available to filter and select individuals
  */
 @Component({
-  selector: 'app-event-form',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatFormFieldModule,
-    MatSelectModule,
-    MatDividerModule,
-    MatTooltipModule,
-    MatButtonModule,
-    MatTableModule,
-    MatCheckboxModule,
-    MatSortModule,
-    MatProgressBarModule,
-    MatIconModule
-  ],
-  template: `
+    selector: 'app-event-form',
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        MatFormFieldModule,
+        MatSelectModule,
+        MatDividerModule,
+        MatTooltipModule,
+        MatButtonModule,
+        MatTableModule,
+        MatCheckboxModule,
+        MatSortModule,
+        MatProgressBarModule,
+        MatIconModule
+    ],
+    template: `
     <form [formGroup]="eventForm" class="event-form" (ngSubmit)="onSubmit()">
       <div class="event-form__controls" [ngClass]="{'event-form__controls--mobile': isMobile}">
         <mat-form-field class="event-form__profile-select dense-5" [appearance]="isMobile ? 'fill' : 'outline'">
@@ -133,7 +132,7 @@ import { IndividualJsonDTO } from '../../studies/JsonResults/IndividualJsonDTO';
     <mat-progress-bar mode="indeterminate"></mat-progress-bar>
     }
   `,
-  styles: [`
+    styles: [`
     .event-form {
       width: 100%;
     }

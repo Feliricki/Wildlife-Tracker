@@ -2,11 +2,10 @@ import { Component } from '@angular/core';
 import { DatePipe } from '@angular/common';
 
 @Component({
-  selector: 'app-reference',
-  standalone: true,
-  imports: [DatePipe],
-  templateUrl: './reference.component.html',
-  styleUrl: './reference.component.css'
+    selector: 'app-reference',
+    imports: [DatePipe],
+    templateUrl: './reference.component.html',
+    styleUrl: './reference.component.css'
 })
 export class ReferenceComponent {
   constructor(){

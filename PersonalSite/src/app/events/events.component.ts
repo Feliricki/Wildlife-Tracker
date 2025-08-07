@@ -92,6 +92,7 @@ export interface EventProfile {
 
 @Component({
     selector: 'app-events',
+    standalone: true,
     imports: [
         MatTableModule, CommonModule, MatListModule,
         MatSortModule, MatNativeDateModule, MatTabsModule,
@@ -104,9 +105,9 @@ export interface EventProfile {
         MatInputModule, MatGridListModule, MtxColorpickerModule,
         AnimalSelectionFormComponent, VisualizationControlsComponent,
     ],
-    templateUrl: './animal-data-panel.component.html',
+    templateUrl: './events.component.html',
     changeDetection: ChangeDetectionStrategy.OnPush,
-    styleUrl: './animal-data-panel.component.scss'
+    styleUrl: './events.component.scss'
 })
 export class AnimalDataPanelComponent implements OnInit {
     // Inject services
@@ -206,15 +207,14 @@ export class AnimalDataPanelComponent implements OnInit {
     });
 
     aggregationForms = this.formBuilder.nonNullable.group({
-        radiusPixels: this.formBuilder.nonNullable.control(60),
+        radiusPixels: this.formBuilder.nonNullable.control(30),
         radius: this.formBuilder.nonNullable.control(1000),
-        cellSizePixels: this.formBuilder.nonNullable.control(50),
+        cellSizePixels: this.formBuilder.nonNullable.control(100),
         intensity: this.formBuilder.nonNullable.control(1),
-        threshold: this.formBuilder.nonNullable.control(0.05),
-        coverage: this.formBuilder.nonNullable.control(0.8),
+        threshold: this.formBuilder.nonNullable.control(0.5),
+        coverage: this.formBuilder.nonNullable.control(1),
         upperPercentile: this.formBuilder.nonNullable.control(100),
         lowerPercentile: this.formBuilder.nonNullable.control(0),
-        gpuAggregation: this.formBuilder.nonNullable.control(true),
     });
 
     eventForm = this.formBuilder.nonNullable.group({
@@ -257,7 +257,6 @@ export class AnimalDataPanelComponent implements OnInit {
     screenChange?: Observable<boolean>;
     extraSmallScreenChange?: Observable<boolean>;
     screenChangeSignal: WritableSignal<boolean> = signal(false);
-    private isSubmitting = false;
 
     currentIndividuals: WritableSignal<string[]> = signal([]);
     badgeHidden: boolean = true;
@@ -269,14 +268,10 @@ export class AnimalDataPanelComponent implements OnInit {
     private setupStateSubscriptions(): void {
         // Watch for current study changes
         this.mapStateService.currentStudy$
-            .pipe(
-                distinctUntilChanged((prev, curr) => prev?.id === curr?.id),
-                takeUntilDestroyed(this.destroyRef)
-            )
+            .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(study => {
                 if (study) {
                     this.eventForm.enable();
-                    this.CheckboxForm.clear();
                     this.currentLocationSensors.set(filterForLocationsSensors(study.sensorTypeIds));
                     this.tableSource.getAnimalData(study.id, this.currentSortOrder);
                     this.uiStateService.openRightPanel();
@@ -399,11 +394,8 @@ export class AnimalDataPanelComponent implements OnInit {
         this.controlChangeHelper(value, option, "path");
     }
 
-    aggregationControlChange(value: number | string, option: string, fromFormControl: boolean = false): void {
-        // Only set form value if NOT coming from form control (prevents feedback loop)
-        if (!fromFormControl) {
-            this.aggregationForms.get(option)?.setValue(value);
-        }
+    aggregationControlChange(value: number | string, option: string): void {
+        this.aggregationForms.get(option)?.setValue(value);
         this.controlChangeHelper(value, option, "aggregation");
     }
 
@@ -653,8 +645,15 @@ export class AnimalDataPanelComponent implements OnInit {
         return this.tableSource.isTagged(localIdentifier);
     }
 
-    get IsPartiallySelected(): Signal<boolean> {
-        return this.tableSource.IsPartiallySelected;
+    get hasValue(): Signal<boolean> {
+        return computed(() => {
+            const hasSelectedItems = this.tableSource.HasValue();
+            const tableLoaded = this.TableState() === "loaded";
+            const result = hasSelectedItems && tableLoaded;
+            console.log(`hasValue computed: ${result} with hasSelectedItems: ${hasSelectedItems} 
+                size: ${this.tableSource.FormArray().controls.length} and tableLoaded: ${tableLoaded}`);
+            return result;
+        });
     }
 
     get Individuals(): Signal<Map<string, IndividualJsonDTO>> {
@@ -666,11 +665,6 @@ export class AnimalDataPanelComponent implements OnInit {
     }
 
     submitForm() {
-        // Prevent duplicate submissions
-        if (this.isSubmitting) {
-            return;
-        }
-        
         if (this.eventForm.invalid) {
             return;
         }
@@ -680,9 +674,6 @@ export class AnimalDataPanelComponent implements OnInit {
             return;
         }
 
-        // Set submitting flag to prevent duplicates
-        this.isSubmitting = true;
-        
         const studyId = study.id;
         const localIdentifiers = this.tableSource.taggedAndSelectedIndividuals() as NonEmptyArray<string>;
         const sensor = this.sensorForm.value;
@@ -708,11 +699,6 @@ export class AnimalDataPanelComponent implements OnInit {
     sendFetchRequest(request: EventRequest): void {
         this.currentIndividuals.set([]);
         this.deckOverlayStateService.setEventRequest(request);
-        
-        // Reset submitting flag after a short delay to prevent rapid resubmissions
-        setTimeout(() => {
-            this.isSubmitting = false;
-        }, 1000);
     }
 
     timeStampHelper(date: Date | null): bigint | undefined {

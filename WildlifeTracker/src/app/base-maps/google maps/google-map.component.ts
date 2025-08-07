@@ -32,15 +32,14 @@ type MapState =
   'rate-limited';
 
 @Component({
-  selector: 'app-google-map',
-  templateUrl: './google-map.component.html',
-  styleUrls: ['./google-map.component.css'],
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    MatButtonModule, MatProgressBarModule,
-    MatIconModule, MatProgressSpinnerModule,
-  ]
+    selector: 'app-google-map',
+    templateUrl: './google-map.component.html',
+    styleUrls: ['./google-map.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [
+        MatButtonModule, MatProgressBarModule,
+        MatIconModule, MatProgressSpinnerModule,
+    ]
 })
 export class GoogleMapViewComponent implements  AfterViewInit {
   // Inject services

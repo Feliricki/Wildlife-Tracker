@@ -24,11 +24,10 @@ enum MapStyles {
 // with and without 3d terrain enabled.
 // with and without labels.
 @Component({
-  selector: "app-custom-button",
-  styleUrl: './custom-button.scss',
-  templateUrl: './custom-button.component.html',
-  standalone: true,
-  imports: [MatButtonModule, MatIconModule]
+    selector: "app-custom-button",
+    styleUrl: './custom-button.scss',
+    templateUrl: './custom-button.component.html',
+    imports: [MatButtonModule, MatIconModule]
 })
 export class CustomButtonComponent {
   readonly standardLayers = [

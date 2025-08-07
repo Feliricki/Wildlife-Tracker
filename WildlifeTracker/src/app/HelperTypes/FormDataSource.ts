@@ -61,7 +61,6 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     // TODO:Consider if this observable should be closed so that it can be resused.
     // A solution could be to store a reference to the observable in the event
     // component and resuse the observable in different instances of the same table.
-    this.sourceSubject$.complete();
   }
 
   // INFO: The inputs require the study's which is aleady present in the event component.
@@ -71,6 +70,12 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
   getAnimalData(studyId: bigint, sortOrder: "asc" | "desc" = "asc"): void {
     this.dataState.set("loading");
     this.dataState$.next("loading");
+
+    // Clear the form array and the selection model for the new data
+    this.formArray().clear();
+    this.selectionModel.clear();
+    this.selectedIndices.set(new Set<number>());
+    this.sourceSubject$.next(this.formArray());
 
     const individuals = this.studyService.jsonRequest("individual", studyId, sortOrder);
     const taggedAnimals = this.studyService.jsonRequest("tag", studyId, sortOrder);
@@ -88,12 +93,6 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
         return [filteredIndividuals, filteredTaggedAnimals] as [IndividualJsonDTO[], TagJsonDTO[]];
       }),
       tap(([individuals, taggedAnimals]) => {
-        // Clear the form array and the selection model for the new data
-        this.formArray().clear();
-        this.selectionModel.clear();
-        this.selectedIndices.set(new Set<number>());
-        
-
         const newAnimals = new Map<string, IndividualJsonDTO>();
         const newTagged = new Map<string, TagJsonDTO>();
 

@@ -2,9 +2,10 @@ import { Component } from '@angular/core';
 import { FormGroup, AbstractControl } from '@angular/forms';
 
 @Component({
-  selector: 'app-base-form',
-  template: ``,
-  styles: []
+    selector: 'app-base-form',
+    template: ``,
+    styles: [],
+    standalone: false
 })
 export abstract class BaseFormComponent {
 

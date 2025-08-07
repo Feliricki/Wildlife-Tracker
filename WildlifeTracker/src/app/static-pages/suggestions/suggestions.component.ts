@@ -5,14 +5,13 @@ import { MatInputModule } from '@angular/material/input';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
 @Component({
-  selector: 'app-suggestions',
-  standalone: true,
-  imports: [
-    MatFormFieldModule, ReactiveFormsModule, MatButtonModule,
-    MatInputModule
-  ],
-  templateUrl: './suggestions.component.html',
-  styleUrl: './suggestions.component.css'
+    selector: 'app-suggestions',
+    imports: [
+        MatFormFieldModule, ReactiveFormsModule, MatButtonModule,
+        MatInputModule
+    ],
+    templateUrl: './suggestions.component.html',
+    styleUrl: './suggestions.component.css'
 })
 export class SuggestionsComponent {
 

@@ -10,18 +10,17 @@ import { Observable } from 'rxjs';
 import { map, shareReplay } from 'rxjs/operators';
 
 @Component({
-  selector: 'app-navigation-schematic',
-  templateUrl: './navigation-schematic.component.html',
-  styleUrls: ['./navigation-schematic.component.css'],
-  standalone: true,
-  imports: [
-    MatToolbarModule,
-    MatButtonModule,
-    MatSidenavModule,
-    MatListModule,
-    MatIconModule,
-    AsyncPipe,
-  ]
+    selector: 'app-navigation-schematic',
+    templateUrl: './navigation-schematic.component.html',
+    styleUrls: ['./navigation-schematic.component.css'],
+    imports: [
+        MatToolbarModule,
+        MatButtonModule,
+        MatSidenavModule,
+        MatListModule,
+        MatIconModule,
+        AsyncPipe,
+    ]
 })
 export class NavigationSchematicComponent {
   private breakpointObserver = inject(BreakpointObserver);

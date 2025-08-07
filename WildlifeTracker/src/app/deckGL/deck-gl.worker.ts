@@ -1,30 +1,30 @@
 /// <reference lib="webworker" />
 
-import { 
-    BinaryAnimalMovementLineResponse, 
-    BinaryDataBuffer, 
-    TooltipContentBuffers, 
-    NumericPropsResponse, 
+import {
+    BinaryAnimalMovementLineResponse,
+    BinaryDataBuffer,
+    TooltipContentBuffers,
+    NumericPropsResponse,
     MovementDataFetchRequest,
-    AnimalMovementLineFeature, 
-    AnimalMovementLineCollection, 
-    AnimalMovementLineBundle, 
+    AnimalMovementLineFeature,
+    AnimalMovementLineCollection,
+    AnimalMovementLineBundle,
     AnimalMovementEvent,
-    NonNumericProps, 
-    NumericPropsType 
+    NonNumericProps,
+    NumericPropsType,
+    BinaryAttribute
 } from "./deckgl-types";
-// import { environment } from '../../environments/environment';
 import { geojsonToBinary } from '@loaders.gl/gis'
-import { BinaryLineFeatures, BinaryAttribute, TypedArray } from '@loaders.gl/schema'
 import * as signalR from '@microsoft/signalr';
 import { MessagePackHubProtocol } from '@microsoft/signalr-protocol-msgpack';
 import * as msgPack from '@msgpack/msgpack';
 import { isDevMode } from "@angular/core";
+import { TypedArray } from '@loaders.gl/schema/dist/lib/table/arrow-api';
+import { BinaryLineFeature } from "@loaders.gl/schema";
 
 
 let streamSubscription: signalR.ISubscription<AnimalMovementLineFeature<AnimalMovementEvent>> | null = null;
 let hubConnection: signalR.HubConnection | null = null;
-// let allEvents: AnimalMovementLineBundle<AnimalMovementEvent> = emptyLineStringFeatureCollection(0);
 
 addEventListener('message', ({ data }) => {
 
@@ -32,7 +32,7 @@ addEventListener('message', ({ data }) => {
     case "FetchRequest":
       setData(data.data as MovementDataFetchRequest);
       break;
-    
+
     case "Cleanup":
       cleanup();
       break;
@@ -47,7 +47,7 @@ async function cleanup() {
     streamSubscription.dispose();
     streamSubscription = null;
   }
-  
+
   if (hubConnection) {
     try {
       await hubConnection.stop();
@@ -72,7 +72,7 @@ export async function setData(
       streamSubscription.dispose();
       streamSubscription = null;
     }
-    
+
     if (hubConnection && hubConnection.state !== signalR.HubConnectionState.Disconnected) {
       try {
         await hubConnection.stop();
@@ -120,7 +120,7 @@ export async function setData(
       },
       complete: () => {
         console.log("Stream completed successfully");
-        
+
         // TODO:Consider writing another type to hold the information for the aggregated events.
         postMessage({
           type: "StreamEnded"
@@ -129,13 +129,13 @@ export async function setData(
       },
       error: (err: unknown) => {
         console.error("Stream error:", err);
-        
+
         // Clean up on stream error
         if (streamSubscription) {
           streamSubscription.dispose();
           streamSubscription = null;
         }
-        
+
         postMessage({
           type: "StreamError"
         });
@@ -144,13 +144,13 @@ export async function setData(
 
   } catch (error) {
     console.error("Connection setup error:", error);
-    
+
     // Clean up on error
     if (streamSubscription) {
       streamSubscription.dispose();
       streamSubscription = null;
     }
-    
+
     if (hubConnection) {
       try {
         await hubConnection.stop();
@@ -159,7 +159,7 @@ export async function setData(
       }
       hubConnection = null;
     }
-    
+
     postMessage({
       type: "StreamError"
     });
@@ -177,7 +177,7 @@ export async function handleFeatures(
   const features = featuresRes.features;
 
   const binaryFeature = geojsonToBinary(features);
-  const binaryLineFeatures: BinaryLineFeatures | undefined = binaryFeature.lines;
+  const binaryLineFeatures: BinaryLineFeature | undefined = binaryFeature.lines;
 
   if (binaryLineFeatures === undefined || features.length === 0) return null;
 
@@ -236,7 +236,7 @@ function parseMsgPackFeature(feature: Array<object>): AnimalMovementLineFeature<
 // };
 
 export function createBinaryResponse(
-  binaryLines: BinaryLineFeatures,
+  binaryLines: BinaryLineFeature,
   featureRes: AnimalMovementLineBundle<AnimalMovementEvent>,
   responseType: "BinaryLineString" | "AggregatedEvents"):
   [BinaryAnimalMovementLineResponse<AnimalMovementEvent>, ArrayBufferLike[]] {

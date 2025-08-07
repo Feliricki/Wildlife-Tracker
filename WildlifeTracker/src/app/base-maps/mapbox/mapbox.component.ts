@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, WritableSignal, signal, Injector, inject, DestroyRef, OnDestroy } from '@angular/core';
 import { StudyDTO } from 'src/app/studies/study';
-import { AsyncPipe } from '@angular/common';
 import { DeckOverlayController, StreamStatus } from 'src/app/deckGL/DeckOverlayController';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { StudyService } from 'src/app/studies/study.service';
@@ -30,7 +29,6 @@ type MapState =
 
 @Component({
     selector: 'app-mapbox',
-    standalone: true,
     changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         MatProgressSpinnerModule, MatButtonModule,
@@ -218,7 +216,7 @@ export class MapboxComponent implements OnInit, OnDestroy {
                                 if (err || !this.map) return;
                                 this.map.easeTo({
                                     center: features[0].geometry.coordinates as [number, number],
-                                    zoom: zoom
+                                    zoom: zoom ?? undefined
                                 });
                             });
                         });

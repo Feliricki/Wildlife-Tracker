@@ -99,7 +99,6 @@ export class DeckOverlayStateService {
 
   public readonly isAggregationLayer = computed(() =>
     this._currentLayer() === LayerTypes.HeatmapLayer ||
-    this._currentLayer() === LayerTypes.HexagonLayer ||
     this._currentLayer() === LayerTypes.ScreenGridLayer
   );
 

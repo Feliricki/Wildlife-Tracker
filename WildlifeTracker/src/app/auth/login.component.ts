@@ -10,17 +10,16 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { NgIf, NgFor } from '@angular/common';
+import { CommonModule, NgIf } from '@angular/common';
 import { NavigationSchematicComponent } from '../schematics/navigation-schematic/navigation-schematic.component';
 
 @Component({
-  selector: 'app-login',
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css'],
-  standalone: true,
-  imports: [FormsModule, ReactiveFormsModule, NgIf,
-    MatFormFieldModule, MatInputModule, NgFor,
-    MatButtonModule, MatIconModule, RouterLink, NavigationSchematicComponent]
+    selector: 'app-login',
+    templateUrl: './login.component.html',
+    styleUrls: ['./login.component.css'],
+    imports: [FormsModule, ReactiveFormsModule, NgIf, CommonModule,
+        MatFormFieldModule, MatInputModule,
+        MatButtonModule, MatIconModule, RouterLink]
 })
 export class LoginComponent extends BaseFormComponent implements OnInit {
   title?: string;

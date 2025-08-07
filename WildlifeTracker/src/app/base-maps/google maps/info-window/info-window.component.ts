@@ -8,11 +8,9 @@ import { MapStateService } from 'src/app/services/map-state.service';
 // INFO: Templating and logic for the info window used in the googlemap component.
 // This component is registered as a custom element in app.component
 @Component({
-  selector: 'app-info-window',
-  standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule],
-  template:
-    `
+    selector: 'app-info-window',
+    imports: [CommonModule, MatButtonModule, MatIconModule],
+    template: `
       <div class="container">
       <h4>{{ currentStudy?.name }}</h4>
       <span>latitude: {{ currentStudy?.mainLocationLat }}</span><br>
@@ -20,7 +18,7 @@ import { MapStateService } from 'src/app/services/map-state.service';
       <button mat-raised-button extended (click)="sendEventRequest(currentStudy!)">See Event Data</button>
       </div>
 `,
-  styleUrl: './info-window.component.css'
+    styleUrl: './info-window.component.css'
 })
 export class InfoWindowComponent {
   @Input()
