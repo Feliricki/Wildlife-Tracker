@@ -12,14 +12,15 @@ import { EventMetadata } from '../events/EventsMetadata';
 import { ControlChange } from '../events/animal-data-panel.component';
 import { environment } from 'src/environments/environment';
 import {
-    BinaryAnimalMovementLineResponse,
-    AnimalMovementEvent,
-    DeckGlRenderingAttributes,
-    MovementDataFetchRequest,
-    AnimalMovementLineCollection,
-    BinaryPointFeature,
-    BinaryLineFeature,
-    BinaryPolygonFeature
+  BinaryAnimalMovementLineResponse,
+  AnimalMovementEvent,
+  DeckGlRenderingAttributes,
+  MovementDataFetchRequest,
+  AnimalMovementLineCollection,
+  BinaryPointFeature,
+  BinaryLineFeature,
+  BinaryPolygonFeature,
+  AnimalPointEvent
 } from './deckgl-types';
 import { LayerFactory } from './layer-factory';
 import { DataProcessor } from './data-processor';
@@ -57,10 +58,10 @@ export enum LayerTypes {
   ContourLayer,
   GeoJsonLayer,
   GPUGridLayer,
-      GridLayer,
-    HeatmapLayer, // 5
-    HexagonLayer,
-    IconLayer,
+  GridLayer,
+  HeatmapLayer, // 5
+  HexagonLayer,
+  IconLayer,
   LineLayer,
   PointCloudLayer,
   PathLayer,
@@ -117,7 +118,7 @@ export type OverlayAggregationOptions = {
   intensity: number; // 0 <= I < Inf
   threshold: number; // 0 < T < 1 - Basically the ratio of fading pixels to the max rate.
   aggregation: 'SUM' | 'MEAN';
-  // colorRange: Array<Color>; NOTE:Not needed for now.
+  // colorRange: Array<Color>; ot needed for now.
   // weightTextureSize: number;
 }
 
@@ -127,7 +128,7 @@ export class DeckOverlayController {
   map: google.maps.Map | mapboxgl.Map;
   deckOverlay?: GoogleMapsOverlay | MapboxOverlay;
   currentActiveOverlay: WritableSignal<OverlayTypes> = signal("google");
-  // NOTE: Not supported on older browsers.
+  // Not supported on older browsers.
   webWorker?: Worker;
 
   // Unused
@@ -156,14 +157,24 @@ export class DeckOverlayController {
     LayerTypes.HeatmapLayer, LayerTypes.ScreenGridLayer,
   ]);
 
+
+  aggregatedPoints: AnimalPointEvent[] = [];
+  dataChunks: Array<BinaryFeatureWithAttributes> = [];
+
+  currentLayers: Array<Layer | null> = [];
+  contentArray: ArrayBufferLike[][] = [];
+
   textDecoder = new TextDecoder();
   textEncoder = new TextEncoder();
 
-  cumulativeData: BinaryAnimalMovementLineResponse<object> =
-    DataProcessor.emptyBinaryAnimalMovementLineResponse("AggregatedEvents");
-  cumulativePoints: BinaryPointFeature | null = null;
 
   handleBinaryResponse(binaryData: BinaryAnimalMovementLineResponse<AnimalMovementEvent>): void {
+    // Observing the raw data
+    const positionLength = new Float32Array(binaryData.position.value).length;
+    const timestampsLength = new Float64Array(binaryData.numericProps.sourceTimestamp.value).length;
+    console.log(`${positionLength} positions`,new Float32Array(binaryData.position.value));
+    console.log(`${timestampsLength} timestamps`,new Float64Array(binaryData.numericProps.sourceTimestamp.value));
+
     const binaryLineFeatures = DataProcessor.processBinaryData(binaryData);
     const [pointsFeatures, polygonFeatures] = DataProcessor.BinaryFeaturesPlaceholder();
 
@@ -187,14 +198,14 @@ export class DeckOverlayController {
       } as EventMetadata;
     });
 
-    this.cumulativePoints = DataProcessor.aggregatePoints(this.cumulativePoints, binaryLineFeatures);
 
     let layers: Array<Layer | null> = [];
     if (this.isAggregationLayer(this.currentLayer)) {
-      if (!this.cumulativePoints) return;
-      layers = [this.createActiveLayer(
-        this.currentLayer,
-        this.cumulativePoints, 0)];
+      if (!this.aggregatedPoints) return;
+      // TODO: Reenable this section
+      // layers = [this.createActiveLayer(
+      //   this.currentLayer,
+      //   this.aggregatedPoints, 0)];
     } else {
       layers = this.dataChunks.map((chunk, index) => this.createActiveLayer(this.currentLayer, chunk.lines, index));
     }
@@ -205,11 +216,8 @@ export class DeckOverlayController {
     });
   }
 
-  dataChunks: Array<BinaryFeatureWithAttributes> = [];
-  currentLayers: Array<Layer | null> = [];
-  contentArray: ArrayBufferLike[][] = [];
 
-  // INFO:Store the current state of the controller
+  // Store the current state of the controller
   streamStatus: WritableSignal<StreamStatus> = signal("standby");
   individualColors = new Map<string, [Color, Color]>();
   currentIndividuals: WritableSignal<Set<string>> = signal(new Set());
@@ -249,7 +257,8 @@ export class DeckOverlayController {
 
   // TODO:Add the trips layer.
   defaultPathOptions: Partial<ArcLayerProps & LineLayerProps & PathLayerProps> = {
-    // NOTE: Arc Layer Specific Options
+    //  Arc Layer Specific Options
+
     // numSegments: 50,
     // greatCircle: false,
     // getHeight: 1,
@@ -261,8 +270,9 @@ export class DeckOverlayController {
     // getTargetPosition: undefined,
     //
     // getTilt: 0, // -90 to 90
-    //
-    // // NOTE:Path Layer Specific Options
+
+    // Path Layer Specific Options
+
     // getPath: undefined,
     // getColor: undefined,
     // capRounded: false,
@@ -270,7 +280,7 @@ export class DeckOverlayController {
     // miterLimit: 4, // Only applicable if roundedJoint = false.
     // _pathType: "open", // If loop or open then the overlay will skip normalization.
     //
-    // // NOTE:General Path Options
+    // // General Path Options
     // autoHighlight: true,
     widthUnits: "pixels",
     widthScale: 1,
@@ -285,12 +295,12 @@ export class DeckOverlayController {
     intensity: 1, // Default intensity value
     threshold: 0.05, // Default threshold for fading effect
     aggregation: 'SUM' as const, // Default aggregation method
-    
-    // INFO: Hexagon specific options
+
+    //  Hexagon specific options
     radius: 1000,
     coverage: 0.8, // Slightly smaller than 1 for better visual separation
 
-    // INFO:Hexagon and Grid Layer Options
+    // Hexagon and Grid Layer Options
     elevationRange: [0, 1000],
     elevationScale: 1, // Hexagon elevation multiplier
     upperPercentile: 100, // Hexagons range with a higher value than the upper percentile will be filtered.
@@ -306,13 +316,13 @@ export class DeckOverlayController {
     getColorValue: null, // If provided, will override the value of getColorWeight and colorAggregation.
     getElevationWeight: 1,
 
-    // INFO: Grid Specific Options
+    //  Grid Specific Options
     gpuAggregation: true, // TODO:This needs to be to true in actual layers.
-    
-    // INFO: ScreenGrid specific options
+
+    // ScreenGrid specific options
     cellSizePixels: 50, // Updated from default to more reasonable size for wildlife data
 
-    // NOTE: The following will go unused for now.
+    // The following will go unused for now.
     // hexagonAggregator: d3-hexbin,
     // colorDomain: null, (default = [min(ColorWeight), max(ColorWeight)](hexagon layer), )
     // colorRange: (default = colorbrewer - 6-class YlOrRd)
@@ -346,7 +356,7 @@ export class DeckOverlayController {
   constructor(map: google.maps.Map | mapboxgl.Map, layer: LayerTypes) {
     this.map = map;
     this.currentLayer = layer;
-    this.cumulativeData = DataProcessor.emptyBinaryAnimalMovementLineResponse("AggregatedEvents");
+    this.aggregatedPoints = [];
 
     if (typeof Worker !== 'undefined') {
       this.webWorker = new Worker(new URL('./deck-gl.worker', import.meta.url));
@@ -355,7 +365,6 @@ export class DeckOverlayController {
         switch (message.data.type) {
 
           case "BinaryLineString":
-            this.cumulativeData = DataProcessor.mergeBinaryResponse(this.cumulativeData, message.data as BinaryAnimalMovementLineResponse<AnimalMovementEvent>);
             this.handleBinaryResponse(message.data as BinaryAnimalMovementLineResponse<AnimalMovementEvent>);
             break;
           case "StreamEnded":
@@ -383,7 +392,6 @@ export class DeckOverlayController {
     return computed(() => this.currentIndividuals().size);
   }
 
-  // INFO: This needs to be updated first.
   get CurrentIndividuals(): Signal<Set<string>> {
     return this.currentIndividuals.asReadonly();
   }
@@ -392,8 +400,7 @@ export class DeckOverlayController {
     this.dataChunks = [];
     this.contentArray = [];
     this.currentLayers = [];
-    this.cumulativeData = DataProcessor.emptyBinaryAnimalMovementLineResponse("AggregatedEvents");
-    this.cumulativePoints = null;
+    this.aggregatedPoints = [];
     LayerFactory.clearColors();
     this.currentMetaData.set(structuredClone(this.MetadataDefaultOptions));
     this.currentIndividuals.set(new Set());
@@ -417,9 +424,9 @@ export class DeckOverlayController {
         });
 
       case "mapbox":
-        // NOTE:This overlay implement the IController class from the mapbox imports and must be added in the original mapbox component class.
+        // This overlay implement the IController class from the mapbox imports and must be added in the original mapbox component class.
         return new MapboxOverlay({
-          interleaved: false, //NOTE:Interleaved option is buggy as of now.
+          interleaved: false, // Interleaved option is buggy as of now.
           getTooltip: (data) => data.layer && this.renderTooltip(data),
           _typedArrayManagerProps: {
             overAlloc: 1,
@@ -427,7 +434,7 @@ export class DeckOverlayController {
           }
         });
       case "arcgis":
-        // TODO: This needs to be changed to the arcgis overlay later on.
+        // This needs to be changed to the arcgis overlay later on.
         return new GoogleMapsOverlay({
           getTooltip: (data) => data.layer && this.renderTooltip(data),
           _typedArrayManagerProps: {
@@ -444,43 +451,43 @@ export class DeckOverlayController {
     this.currentActiveOverlay.set(overlay);
   }
 
- // NOTE:This method is responsible for responding to user input from the control panel.
- setLayerAttributes(change: ControlChange): void {
-  // NOTE:These options change the custom settings to pertaining to deck.gl layer props.
-  if (change.field === "toggleTooltip") {
-    this.setTooltip(change.change.value as boolean);
-    return;
-  }
-  switch (change.formType) {
-    case "point":
-      this.defaultPointOptions[change.field as keyof PointLayerProps] = change.change.value;
-      break;
-    case "path":
-      this.defaultPathOptions[change.field as keyof PathLikeLayerProps] = change.change.value;
-      break;
-    case "aggregation":
-      this.defaultAggregationOptions[change.field as keyof AggregationLayerProps] = change.change.value;
-      break;
-  }
-
-  const layers = this.currentLayers.map(layer => {
-    if (layer !== null) {
-      return this.setLayerAttributesHelper(change, layer);
+  // This method is responsible for responding to user input from the control panel.
+  setLayerAttributes(change: ControlChange): void {
+    // These options change the custom settings pertaining to deck.gl layer props.
+    if (change.field === "toggleTooltip") {
+      this.setTooltip(change.change.value as boolean);
+      return;
     }
-    return layer;
-  });
+    switch (change.formType) {
+      case "point":
+        this.defaultPointOptions[change.field as keyof PointLayerProps] = change.change.value;
+        break;
+      case "path":
+        this.defaultPathOptions[change.field as keyof PathLikeLayerProps] = change.change.value;
+        break;
+      case "aggregation":
+        this.defaultAggregationOptions[change.field as keyof AggregationLayerProps] = change.change.value;
+        break;
+    }
 
-  this.deckOverlay?.setProps({
-    layers: layers
-  });
-  this.currentLayers = layers;
-}
+    const layers = this.currentLayers.map(layer => {
+      if (layer !== null) {
+        return this.setLayerAttributesHelper(change, layer);
+      }
+      return layer;
+    });
 
-setLayerAttributesHelper(change: ControlChange, layer: Layer): Layer {
-  return layer.clone({
-    [change.field]: change.change.value
-  });
-}
+    this.deckOverlay?.setProps({
+      layers: layers
+    });
+    this.currentLayers = layers;
+  }
+
+  setLayerAttributesHelper(change: ControlChange, layer: Layer): Layer {
+    return layer.clone({
+      [change.field]: change.change.value
+    });
+  }
 
 
   loadData(request: EventRequest, basemap: GoogleBaseMap | MapboxBaseMap):
@@ -503,18 +510,15 @@ setLayerAttributesHelper(change: ControlChange, layer: Layer): Layer {
       request: request,
     };
 
-    // if (this.webWorker !== undefined) {
     if (this.webWorker !== undefined) {
       this.webWorker.postMessage({ data: workerRequest, type: "FetchRequest" as const });
     }
     else {
-
       this.sendFetchRequest(request).then(lineStringResponse => {
         if (lineStringResponse === null) return;
 
-        for (const response of lineStringResponse){
+        for (const response of lineStringResponse) {
           if (response === null) continue;
-          this.cumulativeData = DataProcessor.mergeBinaryResponse(this.cumulativeData, response[0]);
           this.handleBinaryResponse(response[0]);
         }
       });
@@ -522,8 +526,7 @@ setLayerAttributesHelper(change: ControlChange, layer: Layer): Layer {
     return this.deckOverlay;
   }
 
-  async sendFetchRequest(request: EventRequest)
-  {
+  async sendFetchRequest(request: EventRequest) {
     try {
       const response = await fetch(environment.baseUrl + "api/MoveBank/GetEventData", {
         method: "POST",
@@ -561,7 +564,6 @@ setLayerAttributesHelper(change: ControlChange, layer: Layer): Layer {
     }
   }
 
-  // TODO: This method needs to be refactored to display different information depending the currently active layer.
   // Aggregation layers need to display different information.
   renderTooltip(info: PickingInfo) {
     const index = info.index;
@@ -587,7 +589,7 @@ setLayerAttributesHelper(change: ControlChange, layer: Layer): Layer {
         <p>Latitude: ${info.coordinate?.at(1)}</p>
       `;
     }
-    else if (layerType === LayerTypes.ScreenGridLayer){
+    else if (layerType === LayerTypes.ScreenGridLayer) {
       const layerObject = info.object as { cellCount: number };
       return `
         <p>Events: ${layerObject.cellCount}</p>
@@ -607,20 +609,20 @@ setLayerAttributesHelper(change: ControlChange, layer: Layer): Layer {
     this.tooltipEnabled = value;
   }
 
-  // TODO:This needs to be changed to handle aggregation layers.
   changeActiveLayer(layer: LayerTypes): void {
     if (this.currentLayer === layer) return;
     this.currentLayer = layer;
     if (this.dataChunks.length === 0) return;
 
-    let layers: Array<Layer<object> | null> = [];
+    let layers: Array<Layer | null> = [];
     if (this.isAggregationLayer(layer)) {
-      if (!this.cumulativePoints) return;
-      layers = [
-        this.createActiveLayer(
-          layer,
-          this.cumulativePoints, 0)
-      ];
+      if (!this.aggregatedPoints) return;
+      //TODO: Reeanble this section of code
+      // layers = [
+      //   this.createActiveLayer(
+      //     layer,
+      //     this.aggregatedPoints, 0)
+      // ];
 
     } else {
       layers = this.dataChunks
@@ -642,14 +644,15 @@ setLayerAttributesHelper(change: ControlChange, layer: Layer): Layer {
     return this.aggregationLayers.has(layer);
   }
 
-  createActiveLayer(layer: LayerTypes, data: (BinaryLineFeature & DeckGlRenderingAttributes) | BinaryPointFeature, layerId: number): Layer | null {
+  // createActiveLayer(layer: LayerTypes, data: (BinaryLineFeature & DeckGlRenderingAttributes) | AnimalPointEvent[], layerId: number): Layer | null {
+  createActiveLayer(layer: LayerTypes, data: (BinaryLineFeature & DeckGlRenderingAttributes), layerId: number): Layer | null {
     this.currentLayer = layer;
     const newLayer = LayerFactory.createLayer(layer, data, layerId);
     if (newLayer) {
-        return newLayer.clone({
-            visible: this.currentLayer === layer,
-            pickable: this.currentLayer === layer
-        });
+      return newLayer.clone({
+        visible: this.currentLayer === layer,
+        pickable: this.currentLayer === layer
+      });
     }
     return newLayer;
   }

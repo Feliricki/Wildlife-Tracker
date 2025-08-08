@@ -11,14 +11,12 @@ import {
     HeatmapLayer,
     HexagonLayer,
     ScreenGridLayer,
-    HeatmapLayerProps,
     HexagonLayerProps,
-    ScreenGridLayerProps,
     GridLayerProps
 } from '@deck.gl/aggregation-layers';
 import { Color, Layer } from '@deck.gl/core';
 import { LayerTypes } from './DeckOverlayController';
-import { BinaryLineFeature, DeckGlRenderingAttributes, BinaryPointFeature } from './deckgl-types';
+import { BinaryLineFeature, DeckGlRenderingAttributes, BinaryPointFeature, AnimalMovementEvent } from './deckgl-types';
 import { randomColor } from './deck-gl.worker';
 
 
@@ -28,7 +26,7 @@ export class LayerFactory {
 
     public static createLayer(
         layerType: LayerTypes,
-        data: (BinaryLineFeature & DeckGlRenderingAttributes) | BinaryPointFeature,
+        data: (BinaryLineFeature & DeckGlRenderingAttributes) | AnimalMovementEvent[],
         layerId: number,
     ): Layer | null {
         switch (layerType) {
@@ -41,11 +39,11 @@ export class LayerFactory {
             case LayerTypes.LineLayer:
                 return this.createLineLayer(data as BinaryLineFeature & DeckGlRenderingAttributes, layerId);
             case LayerTypes.ScreenGridLayer:
-                return this.createScreenGridLayer(data as BinaryPointFeature & DeckGlRenderingAttributes, layerId);
-            case LayerTypes.GridLayer:
-                return this.createGridLayer(data as BinaryPointFeature, layerId);
-            case LayerTypes.HeatmapLayer:
-                return this.createHeatmapLayer(data as BinaryPointFeature & DeckGlRenderingAttributes, layerId);
+                return this.createScreenGridLayer(data as AnimalMovementEvent[], layerId);
+            // case LayerTypes.GridLayer:
+            //     return this.createGridLayer(data as AnimalMovementEvent[], layerId);
+            // case LayerTypes.HeatmapLayer:
+            //     return this.createHeatmapLayer(data as AnimalMovementEvent[], layerId);
             default:
                 return null;
         }
@@ -117,16 +115,17 @@ export class LayerFactory {
         return new ScatterplotLayer(scatterplotProps);
     }
 
-    private static createHeatmapLayer(binaryFeatures: BinaryPointFeature & DeckGlRenderingAttributes, layerId: number): HeatmapLayer {
+    private static createHeatmapLayer(binaryFeatures: BinaryPointFeature, layerId: number): HeatmapLayer {
         const BYTE_SIZE = 4;
         const positions = binaryFeatures.positions;
         const positionSize = positions.size;
         const entrySize = positionSize * 2 * BYTE_SIZE;
 
+        // BUG: The length is being set to binaryFeatures causing the lag probably
         const heatmapProps = {
             id: `${LayerTypes.HeatmapLayer}-${layerId}`,
             data: {
-                length: binaryFeatures.length,
+                length: binaryFeatures,
                 attributes: {
                     getPosition: {
                         value: new Float32Array(positions.value),
@@ -158,7 +157,7 @@ export class LayerFactory {
     }
 
     private static createGridLayer(
-        binaryFeatures: BinaryPointFeature, 
+        binaryFeatures: BinaryPointFeature,
         layerId: number,
         aggregationOptions?: Partial<GridLayerProps>
     ): GridLayer {
@@ -187,30 +186,31 @@ export class LayerFactory {
         return new GridLayer(gridProps);
     }
 
-    private static createScreenGridLayer(binaryFeatures: BinaryPointFeature & DeckGlRenderingAttributes, layerId: number): ScreenGridLayer {
-        const BYTE_SIZE = 4;
-        const positions = binaryFeatures.positions;
-        const positionSize = positions.size;
-        const entrySize = positionSize * 2 * BYTE_SIZE;
+    private static createScreenGridLayer(movementData: AnimalMovementEvent[], layerId: number): ScreenGridLayer {
+        // const BYTE_SIZE = 4;
+        // const positions = movementData.positions;
+        // const positionSize = positions.size;
+        // const entrySize = positionSize * 2 * BYTE_SIZE;
 
-        const screengridProps = {
+        return new ScreenGridLayer<AnimalMovementEvent>({
             id: `${LayerTypes.ScreenGridLayer}-${layerId}`,
-            data: {
-                length: binaryFeatures.length,
-                attributes: {
-                    getPosition: {
-                        value: new Float32Array(positions.value),
-                        size: positionSize,
-                        stride: entrySize,
-                        offset: 0,
-                    }
-                },
-            },
+            data: movementData,
+            // getPosition: d => d.15:31,
+            // data: {
+            //     length: binaryFeatures.length,
+            //     attributes: {
+            //         getPosition: {
+            //             value: new Float32Array(positions.value),
+            //             size: positionSize,
+            //             stride: entrySize,
+            //             offset: 0,
+            //         }
+            //     },
+            // },
             pickable: true,
             cellSizePixels: 20,
             opacity: 0.8,
-        };
-        return new ScreenGridLayer(screengridProps);
+        });
     }
 
     private static createLineLayer(binaryFeatures: BinaryLineFeature & DeckGlRenderingAttributes, layerId: number): LineLayer {

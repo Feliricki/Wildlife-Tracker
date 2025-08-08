@@ -38,7 +38,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     const selectedCount = this.selectedIndices().size;
     return totalCount > 0 && selectedCount === totalCount;
   });
-  
+
   constructor(
     private readonly studyService: StudyService,
     readonly formArrayInput: FormArray<FormControl<boolean>>) {
@@ -63,7 +63,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     // component and resuse the observable in different instances of the same table.
   }
 
-  // INFO: The inputs require the study's which is aleady present in the event component.
+  //  The inputs require the study's which is aleady present in the event component.
   // 1) First. the observables are combined and fetched in sequence
   // 2) Then the signal containing the current individuals and the tagged animals are updated with their values from the http response.
   // 3) Finally the loading state is updated and the form is sent to the behavior subject to update the final source.
@@ -133,7 +133,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
       // Deselect all
       this.selectionModel.clear();
       this.selectedIndices.set(new Set<number>());
-      
+
       for (let i = 0; i < this.TableSize(); i++) {
         const control = this.formArray().controls[i];
         if (control) {
@@ -163,16 +163,16 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
     if (this.dataState() !== "loaded") {
       return;
     }
-    
+
     this.selectionModel.toggle(index);
     const isSelected = this.selectionModel.isSelected(index);
-    
+
     // Update the form control value
     const control = this.formArray().controls[index];
     if (control) {
       control.setValue(isSelected);
     }
-    
+
     // Update the selectedIndices signal
     this.selectedIndices.update(current => {
       const newSet = new Set(current);
@@ -245,13 +245,13 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
       const individuals: string[] = [];
       const selectedSet = this.selectedIndices();
       const sources = this.currentSource();
-      
+
       selectedSet.forEach(index => {
         if (index >= 0 && index < sources.length) {
           individuals.push(sources[index].LocalIdentifier);
         }
       });
-      
+
       return individuals;
     })
   }

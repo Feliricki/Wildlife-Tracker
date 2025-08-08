@@ -16,6 +16,12 @@ export interface AnimalMovementEvent {
   distanceTravelledKm: number;
 }
 
+
+export interface AnimalPointEvent {
+  timestamp: bigint | number;
+  location: [number, number];
+}
+
 // Alias for backward compatibility during migration
 export type EventProperties = AnimalMovementEvent;
 

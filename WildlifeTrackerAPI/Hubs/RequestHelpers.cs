@@ -16,7 +16,7 @@ namespace WildlifeTrackerAPI.Hubs
         }
 
         public static LocationJsonDTO ToLocationJson(DateTime timestamp, float locationLat, float locationLong)
-        {
+        {            
             return new LocationJsonDTO
             {
                 LocationLat = locationLat,

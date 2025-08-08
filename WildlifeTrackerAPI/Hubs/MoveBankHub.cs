@@ -24,7 +24,7 @@ namespace WildlifeTrackerAPI.Hubs
         public List<Feature<LineStringPropertiesV2, LineStringGeometry>> Feature { get; set; } = [];
         [Key(1)]
         [JsonPropertyName(name: "individualLocalIdentifier")]
-        public string IndividualLocalIdentifier { get; set; } = default!;
+        public string IndividualLocalIdentifier { get; set; } = null!;
         [Key(2)]
         [JsonPropertyName(name: "count")]
         public int Count { get; set; }
@@ -41,7 +41,6 @@ namespace WildlifeTrackerAPI.Hubs
 
     public class MoveBankHub : Hub<IMoveBankHub>
     {
-
         public override Task OnConnectedAsync()
         {
             Console.WriteLine("Established connection to Hub.");
@@ -64,28 +63,27 @@ namespace WildlifeTrackerAPI.Hubs
         {
             Console.WriteLine("Starting streaming events for request: " + JsonConvert.SerializeObject(request));
 
-            // TODO: Adjust the request to only ask for data for which there is no cache.
-            // Now test the caching service.
-            List<string> localIdentifiers = request.LocalIdentifiers?.ToList() ?? [];
+            var localIdentifiers = request.LocalIdentifiers?.ToList() ?? [];
             if (localIdentifiers.Count == 0)
             {
                 yield break;
             }
 
             // TODO: Decide if this http call still needs to be made if all requested individuals are cached.
-            HttpResponseMessage? response = await moveBankService.DirectRequestEvents(request);
+            var response = await moveBankService.DirectRequestEvents(request);
             if (response is null)
             {
-                Console.WriteLine("Response was null.");
+                Console.WriteLine("Response was null from MoveBankService");
                 yield break;
             }
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             using var streamReader = new StreamReader(stream, Encoding.UTF8);
             using var csvReader = new CsvReader(streamReader, CultureInfo.InvariantCulture);
 
             // Use this as the main loop to improve memory usage.
-            long studyId = request.StudyId;
-            var FeaturesByIndividuals =
+            var studyId = request.StudyId;
+            var featuresByIndividuals =
                  csvReader
                 .GetRecords<EventRecord>()
                 .Where(record => record?.Timestamp is not null && record.LocationLat is not null && record.LocationLong is not null)                       
@@ -96,14 +94,14 @@ namespace WildlifeTrackerAPI.Hubs
                 })
                 .Select(LineStringFeatureCollection<LineStringPropertiesV2>.ToLineStringGroup);           
             
-            foreach (var featureCollection in FeaturesByIndividuals)
+            foreach (var featureCollection in featuresByIndividuals)
             {
                 //Console.WriteLine("Looping through collection.");
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // For MessagePack serialization, consider using a custom formatter resolver to utilize flat buffers 
                 // A example of the above procedure should already be present in the SignalR github repo.
-                string curAnimal = featureCollection.IndividualLocalIdentifier;
+                var curAnimal = featureCollection.IndividualLocalIdentifier;
 
                 List<Feature<LineStringPropertiesV2, LineStringGeometry>> curFeatures = [];
                 List<LineStringFeatures> lineStringFeatures = [];
@@ -116,7 +114,6 @@ namespace WildlifeTrackerAPI.Hubs
                     curFeatures.Add(feature);
                     if (curFeatures.Count >= 1000)
                     {
-                        //Console.WriteLine("Returning 10000 features.");
                         var features =  new LineStringFeatures
                         {
                             Feature = curFeatures,
@@ -125,7 +122,7 @@ namespace WildlifeTrackerAPI.Hubs
                             Index = index
                         };
                         lineStringFeatures.Add(features);
-                        byte[] serialized = MessagePackSerializer.Serialize(features, cancellationToken: cancellationToken);
+                        var serialized = MessagePackSerializer.Serialize(features, cancellationToken: cancellationToken);
                         
                         yield return serialized;
                         curFeatures = [];                        
@@ -136,7 +133,6 @@ namespace WildlifeTrackerAPI.Hubs
                 
                 if (curFeatures.Count >= 0)
                 {
-                    //Console.WriteLine($"Returning {curFeatures.Count} features.");
                     var features =  new LineStringFeatures 
                     {
                         Feature = curFeatures,
@@ -145,9 +141,8 @@ namespace WildlifeTrackerAPI.Hubs
                         Index = index
                     };
                     lineStringFeatures.Add(features);
-                    byte[] serialized = MessagePackSerializer.Serialize(features, cancellationToken: cancellationToken);
+                    var serialized = MessagePackSerializer.Serialize(features, cancellationToken: cancellationToken);
                     yield return serialized;
-                    index++;
                 }                
                 cachingService.AddIndividual(studyId, curAnimal, request.Options.EventProfile, lineStringFeatures);
             }        

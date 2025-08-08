@@ -46,12 +46,6 @@ export class CustomButtonComponent {
     MapStyles.StandardLabel, MapStyles.OutdoorsLabel, MapStyles.SatelliteLabel
   ]);
 
-  // NOTE:This constant is unnecessary since the terrain does not require a full reload of the map.
-  // readonly terrainLayers = new Set<string>([
-  //   MapStyles.StandardLabelTerrain, MapStyles.StandardNoLabelTerrain,
-  //   MapStyles.OutdoorsLabelTerrain, MapStyles.OutdoorsNoLabelTerrain,
-  //   MapStyles.SatelliteLabelTerrain, MapStyles.SatelliteNoLabelTerrain,
-  // ]);
 
   @Input() map?: mapboxgl.Map;
   @Input() collection?: GeoJSON.FeatureCollection<GeoJSON.Point>;
