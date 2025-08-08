@@ -3,7 +3,6 @@ using MessagePack;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 //using NetTopologySuite.Features;
-using Newtonsoft.Json;
 using WildlifeTrackerAPI.DTO.GeoJSON;
 using WildlifeTrackerAPI.DTO.MoveBankAttributes;
 using WildlifeTrackerAPI.DTO.MoveBankAttributes.DirectReadRecords;
@@ -61,7 +60,7 @@ namespace WildlifeTrackerAPI.Hubs
             [FromServices] ICachingService cachingService,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            Console.WriteLine("Starting streaming events for request: " + JsonConvert.SerializeObject(request));
+            Console.WriteLine("Starting streaming events for request: " + SystemJson.JsonSerializer.Serialize(request));
 
             var localIdentifiers = request.LocalIdentifiers?.ToList() ?? [];
             if (localIdentifiers.Count == 0)

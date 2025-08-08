@@ -11,6 +11,8 @@ using WildlifeTrackerAPI.Mappings;
 using WildlifeTrackerAPI.Hubs;
 using Microsoft.AspNetCore.Diagnostics;
 using Amazon.Runtime;
+using WildlifeTrackerAPI.Repositories;
+using WildlifeTrackerAPI.Middleware;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -172,6 +174,8 @@ builder.Services.AddMemoryCache(options =>
     options.TrackStatistics = true;
 });
 
+builder.Services.AddScoped<IStudyRepository, StudyRepository>();
+builder.Services.AddScoped<IApiCachingService, ApiCachingService>();
 builder.Services.AddScoped<ICachingService, CachingService>();
 
 var app = builder.Build();
@@ -185,28 +189,6 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // NOTE:Production settings.
-    app.UseExceptionHandler("/Error");
-    app.MapGet("/Error", (HttpContext context) => {
-        var exceptionHandler =
-            context.Features.Get<IExceptionHandlerPathFeature>();
-
-        var details = new ProblemDetails();
-        details.Detail = exceptionHandler?.Error.Message;
-        details.Extensions["traceId"] =
-            System.Diagnostics.Activity.Current?.Id
-              ?? context.TraceIdentifier;
-        details.Type =
-            "https://tools.ietf.org/html/rfc7231#section-6.6.1";
-        details.Status = StatusCodes.Status500InternalServerError;
-
-        app.Logger.LogError(
-            exceptionHandler?.Error,
-            "An unhandled exception occurred.");
-
-        return Results.Problem(details);
-    }
-    );
     app.UseHsts();
     app.Use(async (context, next) =>
     {
@@ -223,6 +205,9 @@ else
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<ExceptionHandlerMiddleware>();
+
 app.UseRouting();
 
 //app.UseCors("AnyOrigin");

@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Newtonsoft.Json;
+using System.Text.Json;
 using WildlifeTrackerAPI.Models;
 using WildlifeTrackerAPI.Services;
 using Xunit.Abstractions;
@@ -92,7 +92,7 @@ public class TrieTests
 
         trie.Insert("Apple");
         var retval = trie.Traverse();
-        _output.WriteLine(JsonConvert.SerializeObject(retval));
+        _output.WriteLine(JsonSerializer.Serialize(retval));
         Assert.True(trie.Search("apple"));
         Assert.True(trie.Search("APPLE"));
         Assert.True(trie.Search("ApPlE"));
@@ -122,8 +122,8 @@ public class TrieTests
         Assert.NotNull(node);
         Assert.Equal('A', node.Item2.Value);
         Assert.NotEmpty(node.Item1);
-        // _output.WriteLine(JsonConvert.SerializeObject(node.Item1) + "\r");
-        // _output.WriteLine(JsonConvert.SerializeObject (  node.Item2, Formatting.Indented,  new JsonConverter [] {new StringEnumConverter ()}));
+        // _output.WriteLine(JsonSerializer.Serialize(node.Item1) + "\r");
+        // _output.WriteLine(JsonSerializer.Serialize (  node.Item2, Formatting.Indented,  new JsonConverter [] {new StringEnumConverter ()}));
     }
     [Fact]
     public void TraversalTest()
@@ -140,7 +140,7 @@ public class TrieTests
         trie.Insert("zebra");
         
         var outputs = trie.Traverse();
-        _output.WriteLine(JsonConvert.SerializeObject(outputs));
+        _output.WriteLine(JsonSerializer.Serialize(outputs));
         
         Assert.NotEmpty(outputs);
     }
@@ -159,7 +159,7 @@ public class TrieTests
         Assert.Empty(words);
         foreach (var word in words)
         {
-            _output.WriteLine(JsonConvert.SerializeObject(word));
+            _output.WriteLine(JsonSerializer.Serialize(word));
         }
     }
 
@@ -176,7 +176,7 @@ public class TrieTests
         // 5 words in totals 
 
         var words = trie.Traverse();
-        var output = JsonConvert.SerializeObject(words.Select(val => string.Join("", val)));
+        var output = JsonSerializer.Serialize(words.Select(val => string.Join("", val)));
         
         _output.WriteLine(output);
         Assert.NotEmpty(words);
