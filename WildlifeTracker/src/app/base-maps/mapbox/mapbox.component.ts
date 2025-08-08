@@ -4,7 +4,7 @@ import { DeckOverlayController, StreamStatus } from 'src/app/deckGL/DeckOverlayC
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { StudyService } from 'src/app/studies/study.service';
 import mapboxgl, { GeoJSONSource, MapboxGeoJSONFeature } from 'mapbox-gl';
-import { InfoWindowComponent } from '../google maps/info-window/info-window.component';
+import { InfoWindowComponent } from '../google-map/info-window/info-window.component';
 import { NgElement, WithProperties } from '@angular/elements';
 import { Subscription, distinctUntilChanged, skip } from 'rxjs';
 import { EventRequest } from 'src/app/studies/EventRequest';
@@ -16,9 +16,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { HintControl } from './hint-control';
 
 // Import the new services
-import { UIStateService } from '../../services/ui-state.service';
-import { MapStateService } from '../../services/map-state.service';
-import { DeckOverlayStateService } from '../../services/deck-overlay-state.service';
+import { UIStateService } from '../../core/services/ui-state.service';
+import { MapStateService } from '../../core/services/map-state.service';
+import { DeckOverlayStateService } from '../../core/services/deck-overlay-state.service';
 
 type MapState =
     'initial' |

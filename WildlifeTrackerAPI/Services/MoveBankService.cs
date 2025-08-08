@@ -9,18 +9,32 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Collections.Immutable;
 using Microsoft.IdentityModel.Tokens;
-using WildlifeTrackerAPI.Models;
-using Microsoft.EntityFrameworkCore;
 using Mapster;
+using System.Linq.Expressions;
+using WildlifeTrackerAPI.Models;
+using WildlifeTrackerAPI.DTO.GeoJSON;
+using Microsoft.EntityFrameworkCore;
+using CsvHelper;
+using System.IO;
+using System.Text;
+using System.Globalization;
+using WildlifeTrackerAPI.DTO.MoveBankAttributes.DirectReadRecords;
+using WildlifeTrackerAPI.DTO.MoveBankAttributes.JsonDTOs;
+using System.Text.Json;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using EventRequest = WildlifeTrackerAPI.DTO.MoveBankAttributes.EventRequest;
+using WildlifeTrackerAPI.Enums;
 
 namespace WildlifeTrackerAPI.Services
 {
     public interface IMoveBankService
     {
         Task<ApiTokenResultDTO?> GetApiToken();
-        Task<List<string>> GetWordsWithPrefix(string prefix, long? maxCount = null, bool allowRestricted= false);
+        Task<ApiResult<StudyDTO>> GetStudiesAsync(int pageIndex, int pageSize, string? sortColumn, string? sortOrder, string? filterColumn, string? filterQuery, bool isUserAdmin);
+        Task<StudyDTO?> GetStudyAsync(long studyId, bool isUserAdmin);
+        Task<object> GetAllStudiesAsync(bool isUserAdmin, bool geojsonFormat);
+        Task<string> GetJsonDataAsync(MoveBankEntityType entityType, long studyId, string sortOrder, bool isUserAdmin);
+        Task<object> GetEventDataAsync(EventRequest request);
         DateTime? GetDateTime(string? dateString);
 
         Task<HttpResponseMessage?> DirectRequestEvents(EventRequest request);
@@ -38,15 +52,6 @@ namespace WildlifeTrackerAPI.Services
             Dictionary<string, string?>? parameters = null,
             (string, string)[]? headers = null,
             bool authorizedUser = false);
-        // Parameters are required for json requests
-        Task<HttpResponseMessage> JsonEventData(
-            long studyId,
-            string sensorType,
-            ImmutableArray<string> individualLocalIdentifiers,
-            Dictionary<string, string?>? parameters,
-            string? eventProfile = null,
-            (string, string)[]? headers = null,
-            bool authorizedUser = false);
         
     }
     public class MoveBankService : IMoveBankService
@@ -58,9 +63,9 @@ namespace WildlifeTrackerAPI.Services
         private readonly IDataProtectionProvider _provider;
         private readonly ITimeLimitedDataProtector _protector;
         private readonly SecretsManagerCache _secretsCache;
-        // This context will be used to post information on studies to contact 
-        private readonly ApplicationDbContext _context;
         private readonly IAutoCompleteService _autoCompleteService;
+        private readonly IStudyRepository _studyRepository;
+        private readonly IApiCachingService _cachingService;
 
         public MoveBankService(
             HttpClient httpClient,
@@ -68,20 +73,19 @@ namespace WildlifeTrackerAPI.Services
             ILogger<MoveBankService> logger,
             IAmazonSecretsManager amazonSecretsManager,
             IDataProtectionProvider provider,
-            ApplicationDbContext context,
-            IAutoCompleteService autoCompleteService)
+            IAutoCompleteService autoCompleteService,
+            IStudyRepository studyRepository,
+            IApiCachingService cachingService)
         {
             _httpClient = httpClient;
             _configuration = configuration;
             _logger = logger;
             _amazonSecretsManager = amazonSecretsManager;
             _provider = provider;
-            _context = context;
-            
             _autoCompleteService = autoCompleteService;
+            _studyRepository = studyRepository;
+            _cachingService = cachingService;
             
-            // TODO: Autocomplete should return different results depending on authorization 
-
             _protector = _provider.CreateProtector("API Token").ToTimeLimitedDataProtector();
             uint durationMinutes = 1;
             _secretsCache = new SecretsManagerCache(
@@ -96,12 +100,265 @@ namespace WildlifeTrackerAPI.Services
                 });
         }
         
-        public async Task<List<string>> GetWordsWithPrefix(string prefix="", long? maxCount = 10, bool allowedRestricted = false)
+        private static readonly Expression<Func<Studies, bool>> _validLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
+
+        private static bool IsLicenseValid(Studies study)
         {
-            return await Task.FromResult(
-                _autoCompleteService.GetAllWordsWithPrefix(prefix, maxCount, allowedRestricted).Select(charArray => string.Join("", charArray)).ToList()
-            );
+            string[] validLicenses = { "CC_0", "CC_BY", "CC_BY_NC" };
+            return study.LicenseType != null && validLicenses.Contains(study.LicenseType.Trim());
         }
+
+        public async Task<StudyDTO?> GetStudyAsync(long studyId, bool isUserAdmin)
+        {
+            var cacheKey = $"GetStudy:{studyId}";
+            return await _cachingService.GetOrCreateAsync(cacheKey, async () =>
+            {
+                var study = await _studyRepository.GetStudyByIdAsync(studyId);
+
+                if (study == null || !study.IHaveDownloadAccess)
+                {
+                    return null; // Or throw a specific exception
+                }
+
+                if (!isUserAdmin && !IsLicenseValid(study))
+                {
+                    return null; // Or throw an unauthorized exception
+                }
+
+                return study.Adapt<StudyDTO>();
+            });
+        }
+
+        public async Task<object> GetAllStudiesAsync(bool isUserAdmin, bool geojsonFormat)
+        {
+            var cacheKey = $"GetAllStudies:{isUserAdmin}-{geojsonFormat}";
+            return await _cachingService.GetOrCreateAsync(cacheKey, async () =>
+            {
+                var query = _studyRepository.GetStudiesQuery()
+                    .Where(s => s.IHaveDownloadAccess);
+
+                if (!isUserAdmin)
+                {
+                    query = query.Where(_validLicenseExp);
+                }
+
+                var dtoArray = await query.ProjectToType<StudyDTO>().ToArrayAsync();
+
+                if (geojsonFormat)
+                {
+                    return PointFeatureCollection<StudyDTO>.CreateFromStudies(dtoArray, s => s);
+                }
+
+                return dtoArray;
+            });
+        }
+
+        public async Task<ApiResult<StudyDTO>> GetStudiesAsync(int pageIndex, int pageSize, string? sortColumn, string? sortOrder, string? filterColumn, string? filterQuery, bool isUserAdmin)
+        {
+            var cacheKey = $"GetStudies:{isUserAdmin}-{pageIndex}-{pageSize}-{sortColumn}-{sortOrder}-{filterColumn}-{filterQuery}";
+
+            return await _cachingService.GetOrCreateAsync(cacheKey, async () =>
+            {
+                var query = _studyRepository.GetStudiesQuery()
+                    .Where(s => s.IHaveDownloadAccess);
+
+                if (!isUserAdmin)
+                {
+                    query = query.Where(_validLicenseExp);
+                }
+
+                var dtoQuery = query.ProjectToType<StudyDTO>();
+
+                return await ApiResult<StudyDTO>.CreateAsync(
+                    dtoQuery,
+                    pageIndex,
+                    pageSize,
+                    sortColumn,
+                    sortOrder,
+                    filterColumn,
+                    filterQuery);
+            });
+        }
+
+        public async Task<string> GetJsonDataAsync(MoveBankEntityType entityType, long studyId, string sortOrder, bool isUserAdmin)
+        {
+            var cacheKey = $"GetJsonData:{entityType}-{studyId}";
+            return await _cachingService.GetOrCreateAsync(cacheKey, async () =>
+            {
+                Dictionary<string, string?> parameters = [];
+                var response = await JsonRequest(
+                    studyId: studyId,
+                    entityType: entityType.ToString().ToLower(),
+                    parameters: parameters,
+                    headers: null,
+                    authorizedUser: isUserAdmin);
+
+                if (response == null) throw new Exception("Json request yielded a null response");
+
+                string? returnType = "json";
+                byte[] responseContentArray = await response.Content.ReadAsByteArrayAsync();
+                if (responseContentArray.Length == 0)
+                {
+                    response = await DirectRequest(
+                        studyId: studyId,
+                        entityType: entityType,
+                        parameters: parameters,
+                        headers: null,
+                        authorizedUser: isUserAdmin);
+
+                    if (response == null) throw new Exception("Null return value on DirectRequest.");
+                    responseContentArray = await response.Content.ReadAsByteArrayAsync();
+                    returnType = responseContentArray.Length > 0 ? "csv" : null;
+                }
+                if (returnType == null)
+                {
+                    throw new UnauthorizedAccessException("GetJsonData: Did not receive a valid response from external api.");
+                }
+
+                object? data;
+                if (returnType == "csv")
+                {
+                    using var memStream = new MemoryStream(responseContentArray);
+                    using var stream = new StreamReader(memStream, Encoding.UTF8);
+                    using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
+
+                    data = entityType switch
+                    {
+                        MoveBankEntityType.Study => csvReader.GetRecords<StudiesRecord>().AsQueryable().ProjectToType<StudyJsonDTO>().ToList(),
+                        MoveBankEntityType.Individual => csvReader.GetRecords<IndividualRecord>().AsQueryable().ProjectToType<IndividualJsonDTO>().ToList(),
+                        MoveBankEntityType.Tag => csvReader.GetRecords<TagRecord>().AsQueryable().ProjectToType<TagJsonDTO>().ToList(),
+                        _ => null
+                    };
+                }
+                else
+                {
+                    data = entityType switch
+                    {
+                        MoveBankEntityType.Study => JsonSerializer.Deserialize<List<StudyJsonDTO>>(responseContentArray),
+                        MoveBankEntityType.Individual => JsonSerializer.Deserialize<List<IndividualJsonDTO>>(responseContentArray),
+                        MoveBankEntityType.Tag => JsonSerializer.Deserialize<List<TagJsonDTO>>(responseContentArray),
+                        _ => null
+                    };
+                }
+
+                if (data == null)
+                {
+                    throw new InvalidOperationException("Invalid return type");
+                }
+
+                var sorted = SortObjects(sortOrder, data);
+                if (sorted == null)
+                {
+                    throw new Exception("Invalid object passed to SortObjects method.");
+                }
+
+                return JsonSerializer.Serialize(sorted);
+            });
+        }
+
+        private static object? SortObjects(string sortOrder, object? jsonObjects)
+        {
+            if (jsonObjects is null)
+            {
+                return null;
+            }
+            if (sortOrder.ToUpper() == "ASC")
+            {
+                return jsonObjects switch
+                {
+                    List<StudyJsonDTO> studies => studies.OrderBy(s => s.Name).ToList(),
+                    List<IndividualJsonDTO> individuals => individuals.OrderBy(i => i.LocalIdentifier).ToList(),
+                    List<TagJsonDTO> tagged => tagged.OrderBy(t => t.LocalIdentifier).ToList(),
+                    _ => null,
+                };
+            }
+            return jsonObjects switch
+            {
+                List<StudyJsonDTO> studies => studies.OrderByDescending(s => s.Name).ToList(),
+                List<IndividualJsonDTO> individuals => individuals.OrderByDescending(i => i.LocalIdentifier).ToList(),
+                List<TagJsonDTO> tagged => tagged.OrderByDescending(t => t.LocalIdentifier).ToList(),
+                _ => null,
+            };
+        }
+
+        public async Task<object> GetEventDataAsync(EventRequest request)
+        {
+            var response = await DirectRequestEvents(request);
+
+            if (response is null)
+            {
+                throw new InvalidOperationException("Null response from movebank service");
+            }
+
+            var responseContentArray = await response.Content.ReadAsByteArrayAsync();
+
+            using var memStream = new MemoryStream(responseContentArray);
+            using var stream = new StreamReader(memStream, Encoding.UTF8);
+            using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
+
+            var records = new List<EventRecord>();
+            while (await csvReader.ReadAsync())
+            {
+                var record = csvReader.GetRecord<EventRecord>();
+                if (record?.Timestamp is null || record.LocationLat is null || record.LocationLong is null)
+                {
+                    continue;
+                }
+                records.Add(record);
+            }
+
+            var data = LineStringFeatureCollection<LineStringPropertiesV1>.RecordToEventJsonDto(records, request.StudyId);
+
+            if (data is null)
+            {
+                throw new Exception("Data was null");
+            }
+            if (request.GeometryType is null)
+            {
+                // Return unprocessed json data
+                return data;
+            }
+
+            data.IndividualEvents.ForEach(l => l.Locations.Sort((x, y) => x.Timestamp.CompareTo(y.Timestamp)));
+
+            object collection;
+            switch (request.GeometryType.ToLower())
+            {
+                case "linestring":
+                    var lineCollections = LineStringFeatureCollection<LineStringPropertiesV1>
+                        .CombineLineStringFeatures(data);
+                    collection = lineCollections;
+                    break;
+                case "point":
+                    var pointCollection = PointFeatureCollection<PointProperties>
+                        .CombinePointFeatures(data, PropertyFunc);
+                    collection = pointCollection;
+                    break;
+                default:
+                    throw new ArgumentException("GeoJSON parameter was passed an invalid value.");
+            }
+
+            return collection;
+
+            static PointProperties PropertyFunc(LocationJsonDTO location) => new()
+            {
+                Date = TimestampToDateTime(location.Timestamp),
+                DateString = FormatTimestamp(location.Timestamp),
+                Timestamp = location.Timestamp
+            };
+        }
+
+        private static DateTime TimestampToDateTime(long timestamp)
+        {
+            return DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime;
+        }
+
+        private static string FormatTimestamp(long timestamp)
+        {
+            var date = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime;
+            return "Date: " + date.ToLongDateString() + " Time: " + date.ToLongTimeString();
+        }
+
         public async Task<ApiTokenResultDTO?> GetApiToken()
         {
             SecretCacheItem? secretCache = _secretsCache.GetCachedSecret(_configuration["ConnectionStrings:AWSKeyVault2ARN"]);
@@ -132,7 +389,8 @@ namespace WildlifeTrackerAPI.Services
             return secretObj;
         }
                 
-        // TODO: Current timezone being returned is CEST
+        // TODO: This method assumes the timezone is CET/CEST and will not work correctly for other timezones.
+        // It needs to be updated to handle timezones dynamically.
         public DateTime? GetDateTime(string? dateString)
         {
             if (dateString is null)
@@ -266,7 +524,7 @@ namespace WildlifeTrackerAPI.Services
 
             // INFO: In this case, the another request is sent asking for permission and the study is stored in my database to credit at another time.                
             response = await GetPermissionForDirectRead(request, response);
-            var study = await _context.Studies.AsNoTracking().Where(s => s.Id == studyId).FirstOrDefaultAsync();
+            var study = await _studyRepository.GetStudyByIdAsync(studyId.Value);
             //if (await SaveStudy(study))
             //{
             //    Console.WriteLine("Successfully saved study to RequestPermission table");
@@ -328,102 +586,6 @@ namespace WildlifeTrackerAPI.Services
             response.EnsureSuccessStatusCode();
 
             return response;
-        }
-        // TODO: This method does not handle the case when user permissions are needed 
-        // Several inputs are required for events data to be returned
-        // If a license agreement has not accepted then the license agreements must be returned in a MD5 hash string
-        // The following parameters must be passed:
-        // 1) the study id
-        // 2) At least one 'individual_local_identifiers'
-        // 3) A sensor type (usually 'gps')
-        // 4) If the number of individuals exceeds a certain threshold than it may be prudent to enforce an event reduction profile.
-        
-        // times are provided in milliseconds since 1970-01-01 UTC 
-        // Coordinates are in WGS84 format.
-        // NOTE: This method may need a direct request analogue as a failsafe
-        // Remember to check proper permissions
-        public async Task<HttpResponseMessage> JsonEventData(
-            long studyId,
-            string sensorType,
-            ImmutableArray<string> individualLocalIdentifiers,
-            Dictionary<string, string?>? parameters = null,
-            string? eventProfile = null,
-            (string, string)[]? headers = null,
-            bool authorizedUser = false)
-        {
-            var uri = _httpClient.BaseAddress!.OriginalString;
-
-            var secretObj = await GetApiToken();
-
-            if (!authorizedUser)
-            {
-                uri += "public/json";
-            }
-            else
-            {
-                uri += "json-auth";
-            }
-
-            uri = QueryHelpers.AddQueryString(uri, new Dictionary<string, string?>()
-            {
-                ["study_id"] = studyId.ToString(),
-                ["sensor_type"] = sensorType,
-            });
-            
-            foreach (var localIdentifier in individualLocalIdentifiers)
-            {
-                uri = QueryHelpers.AddQueryString(uri, "individual_local_identifiers", localIdentifier);
-            }
-
-            if (parameters is not null) uri = QueryHelpers.AddQueryString(uri, parameters);
-
-            if (eventProfile is not null) uri = QueryHelpers.AddQueryString(uri, "event_reduction_profile", eventProfile);
-
-            if (secretObj is not null && !string.IsNullOrEmpty(secretObj.ApiToken))
-            {
-                uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
-            }
-
-            using var request = new HttpRequestMessage()
-            {
-                RequestUri = new Uri(uri),
-                Method = HttpMethod.Get
-            };
-
-            if (headers != null)
-            {
-                foreach (var header in headers)
-                {
-                    request.Headers.Add(header.Item1, header.Item2);
-                }
-            }
-            // Handle the empty case in the controller endpoint
-            var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-            return response;
-        }
-
-        private async Task<bool> SaveStudy(Studies? study)
-        {
-            if (study is null) return await Task.FromResult(false);
-            
-            Dictionary<long, RequestPermission> recordedStudies = _context.RequestPermission.ToDictionary(s => s.Id);
-            if (_context.RequestPermission.IsNullOrEmpty() || recordedStudies.ContainsKey(study.Id))
-            {
-                RequestPermission request = study.Adapt<RequestPermission>();
-                _context.RequestPermission.Add(request);
-                // Identity insert is set to on so we can manually set the primary key
-                using var transaction = _context.Database.BeginTransaction();
-                _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT RequestPermission ON");
-                var dbChanges = await _context.SaveChangesAsync();
-                _context.Database.ExecuteSqlRaw("SET IDENTITY_INSERT RequestPermission OFF");
-                Console.WriteLine("Success added entry to Request Permission table.");
-                return true;
-            }
-            else
-            {
-                return await Task.FromResult(false);
-            }
         }
 
         private static bool HasLicenseTerms(HttpResponseMessage? response)

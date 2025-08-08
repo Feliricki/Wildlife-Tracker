@@ -2,16 +2,16 @@ import { Component, OnInit } from '@angular/core';
 import {  Router, RouterLink } from '@angular/router';
 import { FormGroup, FormControl, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 
-import { BaseFormComponent } from '../base-form.component';
-import { AuthService } from './auth.service';
-import { LoginRequest } from './login-request';
-import { LoginResult } from './login-result';
+import { BaseFormComponent } from '../../base-form.component';
+import { AuthService } from '../auth.service';
+import { LoginRequest } from '../login-request';
+import { LoginResult } from '../login-result';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { CommonModule, NgIf } from '@angular/common';
-import { NavigationSchematicComponent } from '../schematics/navigation-schematic/navigation-schematic.component';
+import { NavigationSchematicComponent } from '../../schematics/navigation-schematic/navigation-schematic.component';
 
 @Component({
     selector: 'app-login',

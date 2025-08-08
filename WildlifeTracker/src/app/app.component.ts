@@ -2,9 +2,9 @@ import { Component, Injector } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { NavBarComponent } from './nav-bar/nav-bar.component';
 import { createCustomElement } from '@angular/elements';
-import { InfoWindowComponent } from './base-maps/google maps/info-window/info-window.component';
+import { InfoWindowComponent } from './base-maps/google-map/info-window/info-window.component';
 import { CustomButtonComponent } from './base-maps/mapbox/custom-button/custom-button.component';
-import { LumaDeviceService } from './services/luma-device.service';
+import { LumaDeviceService } from './core/services/luma-device.service';
 
 
 @Component({

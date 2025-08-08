@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { StudyDTO } from 'src/app/studies/study';
-import { MapStateService } from 'src/app/services/map-state.service';
+import { MapStateService } from '../../../core/services/map-state.service';
 
 // INFO: Templating and logic for the info window used in the googlemap component.
 // This component is registered as a custom element in app.component

@@ -6,7 +6,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 
 import { CustomRenderer1 } from './renderers';
 import { MarkerClusterer, SuperClusterAlgorithm, SuperClusterOptions } from '@googlemaps/markerclusterer';
-import { JsonResponseData } from '../../studies/JsonResults/JsonDataResponse';
+import { JsonResponseData } from '../../core/models/JsonDataResponse';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NgElement, WithProperties } from '@angular/elements';
@@ -20,9 +20,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { SnackbarComponent } from '../snackbar.component';
 
 // Import the new services
-import { UIStateService } from '../../services/ui-state.service';
-import { MapStateService } from '../../services/map-state.service';
-import { DeckOverlayStateService } from '../../services/deck-overlay-state.service';
+import { UIStateService } from '../../core/services/ui-state.service';
+import { MapStateService } from '../../core/services/map-state.service';
+import { DeckOverlayStateService } from '../../core/services/deck-overlay-state.service';
 
 type MapState =
   'initial' |

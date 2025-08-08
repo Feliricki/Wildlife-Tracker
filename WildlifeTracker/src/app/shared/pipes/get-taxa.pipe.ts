@@ -1,5 +1,5 @@
 import { Pipe, PipeTransform } from '@angular/core';
-import { TaxaInfo } from '../ENA-API/taxa-info';
+import { TaxaInfo } from '../../core/models/taxa-info';
 
 @Pipe({
   name: 'getTaxa',

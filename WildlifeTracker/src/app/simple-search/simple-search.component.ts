@@ -6,7 +6,7 @@ import { FormControl, FormsModule, ReactiveFormsModule, FormBuilder } from '@ang
 import { PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table'
-import { ENAAPIService } from '../ENA-API/ena-api.service';
+import { ENAAPIService } from '../core/services/ena-api.service';
 import { WikipediaSearchService } from '../wikipedia/wikipedia-search.service';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatOptionModule } from '@angular/material/core';
@@ -24,8 +24,8 @@ import { BreakpointObserver, BreakpointState, Breakpoints } from '@angular/cdk/l
 import { MatSelectModule } from '@angular/material/select';
 
 // Import state services
-import { UIStateService } from '../services/ui-state.service';
-import { MapStateService } from '../services/map-state.service';
+import { UIStateService } from '../core/services/ui-state.service';
+import { MapStateService } from '../core/services/map-state.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 interface WikiLinks {

@@ -5,8 +5,8 @@ import { catchError, map, tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { StudyDTO } from '../studies/study';
 import { EventRequest } from '../studies/EventRequest';
-import { EventJsonDTO } from '../studies/JsonResults/EventJsonDTO';
-import { JsonResponseData } from '../studies/JsonResults/JsonDataResponse';
+import { EventJsonDTO } from '../models/EventJsonDTO';
+import { JsonResponseData } from '../models/JsonDataResponse';
 
 export interface MoveBankState {
   studies: Map<bigint, StudyDTO>;

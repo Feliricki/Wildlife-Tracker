@@ -12,10 +12,10 @@ import { MatSortModule } from '@angular/material/sort';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { EventProfile } from '../animal-data-panel.component';
-import { SourceState } from '../../HelperTypes/FormDataSource';
-import { FormDataSource } from '../../HelperTypes/FormDataSource';
-import { TagJsonDTO } from '../../studies/JsonResults/TagJsonDTO';
-import { IndividualJsonDTO } from '../../studies/JsonResults/IndividualJsonDTO';
+import { SourceState } from '../../core/models/FormDataSource';
+import { FormDataSource } from '../../core/models/FormDataSource';
+import { TagJsonDTO } from '../../core/models/TagJsonDTO';
+import { IndividualJsonDTO } from '../../core/models/IndividualJsonDTO';
 
 /**
  * This component is used to select individuals for an event retrieval.

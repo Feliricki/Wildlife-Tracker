@@ -1,8 +1,8 @@
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 import { HomeComponent } from './home/home.component';
-import { LoginComponent } from './auth/login.component';
-import { ReferenceComponent } from "./static-pages/references/reference.component";
+import { LoginComponent } from './auth/login/login.component';
+import { ReferenceComponent } from "./static-pages/reference/reference.component";
 import { PageNotFoundComponent } from "./page-not-found/page-not-found.component";
 import { AdminPageComponent } from './admin/admin-page/admin-page.component';
 import { adminPageGuard } from './admin/admin-page.guard';

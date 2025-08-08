@@ -1,4 +1,4 @@
-import { NonEmptyArray } from "../HelperTypes/NonEmptyArray";
+import { NonEmptyArray } from "../core/models/NonEmptyArray";
 import { EventOptions } from "./EventOptions";
 
 // INFO: These interfaces are used to make request to the backend.

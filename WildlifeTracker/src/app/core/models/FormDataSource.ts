@@ -1,10 +1,10 @@
 import { CollectionViewer, DataSource, SelectionModel } from "@angular/cdk/collections";
 import { FormArray, FormControl } from "@angular/forms";
-import { StudyService } from "../studies/study.service";
+import { StudyService } from "../../studies/study.service";
 import { BehaviorSubject, Observable, catchError, concat, finalize, map, of, tap, toArray } from "rxjs";
-import { IndividualJsonDTO } from "../studies/JsonResults/IndividualJsonDTO";
+import { IndividualJsonDTO } from "./IndividualJsonDTO";
 import { Signal, WritableSignal, computed, signal } from "@angular/core";
-import { TagJsonDTO } from "../studies/JsonResults/TagJsonDTO";
+import { TagJsonDTO } from "./TagJsonDTO";
 
 export type SourceState = "loading" | "initial" | "error" | "loaded";
 export type FormType = FormControl<[boolean, string]>;

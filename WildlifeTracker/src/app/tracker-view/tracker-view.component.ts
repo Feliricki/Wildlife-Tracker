@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, Signal, WritableSignal, signal, inject, DestroyRef } from '@angular/core';
-import { GoogleMapViewComponent } from '../base-maps/google maps/google-map.component';
+import { GoogleMapViewComponent } from '../base-maps/google-map/google-map.component';
 import { SimpleSearchComponent } from '../simple-search/simple-search.component';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
@@ -27,10 +27,10 @@ import { Router } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 
 // Import the new services
-import { UIStateService } from '../services/ui-state.service';
-import { MapStateService } from '../services/map-state.service';
-import { DeckOverlayStateService } from '../services/deck-overlay-state.service';
-import { MoveBankService } from '../services/movebank.service';
+import { UIStateService } from '../core/services/ui-state.service';
+import { MapStateService } from '../core/services/map-state.service';
+import { DeckOverlayStateService } from '../core/services/deck-overlay-state.service';
+import { MoveBankService } from '../core/services/movebank.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export type GoogleMapStyles =

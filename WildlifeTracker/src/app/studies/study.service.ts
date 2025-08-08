@@ -4,10 +4,10 @@ import { Observable, of, catchError, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { StudyDTO } from './study';
 import { ApiResult } from '../ApiResult';
-import { EventJsonDTO } from './JsonResults/EventJsonDTO';
+import { EventJsonDTO } from '../core/models/EventJsonDTO';
 import { EventOptions } from './EventOptions';
-import { NonEmptyArray } from '../HelperTypes/NonEmptyArray';
-import { JsonResponseData } from './JsonResults/JsonDataResponse';
+import { NonEmptyArray } from '../core/models/NonEmptyArray';
+import { JsonResponseData } from '../core/models/JsonDataResponse';
 import { EventRequest } from './EventRequest';
 import { AnimalLocationPointCollection } from '../deckGL/deckgl-types';
 
