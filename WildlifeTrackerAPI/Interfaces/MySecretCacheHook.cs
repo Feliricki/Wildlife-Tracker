@@ -1,13 +1,12 @@
-﻿using Amazon.Runtime;
-using Amazon.SecretsManager.Extensions.Caching;
-using Microsoft.AspNetCore.DataProtection;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
+using Amazon.SecretsManager.Extensions.Caching;
 using Amazon.SecretsManager.Model;
+using Microsoft.AspNetCore.DataProtection;
 
-namespace WildlifeTrackerAPI.Extensions
+namespace WildlifeTrackerAPI.Interfaces
 {
-    public class KeyDTO<T>
+    public class KeyDto<T>
     {
         public string KeyType { get; set; } = "";
         public T Data { get; set; } = default!;
@@ -33,18 +32,18 @@ namespace WildlifeTrackerAPI.Extensions
                 {
                     //var x = new Amazon.SecretsManager.Model.DescribeSecretResponse();                
                     var stored = _dataProtector.Unprotect(cachekey);
-                    var result = JsonSerializer.Deserialize<KeyDTO<object>>(stored);
+                    var result = JsonSerializer.Deserialize<KeyDto<object>>(stored);
                     Console.WriteLine("Retrieving result of type " + result!.KeyType);
                     switch (result!.KeyType)
                     {
                         case "Amazon.SecretsManager.Model.DescribeSecretRequest":
-                            var requestData = JsonSerializer.Deserialize<KeyDTO<DescribeSecretRequest>>(stored);
+                            var requestData = JsonSerializer.Deserialize<KeyDto<DescribeSecretRequest>>(stored);
                             return requestData!.Data;
                         case "Amazon.SecretsManager.Model.DescribeSecretResponse":
-                            var Data = JsonSerializer.Deserialize<KeyDTO<DescribeSecretResponse>>(stored);
-                            return Data!.Data;
+                            var data = JsonSerializer.Deserialize<KeyDto<DescribeSecretResponse>>(stored);
+                            return data!.Data;
                         case "Amazon.SecretsManager.Model.GetSecretValueResponse":
-                            var responseData = JsonSerializer.Deserialize<KeyDTO<GetSecretValueResponse>>(stored);
+                            var responseData = JsonSerializer.Deserialize<KeyDto<GetSecretValueResponse>>(stored);
                             return responseData!.Data;
                         default:
                             return null;
@@ -68,9 +67,9 @@ namespace WildlifeTrackerAPI.Extensions
                 Console.WriteLine($"Placing object of type {o.GetType().ToString()} into cache.");
                 var jsonString = o switch
                 {
-                    DescribeSecretRequest request => JsonSerializer.Serialize(new KeyDTO<DescribeSecretRequest>() { KeyType = typeof(DescribeSecretRequest).ToString(), Data = request }),
-                    DescribeSecretResponse response => JsonSerializer.Serialize(new KeyDTO<DescribeSecretResponse>() { KeyType = typeof(DescribeSecretResponse).ToString(), Data = response }),
-                    GetSecretValueResponse response => JsonSerializer.Serialize(new KeyDTO<GetSecretValueResponse>() { KeyType = typeof(GetSecretValueResponse).ToString(), Data = response }),
+                    DescribeSecretRequest request => JsonSerializer.Serialize(new KeyDto<DescribeSecretRequest>() { KeyType = typeof(DescribeSecretRequest).ToString(), Data = request }),
+                    DescribeSecretResponse response => JsonSerializer.Serialize(new KeyDto<DescribeSecretResponse>() { KeyType = typeof(DescribeSecretResponse).ToString(), Data = response }),
+                    GetSecretValueResponse response => JsonSerializer.Serialize(new KeyDto<GetSecretValueResponse>() { KeyType = typeof(GetSecretValueResponse).ToString(), Data = response }),
                     _ => throw new ArgumentException("Invalid Object Passed into Cache"),
                 };
                 var bytes = Encoding.UTF8.GetBytes(jsonString);

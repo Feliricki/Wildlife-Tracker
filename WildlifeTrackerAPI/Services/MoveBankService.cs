@@ -3,27 +3,25 @@ using Amazon.SecretsManager.Extensions.Caching;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
 using WildlifeTrackerAPI.DTO;
-using WildlifeTrackerAPI.Extensions;
 using Amazon.SecretsManager.Model;
 using System.Globalization;
 using System.Security.Cryptography;
-using System.Collections.Immutable;
-using Microsoft.IdentityModel.Tokens;
 using Mapster;
 using System.Linq.Expressions;
 using WildlifeTrackerAPI.Models;
 using WildlifeTrackerAPI.DTO.GeoJSON;
 using Microsoft.EntityFrameworkCore;
 using CsvHelper;
-using System.IO;
 using System.Text;
-using System.Globalization;
 using WildlifeTrackerAPI.DTO.MoveBankAttributes.DirectReadRecords;
 using WildlifeTrackerAPI.DTO.MoveBankAttributes.JsonDTOs;
-using System.Text.Json;
+using WildlifeTrackerAPI.DTO.MoveBankAttributes;
+using WildlifeTrackerAPI.DTO.MoveBankAttributes.DirectReadDTOs;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 using EventRequest = WildlifeTrackerAPI.DTO.MoveBankAttributes.EventRequest;
 using WildlifeTrackerAPI.Enums;
+using WildlifeTrackerAPI.Interfaces;
+using WildlifeTrackerAPI.Repositories;
 
 namespace WildlifeTrackerAPI.Services
 {
@@ -100,12 +98,12 @@ namespace WildlifeTrackerAPI.Services
                 });
         }
         
-        private static readonly Expression<Func<Studies, bool>> _validLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
+        private static readonly Expression<Func<Studies, bool>> ValidLicenseExp = study => study.LicenseType == "CC_0" || study.LicenseType == "CC_BY" || study.LicenseType == "CC_BY_NC";
 
         private static bool IsLicenseValid(Studies study)
         {
-            string[] validLicenses = { "CC_0", "CC_BY", "CC_BY_NC" };
-            return study.LicenseType != null && validLicenses.Contains(study.LicenseType.Trim());
+            string[] validLicenses = ["CC_0", "CC_BY", "CC_BY_NC"];
+            return validLicenses.Contains(study.LicenseType.Trim());
         }
 
         public async Task<StudyDTO?> GetStudyAsync(long studyId, bool isUserAdmin)
@@ -139,15 +137,10 @@ namespace WildlifeTrackerAPI.Services
 
                 if (!isUserAdmin)
                 {
-                    query = query.Where(_validLicenseExp);
+                    query = query.Where(ValidLicenseExp);
                 }
 
                 var dtoArray = await query.ProjectToType<StudyDTO>().ToArrayAsync();
-
-                if (geojsonFormat)
-                {
-                    return PointFeatureCollection<StudyDTO>.CreateFromStudies(dtoArray, s => s);
-                }
 
                 return dtoArray;
             });
@@ -164,7 +157,7 @@ namespace WildlifeTrackerAPI.Services
 
                 if (!isUserAdmin)
                 {
-                    query = query.Where(_validLicenseExp);
+                    query = query.Where(ValidLicenseExp);
                 }
 
                 var dtoQuery = query.ProjectToType<StudyDTO>();
@@ -195,13 +188,13 @@ namespace WildlifeTrackerAPI.Services
 
                 if (response == null) throw new Exception("Json request yielded a null response");
 
-                string? returnType = "json";
-                byte[] responseContentArray = await response.Content.ReadAsByteArrayAsync();
+                var returnType = "json";
+                var responseContentArray = await response.Content.ReadAsByteArrayAsync();
                 if (responseContentArray.Length == 0)
                 {
                     response = await DirectRequest(
                         studyId: studyId,
-                        entityType: entityType,
+                        entityType: entityType.ToString().ToLower(),
                         parameters: parameters,
                         headers: null,
                         authorizedUser: isUserAdmin);
@@ -262,7 +255,7 @@ namespace WildlifeTrackerAPI.Services
             {
                 return null;
             }
-            if (sortOrder.ToUpper() == "ASC")
+            if (sortOrder.Equals("ASC", StringComparison.CurrentCultureIgnoreCase))
             {
                 return jsonObjects switch
                 {
@@ -361,12 +354,12 @@ namespace WildlifeTrackerAPI.Services
 
         public async Task<ApiTokenResultDTO?> GetApiToken()
         {
-            SecretCacheItem? secretCache = _secretsCache.GetCachedSecret(_configuration["ConnectionStrings:AWSKeyVault2ARN"]);
-            GetSecretValueResponse? secretValue = await secretCache.GetSecretValue(new CancellationToken());
+            var secretCache = _secretsCache.GetCachedSecret(_configuration["ConnectionStrings:AWSKeyVault2ARN"]);
+            var secretValue = await secretCache.GetSecretValue(CancellationToken.None);
 
 
             var secretObj = JsonSerializer.Deserialize<ApiTokenResultDTO>(secretValue.SecretString);
-            DateTime? expirationDate = GetDateTime(secretObj?.ExpirationDate!);
+            var expirationDate = GetDateTime(secretObj?.ExpirationDate!);
 
             if (expirationDate != null && expirationDate > DateTime.Now)
             {
@@ -382,7 +375,7 @@ namespace WildlifeTrackerAPI.Services
             await _amazonSecretsManager.RotateSecretAsync(rotationRequest);            
 
             secretCache = _secretsCache.GetCachedSecret(_configuration["ConnectionStrings:AWSKeyVault2ARN"]);
-            secretValue = await secretCache.GetSecretValue(new CancellationToken());
+            secretValue = await secretCache.GetSecretValue(CancellationToken.None);
 
             secretObj = JsonSerializer.Deserialize<ApiTokenResultDTO>(secretValue.SecretString)!;
 
@@ -475,7 +468,7 @@ namespace WildlifeTrackerAPI.Services
 
             // Adding Parameters
             uri = QueryHelpers.AddQueryString(uri, "entity_type", entityType);
-            if (studyId is long studyIdLong && (parameters is null || !parameters.ContainsKey("study_id")))
+            if (studyId is { } studyIdLong && (parameters is null || !parameters.ContainsKey("study_id")))
             {
                 uri = QueryHelpers.AddQueryString(uri, "study_id", studyIdLong.ToString());
             }
@@ -490,12 +483,10 @@ namespace WildlifeTrackerAPI.Services
                 uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
             }
 
-            using var request = new HttpRequestMessage()
-            {
-                RequestUri = new Uri(uri),
-                Method = HttpMethod.Get,                
-            };
-            
+            using var request = new HttpRequestMessage();
+            request.RequestUri = new Uri(uri);
+            request.Method = HttpMethod.Get;
+
             // Headers get set here
             if (headers is not null)
             {
@@ -513,8 +504,6 @@ namespace WildlifeTrackerAPI.Services
 
             response.EnsureSuccessStatusCode();
 
-            //var responseContentBytes = await response.Content.ReadAsByteArrayAsync();
-            // The following method works by checking the headers of the response and thus avoids reading the stream unnecessarily.
             if (!HasLicenseTerms(response) || studyId is null)
             {
                 Console.WriteLine("Returning the http response without sending another request asking for permissions.");
@@ -524,16 +513,7 @@ namespace WildlifeTrackerAPI.Services
 
             // INFO: In this case, the another request is sent asking for permission and the study is stored in my database to credit at another time.                
             response = await GetPermissionForDirectRead(request, response);
-            var study = await _studyRepository.GetStudyByIdAsync(studyId.Value);
-            //if (await SaveStudy(study))
-            //{
-            //    Console.WriteLine("Successfully saved study to RequestPermission table");
-            //}
-            //else
-            //{
-            //    Console.WriteLine("Did not save study to database.");
-            //}
-                         
+            
             return response;
         }
 
@@ -568,11 +548,9 @@ namespace WildlifeTrackerAPI.Services
                 uri = QueryHelpers.AddQueryString(uri, "api-token", secretObj.ApiToken);
             }
 
-            using var request = new HttpRequestMessage()
-            {
-                RequestUri = new Uri(uri),
-                Method = HttpMethod.Get,
-            };
+            using var request = new HttpRequestMessage();
+            request.RequestUri = new Uri(uri);
+            request.Method = HttpMethod.Get;
             // Headers get set here
             if (headers is not null)
             {
@@ -595,12 +573,8 @@ namespace WildlifeTrackerAPI.Services
                 return false;
             }
             var headers = response.Headers;
-            if ((headers.TryGetValues("accept-license", out var result) && result.FirstOrDefault() is "true")
-                || (headers.TryGetValues("Accept-License", out var result2) && result2.FirstOrDefault() is "true"))
-            {
-                return true;
-            }
-            return false;
+            return (headers.TryGetValues("accept-license", out var result) && result.FirstOrDefault() is "true")
+                   || (headers.TryGetValues("Accept-License", out var result2) && result2.FirstOrDefault() is "true");
         }
 
         private async Task<HttpResponseMessage> GetPermissionForDirectRead(
@@ -608,10 +582,10 @@ namespace WildlifeTrackerAPI.Services
             HttpResponseMessage oldResponse)
         {
             var uri = oldRequest.RequestUri!.AbsoluteUri;
-            var checkSum = MD5.HashData(await oldResponse.Content!.ReadAsByteArrayAsync());
-            var md5_string = BitConverter.ToString(checkSum).Replace("-", string.Empty);
+            var checkSum = MD5.HashData(await oldResponse.Content.ReadAsByteArrayAsync());
+            var md5String = BitConverter.ToString(checkSum).Replace("-", string.Empty);
 
-            uri = QueryHelpers.AddQueryString(uri, "license-md5", md5_string);
+            uri = QueryHelpers.AddQueryString(uri, "license-md5", md5String);
 
             var request = new HttpRequestMessage()
             {

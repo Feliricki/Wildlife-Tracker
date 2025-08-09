@@ -45,7 +45,7 @@ namespace WildlifeTrackerAPI.Controllers
         public async Task<ActionResult<StudyDTO>> GetStudy(long studyId)
         {
             var studyDto = await _moveBankService.GetStudyAsync(studyId, User.IsInRole(RoleNames.Administrator));
-            if (studyDto == null)
+            if (studyDto is null)
             {
                 return Unauthorized("User is not authorized to view this study.");
             }

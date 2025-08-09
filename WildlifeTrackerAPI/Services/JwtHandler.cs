@@ -58,7 +58,7 @@ namespace WildlifeTrackerAPI.Services
         private async Task<bool> ValidateToken(string token)
         {
             // TODO: The token includes the 'Bearer ' part
-            string[] split = token.Split(" ");
+            var split = token.Split(" ");
             if (split.Length != 2)
             {
                 return false;

@@ -9,10 +9,9 @@ using WildlifeTrackerAPI.Services;
 using Mapster;
 using WildlifeTrackerAPI.Mappings;
 using WildlifeTrackerAPI.Hubs;
-using Microsoft.AspNetCore.Diagnostics;
 using Amazon.Runtime;
 using WildlifeTrackerAPI.Repositories;
-using WildlifeTrackerAPI.Middleware;
+using ExceptionHandlerMiddleware = WildlifeTrackerAPI.Middleware.ExceptionHandlerMiddleware;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,7 +21,7 @@ builder.Services.AddLogging(option =>
     option.AddApplicationInsights(                     
         telemetry => telemetry.ConnectionString =
         builder
-            .Configuration["Azure:ApplicationInsights:ConnectionString"],loggerOptions => { });
+            .Configuration["Azure:ApplicationInsights:ConnectionString"],_ => { });
 });
 
 builder.Services.AddCors(options =>
@@ -75,11 +74,19 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-// NOTE: Switch this to the other connection string to make changes to production database
-//options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), options =>
-options.UseSqlServer(builder.Configuration["TestConnectionStrings:DefaultConnection"], options => 
-{
-        options.CommandTimeout(60);
+    // SECURITY: Determine connection string based on environment
+    var connectionString = builder.Environment.IsDevelopment() 
+        ? builder.Configuration["TestConnectionStrings:DefaultConnection"]
+        : builder.Configuration.GetConnectionString("DefaultConnection");
+    
+    if (string.IsNullOrEmpty(connectionString))
+    {
+        throw new InvalidOperationException("Database connection string is not configured.");
+    }
+    
+    options.UseSqlServer(connectionString, optionsBuilder => 
+    {
+        optionsBuilder.CommandTimeout(60);
     });
 });
 
@@ -137,7 +144,22 @@ builder.Services.AddScoped<JwtHandler>();
 
 // Amazon Key Vault Services
 var awsOptions = builder.Configuration.GetAWSOptions();
-awsOptions.Credentials = new BasicAWSCredentials(builder.Configuration["AWS:AccessKey"], builder.Configuration["AWS:SecretKey"]);
+
+// SECURITY WARNING: Using BasicAWSCredentials with configuration values
+// For production, consider using:
+// - AWS IAM roles for EC2/ECS
+// - AWS credential profiles
+// - Environment variables
+// - AWS Systems Manager Parameter Store
+var accessKey = builder.Configuration["AWS:AccessKey"];
+var secretKey = builder.Configuration["AWS:SecretKey"];
+
+if (string.IsNullOrEmpty(accessKey) || string.IsNullOrEmpty(secretKey))
+{
+    throw new InvalidOperationException("AWS credentials are not properly configured. Check AWS:AccessKey and AWS:SecretKey settings.");
+}
+
+awsOptions.Credentials = new BasicAWSCredentials(accessKey, secretKey);
 builder.Services.AddDefaultAWSOptions(awsOptions);
 builder.Services.AddAWSService<IAmazonSecretsManager>();
 

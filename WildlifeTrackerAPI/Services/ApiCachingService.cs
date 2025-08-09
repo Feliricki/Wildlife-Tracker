@@ -20,20 +20,16 @@ namespace WildlifeTrackerAPI.Services
 
         public async Task<T> GetOrCreateAsync<T>(string cacheKey, Func<Task<T>> factory, TimeSpan? absoluteExpirationRelativeToNow = null, TimeSpan? slidingExpiration = null)
         {
-            if (!_memoryCache.TryGetValue(cacheKey, out T? value))
+            if (_memoryCache.TryGetValue(cacheKey, out T? value)) return value!;
+            value = await factory();
+            if (value == null) return value!;
+            var options = new MemoryCacheEntryOptions
             {
-                value = await factory();
-                if (value != null)
-                {
-                    var options = new MemoryCacheEntryOptions
-                    {
-                        AbsoluteExpirationRelativeToNow = absoluteExpirationRelativeToNow ?? _defaultCacheOptions.AbsoluteExpirationRelativeToNow,
-                        SlidingExpiration = slidingExpiration ?? _defaultCacheOptions.SlidingExpiration,
-                        Size = _defaultCacheOptions.Size
-                    };
-                    _memoryCache.Set(cacheKey, value, options);
-                }
-            }
+                AbsoluteExpirationRelativeToNow = absoluteExpirationRelativeToNow ?? _defaultCacheOptions.AbsoluteExpirationRelativeToNow,
+                SlidingExpiration = slidingExpiration ?? _defaultCacheOptions.SlidingExpiration,
+                Size = _defaultCacheOptions.Size
+            };
+            _memoryCache.Set(cacheKey, value, options);
             return value!;
         }
     }

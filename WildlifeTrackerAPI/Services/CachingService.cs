@@ -15,7 +15,7 @@ namespace WildlifeTrackerAPI.Services
         IMemoryCache memoryCache) : ICachingService
     {
         readonly IMemoryCache _memoryCache = memoryCache;
-        readonly MemoryCacheEntryOptions memoryCacheOptions = new()
+        private readonly MemoryCacheEntryOptions _memoryCacheOptions = new()
         {
             Size = 1,
             SlidingExpiration = TimeSpan.FromMinutes(1),
@@ -24,12 +24,13 @@ namespace WildlifeTrackerAPI.Services
 
         public void AddIndividual(long studyId, string localIdentifier, string? eventProfile, IEnumerable<LineStringFeatures> features)
         {
-            if ((features.TryGetNonEnumeratedCount(out var count) && count == 0) || !features.Any())
+            var lineStringFeaturesEnumerable = features as LineStringFeatures[] ?? features.ToArray();
+            if ((features.TryGetNonEnumeratedCount(out var count) && count == 0) || !lineStringFeaturesEnumerable.Any())
             {
                 return;
             }
             var cacheKey = $"{studyId}-{localIdentifier}-{eventProfile ?? "None"}";
-            _memoryCache.Set<List<LineStringFeatures>>(cacheKey, features.ToList(), memoryCacheOptions);
+            _memoryCache.Set(cacheKey, lineStringFeaturesEnumerable.ToList(), _memoryCacheOptions);
         }
 
         public void AddAll(long studyId, string? eventProfile, IEnumerable<KeyValuePair<string, List<LineStringFeatures>>> individualsAndEvents)
@@ -44,7 +45,7 @@ namespace WildlifeTrackerAPI.Services
         {
             foundEvents = [];
             var cacheKey = $"{studyId}-{localIdentifier}-{eventProfile ?? "None"}";
-            if (!_memoryCache.TryGetValue<List<LineStringFeatures>>(cacheKey, out var foundFeatures))
+            if (_memoryCache.TryGetValue<List<LineStringFeatures>>(cacheKey, out var foundFeatures))
             {
                 foundEvents = foundFeatures ?? [];
                 return foundEvents.Count > 0;
