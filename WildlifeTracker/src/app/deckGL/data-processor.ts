@@ -88,55 +88,34 @@ export class DataProcessor {
   }
 
 
-  public static binaryToObject(data: BinaryAnimalMovementLineResponse<AnimalMovementEvent>): AnimalPointEvent[] {
-    console.log(`Converting ${data.length} number of binary lines to point object`);
+
+  // Helper function to convert a BinaryType into a AnimalPointEvent
+  private static binaryToObject(data: BinaryAnimalMovementLineResponse<AnimalMovementEvent>): AnimalPointEvent[] {
     const events: AnimalPointEvent[] = [];
     const numFeatures = data.length;
-
 
     const positions = new Float32Array(data.position.value);
     const timestamps = new Float64Array(data.numericProps.sourceTimestamp.value);
 
-    for (let i = 0; i < numFeatures; i += 2) {
-      // TODO:Convert binary features to an object
-      // events.push({
-      //   location: positions[i],
-      //   timestamp: timestamps[i]
-      // });
+    for (let i = 0; i < numFeatures; i += 1) {
+      const position: [number, number] = [positions[i*4], positions[i*4+1]];
+      const timestamp = timestamps[i*2];
+      events.push({
+        location: position,
+        timestamp: timestamp
+      });
     }
 
-    console.log(`Created ${events.length} points objects`);
     return events;
   }
 
-  // TODO: Aggregation is only keeping track of a since record. Refactor to actually add the cumulative data
+  // New method that uses object instead of typed arrays
   public static aggregatePoints(
-    prev: BinaryPointFeature,
-    cur: BinaryLineFeature
-  ): BinaryPointFeature {
-    const prevPositions = prev ? new Float32Array(prev.positions.value) : new Float32Array();
-    const curPositions = new Float32Array(cur.positions.value);
-
-    const mergedArray = new Float32Array(prevPositions.length + curPositions.length);
-    mergedArray.set(prevPositions);
-    mergedArray.set(curPositions, prevPositions.length);
-
-    const mergedPositions = {
-      size: cur.positions.size,
-      value: mergedArray
-    };
-
-    // TODO: It does not makes sense for the aggregate data to keep track of DeckGlRenderingAttributes
-    // since some of the properties like individualLocalIdentifier are not being used
-    // refactor to remove it
-    return {
-      type: "Point",
-      positions: mergedPositions,
-      featureIds: { size: 1, value: new Uint16Array() },
-      globalFeatureIds: { size: 1, value: new Uint16Array() },
-      numericProps: {},
-      properties: []
-    };
+    prev: AnimalPointEvent[],
+    cur: BinaryAnimalMovementLineResponse<AnimalMovementEvent>
+  ): AnimalPointEvent[] {
+    prev.push(...this.binaryToObject(cur));
+    return prev;
   }
 
   public static processBinaryData(binaryData: BinaryAnimalMovementLineResponse<AnimalMovementEvent>): BinaryLineFeature & DeckGlRenderingAttributes {

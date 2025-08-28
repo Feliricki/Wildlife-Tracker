@@ -670,7 +670,7 @@ export class AnimalDataPanelComponent implements OnInit {
         if (this.isSubmitting) {
             return;
         }
-        
+
         if (this.eventForm.invalid) {
             return;
         }
@@ -682,7 +682,7 @@ export class AnimalDataPanelComponent implements OnInit {
 
         // Set submitting flag to prevent duplicates
         this.isSubmitting = true;
-        
+
         const studyId = study.id;
         const localIdentifiers = this.tableSource.taggedAndSelectedIndividuals() as NonEmptyArray<string>;
         const sensor = this.sensorForm.value;
@@ -708,7 +708,7 @@ export class AnimalDataPanelComponent implements OnInit {
     sendFetchRequest(request: EventRequest): void {
         this.currentIndividuals.set([]);
         this.deckOverlayStateService.setEventRequest(request);
-        
+
         // Reset submitting flag after a short delay to prevent rapid resubmissions
         setTimeout(() => {
             this.isSubmitting = false;

@@ -14,10 +14,10 @@ export class AuthInterceptor implements HttpInterceptor {
 
     // Only attach the token if sending a request to my backend
     if (cloned.url.startsWith("/api")){
-      if (localStorage.getItem("tokenKey") !== null){
+      if (localStorage.getItem("WildlifeTrackerToken") !== null){
         cloned = cloned.clone({
           setHeaders: {
-            Authorization: `Bearer ${localStorage.getItem("tokenKey")}`
+            Authorization: `Bearer ${localStorage.getItem("WildlifeTrackerToken")}`
           }
         });
       }

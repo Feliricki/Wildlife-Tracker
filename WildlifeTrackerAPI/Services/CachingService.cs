@@ -10,7 +10,6 @@ namespace WildlifeTrackerAPI.Services
         bool TryGetIndividualEvents(long studyId, string localIdentifier, string? eventProfile, out List<LineStringFeatures> foundEvents);
     }
 
-    // TODO: Decide on caching options.
     public class CachingService(
         IMemoryCache memoryCache) : ICachingService
     {

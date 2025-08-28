@@ -172,6 +172,7 @@ export class MapDashboardComponent implements OnInit {
     "background-color": "rgba(0,0,0,0)",
   };
 
+  // TODO:Refactor this to include the hexagon layer again
   readonly layerMenuOptions = [
     ["Arc Layer", LayerTypes.ArcLayer],
     ["Line Layer", LayerTypes.LineLayer],
@@ -211,11 +212,11 @@ export class MapDashboardComponent implements OnInit {
   ngOnInit(): void {
     // Ensure map type signals are synchronized (only for supported types)
     const activeMapType = this.activeMap();
-    
+
     if (activeMapType === 'google' || activeMapType === 'mapbox') {
       this.mapStateService.setMapType(activeMapType);
     }
-    
+
     // Handle initial responsive state
     firstValueFrom(this.smallScreen$).then(isSmall => {
       if (isSmall) {
@@ -311,12 +312,12 @@ export class MapDashboardComponent implements OnInit {
 
     this.resetGoogleMap();
     this.activeMap.set(basemap);
-    
+
     // Keep both signals synchronized (only for supported types)
     if (basemap === 'google' || basemap === 'mapbox') {
       this.mapStateService.setMapType(basemap);
     }
-    
+
     this.mapStateService.setPointsVisible(true);
     this.uiStateService.setMapLoaded(false);
     this.mapStateService.setMapLoaded(false);

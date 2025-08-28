@@ -102,7 +102,7 @@ export async function setData(
 
         streamSubscription = streamResponse.subscribe({
             next: response => {
-                // NOTE:this operation should only be performed once.
+                // this operation should only be performed once.
                 const decoded = msgPack.decode(response) as Array<number | string | unknown[]>;
                 const featuresRes: AnimalMovementLineBundle<AnimalMovementEvent> = parseMsgPackResponse(decoded);
 
@@ -114,8 +114,6 @@ export async function setData(
             },
             complete: () => {
                 console.log("Stream completed successfully");
-
-                // TODO:Consider writing another type to hold the information for the aggregated events.
                 postMessage({
                     type: "StreamEnded"
                 });
@@ -231,7 +229,6 @@ export function createBinaryResponse(
     const properties = binaryLines.properties as NonNumericProps<AnimalMovementEvent>[];
     const content = extractContent(properties);
 
-    // NOTE: The following returns the object being returns and an array of all the buffers within it.
     const numericPropsPairValue = extractNumericProps(binaryLines.numericProps);
     const response: BinaryAnimalMovementLineResponse<AnimalMovementEvent> = {
         type: responseType,

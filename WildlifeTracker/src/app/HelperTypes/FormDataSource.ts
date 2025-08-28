@@ -87,8 +87,9 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
         const individuals = results[0] as IndividualJsonDTO[];
         const taggedAnimals = results[1] as TagJsonDTO[];
 
-        const filteredIndividuals = individuals.filter(val => val.LocalIdentifier && val.LocalIdentifier.length > 0);
-        const filteredTaggedAnimals = taggedAnimals.filter(val => val.LocalIdentifier && val.LocalIdentifier.length > 0);
+        console.log(results);
+        const filteredIndividuals = individuals.filter(val => val.local_identifier && val.local_identifier.length > 0);
+        const filteredTaggedAnimals = taggedAnimals.filter(val => val.local_identifier && val.local_identifier.length > 0);
 
         return [filteredIndividuals, filteredTaggedAnimals] as [IndividualJsonDTO[], TagJsonDTO[]];
       }),
@@ -96,11 +97,12 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
         const newAnimals = new Map<string, IndividualJsonDTO>();
         const newTagged = new Map<string, TagJsonDTO>();
 
-        individuals.forEach(individual => newAnimals.set(individual.LocalIdentifier, individual));
-        taggedAnimals.forEach(individual => newTagged.set(individual.LocalIdentifier, individual));
+        individuals.forEach(individual => newAnimals.set(individual.local_identifier, individual));
+        taggedAnimals.forEach(individual => newTagged.set(individual.local_identifier, individual));
 
         this.currentAnimals.set(newAnimals);
         this.currentTaggedAnimals.set(newTagged);
+
       }),
       catchError((err) => {
         console.error(err);
@@ -248,7 +250,7 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
 
       selectedSet.forEach(index => {
         if (index >= 0 && index < sources.length) {
-          individuals.push(sources[index].LocalIdentifier);
+          individuals.push(sources[index].local_identifier);
         }
       });
 

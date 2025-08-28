@@ -2,7 +2,6 @@ import {
     ArcLayer,
     ArcLayerProps,
     LineLayer,
-    LineLayerProps,
     ScatterplotLayer,
     ScatterplotLayerProps
 } from '@deck.gl/layers';
@@ -11,12 +10,10 @@ import {
     HeatmapLayer,
     HexagonLayer,
     ScreenGridLayer,
-    HexagonLayerProps,
-    GridLayerProps
 } from '@deck.gl/aggregation-layers';
 import { Color, Layer } from '@deck.gl/core';
 import { LayerTypes } from './DeckOverlayController';
-import { BinaryLineFeature, DeckGlRenderingAttributes, BinaryPointFeature, AnimalMovementEvent } from './deckgl-types';
+import { BinaryLineFeature, DeckGlRenderingAttributes, AnimalPointEvent } from './deckgl-types';
 import { randomColor } from './deck-gl.worker';
 
 
@@ -26,24 +23,25 @@ export class LayerFactory {
 
     public static createLayer(
         layerType: LayerTypes,
-        data: (BinaryLineFeature & DeckGlRenderingAttributes) | AnimalMovementEvent[],
+        data: (BinaryLineFeature & DeckGlRenderingAttributes) | AnimalPointEvent[],
         layerId: number,
     ): Layer | null {
+
         switch (layerType) {
             case LayerTypes.ArcLayer:
                 return this.createArcLayer(data as BinaryLineFeature & DeckGlRenderingAttributes, layerId);
             case LayerTypes.ScatterplotLayer:
                 return this.createScatterplotLayer(data as BinaryLineFeature & DeckGlRenderingAttributes, layerId);
-            // case LayerTypes.HexagonLayer:
-            //     return this.createHexagonLayer(data as BinaryPointFeature, layerId, aggregationOptions);
+            case LayerTypes.HexagonLayer:
+                return this.createHexagonLayer(data as AnimalPointEvent[], layerId);
             case LayerTypes.LineLayer:
                 return this.createLineLayer(data as BinaryLineFeature & DeckGlRenderingAttributes, layerId);
             case LayerTypes.ScreenGridLayer:
-                return this.createScreenGridLayer(data as AnimalMovementEvent[], layerId);
-            // case LayerTypes.GridLayer:
-            //     return this.createGridLayer(data as AnimalMovementEvent[], layerId);
-            // case LayerTypes.HeatmapLayer:
-            //     return this.createHeatmapLayer(data as AnimalMovementEvent[], layerId);
+                return this.createScreenGridLayer(data as AnimalPointEvent[], layerId);
+            case LayerTypes.GridLayer:
+                return this.createGridLayer(data as AnimalPointEvent[], layerId);
+            case LayerTypes.HeatmapLayer:
+                return this.createHeatmapLayer(data as AnimalPointEvent[], layerId);
             default:
                 return null;
         }
@@ -115,98 +113,52 @@ export class LayerFactory {
         return new ScatterplotLayer(scatterplotProps);
     }
 
-    private static createHeatmapLayer(binaryFeatures: BinaryPointFeature, layerId: number): HeatmapLayer {
-        const BYTE_SIZE = 4;
-        const positions = binaryFeatures.positions;
-        const positionSize = positions.size;
-        const entrySize = positionSize * 2 * BYTE_SIZE;
-
-        // BUG: The length is being set to binaryFeatures causing the lag probably
-        const heatmapProps = {
+    private static createHeatmapLayer(data: AnimalPointEvent[], layerId: number): HeatmapLayer {
+        return new HeatmapLayer<AnimalPointEvent>({
             id: `${LayerTypes.HeatmapLayer}-${layerId}`,
-            data: {
-                length: binaryFeatures,
-                attributes: {
-                    getPosition: {
-                        value: new Float32Array(positions.value),
-                        size: positionSize,
-                        stride: entrySize,
-                        offset: 0,
-                    },
-                },
-            },
+            data: data,
+            getPosition: point => point.location,
             pickable: false,
             aggregation: "SUM" as const,
             radiusPixels: 30,
             intensity: 1,
             threshold: 0.3,
             getWeight: 1,
-        };
-
-        return new HeatmapLayer(heatmapProps);
+        });
     }
 
     // Temporarily disabled due to compilation issues and user request.
     private static createHexagonLayer(
-        binaryFeatures: BinaryPointFeature,
+        data: AnimalPointEvent[],
         layerId: number,
-        aggregationOptions?: Partial<HexagonLayerProps>
-    ): HexagonLayer | null {
-        // Temporarily disabled due to compilation issues and user request.
-        return null;
+    ): HexagonLayer {
+        return new HexagonLayer<AnimalPointEvent>({
+            id: `${LayerTypes.HexagonLayer}-${layerId}`,
+            data: data,
+            getPosition: point => point.location
+        });
     }
 
     private static createGridLayer(
-        binaryFeatures: BinaryPointFeature,
+        data: AnimalPointEvent[],
         layerId: number,
-        aggregationOptions?: Partial<GridLayerProps>
     ): GridLayer {
-        const BYTE_SIZE = 4;
-        const positions = binaryFeatures.positions;
-        const positionSize = positions.size;
-        const entrySize = positionSize * 2 * BYTE_SIZE;
 
-        const gridProps = {
+        return new GridLayer<AnimalPointEvent>({
             id: `${LayerTypes.GridLayer}-${layerId}`,
-            data: {
-                length: positions.value.byteLength / (positionSize * 4),
-                attributes: {
-                    getPosition: {
-                        value: new Float32Array(positions.value),
-                        size: positionSize,
-                        stride: entrySize,
-                        offset: 0,
-                    }
-                },
-            },
-            colorRange: aggregationOptions?.colorRange,
-            gpuAggregation: aggregationOptions?.gpuAggregation !== undefined ? aggregationOptions.gpuAggregation : true,
+            data: data,
+            getPosition: point => point.location,
+            // colorRange: aggregationOptions?.colorRange,
+            // gpuAggregation: aggregationOptions?.gpuAggregation !== undefined ? aggregationOptions.gpuAggregation : true,
             pickable: true,
-        };
-        return new GridLayer(gridProps);
+        });
     }
 
-    private static createScreenGridLayer(movementData: AnimalMovementEvent[], layerId: number): ScreenGridLayer {
-        // const BYTE_SIZE = 4;
-        // const positions = movementData.positions;
-        // const positionSize = positions.size;
-        // const entrySize = positionSize * 2 * BYTE_SIZE;
-
-        return new ScreenGridLayer<AnimalMovementEvent>({
+    private static createScreenGridLayer(data: AnimalPointEvent[], layerId: number): ScreenGridLayer {
+        return new ScreenGridLayer<AnimalPointEvent>({
             id: `${LayerTypes.ScreenGridLayer}-${layerId}`,
-            data: movementData,
-            // getPosition: d => d.15:31,
-            // data: {
-            //     length: binaryFeatures.length,
-            //     attributes: {
-            //         getPosition: {
-            //             value: new Float32Array(positions.value),
-            //             size: positionSize,
-            //             stride: entrySize,
-            //             offset: 0,
-            //         }
-            //     },
-            // },
+            data: data,
+            getPosition: point => point.location,
             pickable: true,
             cellSizePixels: 20,
             opacity: 0.8,
@@ -220,7 +172,7 @@ export class LayerFactory {
         const entrySize = positionSize * 2 * BYTE_SIZE;
         const colors = this.getColorHelper(binaryFeatures.individualLocalIdentifier);
 
-        const lineLayerProps: LineLayerProps = {
+        return new LineLayer({
             id: `${LayerTypes.LineLayer}-${layerId}`,
             data: {
                 length: binaryFeatures.length,
@@ -243,8 +195,7 @@ export class LayerFactory {
             pickable: true,
             getColor: colors[0],
             autoHighlight: true,
-        };
-        return new LineLayer(lineLayerProps);
+        });
     }
 
     private static getColorHelper(animal: string): [Color, Color] {

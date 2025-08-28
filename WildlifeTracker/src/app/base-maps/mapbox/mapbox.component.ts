@@ -46,7 +46,6 @@ export class MapboxComponent implements OnInit, OnDestroy {
     private readonly injector = inject(Injector);
     private readonly destroyRef = inject(DestroyRef);
 
-    // NOTE:Restricted mapbox key
     mapboxToken = "pk.eyJ1IjoiZmVsaXJpY2tpIiwiYSI6ImNsdGRkMWppMDA1ODUyanBmNWczZnp1c20ifQ.efFPdWGtuf6qkLsCo9KlqQ";
 
     currentCollection?: GeoJSON.FeatureCollection<GeoJSON.Point, StudyDTO>;
@@ -109,11 +108,11 @@ export class MapboxComponent implements OnInit, OnDestroy {
                 takeUntilDestroyed(this.destroyRef),
                 distinctUntilChanged()
             )
-                    .subscribe(request => {
-            if (request && this.mapStateService.mapType() === 'mapbox') {
-                this.handleEventRequest(request);
-            }
-        })
+            .subscribe(request => {
+                if (request && this.mapStateService.mapType() === 'mapbox') {
+                    this.handleEventRequest(request);
+                }
+            })
     }
 
     ngOnDestroy(): void {

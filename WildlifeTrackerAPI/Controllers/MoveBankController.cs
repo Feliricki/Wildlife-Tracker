@@ -90,11 +90,12 @@ namespace WildlifeTrackerAPI.Controllers
         [HttpGet(Name = "GetJsonData")]
         [ResponseCache(CacheProfileName = "Any-60")]
         public async Task<IActionResult> GetJsonData(
-            [Required] MoveBankEntityType entityType,
+            [Required][EntityTypeValidator] string entityType,
             [Required] long studyId,
             [SortOrderValidator] string sortOrder = "ASC")
         {
             var jsonString = await _moveBankService.GetJsonDataAsync(entityType, studyId, sortOrder, User.IsInRole(RoleNames.Administrator));
+            Console.WriteLine(jsonString);
             return Content(jsonString, "application/json");
         }
 

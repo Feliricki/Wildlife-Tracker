@@ -14,7 +14,7 @@ export class AuthService {
   private _authStatus = new Subject<boolean>();
   public authStatus = this._authStatus.asObservable();
 
-  private tokenKey = "tokenKey";
+  private tokenKey = "WildlifeTrackerToken";
 
   private _isAdmin: WritableSignal<boolean> = signal(false);
   public isAdmin = this._isAdmin.asReadonly();

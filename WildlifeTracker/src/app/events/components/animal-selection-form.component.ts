@@ -69,11 +69,11 @@ import { IndividualJsonDTO } from '../../studies/JsonResults/IndividualJsonDTO';
           }
         </mat-form-field>
       </div>
-      
+
       <table mat-table formArrayName="checkboxes" matSort matSortDisableClear matSortActive="name"
-        matSortDirection="asc" [dataSource]="tableSource" #Table [trackBy]="trackById" 
+        matSortDirection="asc" [dataSource]="tableSource" #Table [trackBy]="trackById"
         class="event-form__table dense-5" [ngClass]="{'event-form__table--mobile': isMobile}">
-        
+
         <ng-container matColumnDef="select">
           <th mat-header-cell *matHeaderCellDef>
             <mat-checkbox [checked]="isAllSelected()" [disabled]="TableState() !== 'loaded'"
@@ -105,7 +105,7 @@ import { IndividualJsonDTO } from '../../studies/JsonResults/IndividualJsonDTO';
             </div>
           </th>
           <td mat-cell *matCellDef="let control; let j = index;" class="event-form__table-cell">
-            <p>{{ getIndividual(j)()?.LocalIdentifier ?? "N/A" }}</p>
+            <p>{{ getIndividual(j)()?.local_identifier }}</p>
           </td>
           @if (!isMobile) {
           <td mat-footer-cell *matFooterCellDef>
@@ -136,25 +136,25 @@ import { IndividualJsonDTO } from '../../studies/JsonResults/IndividualJsonDTO';
     .event-form {
       width: 100%;
     }
-    
+
     .event-form__controls {
       display: flex;
       gap: 1rem;
       margin-bottom: 1rem;
     }
-    
+
     .event-form__controls--mobile {
       flex-direction: column;
     }
-    
+
     .event-form__profile-select {
       flex: 1;
     }
-    
+
     .event-form__sensor-select {
       flex: 1;
     }
-    
+
     .event-form__table {
       width: 100%;
       table-layout: fixed;
@@ -164,7 +164,7 @@ import { IndividualJsonDTO } from '../../studies/JsonResults/IndividualJsonDTO';
       word-wrap: break-word;
       overflow-wrap: break-word;
     }
-    
+
     .event-form__table td.mat-cell, .event-form__table th.mat-header-cell {
       padding: 0 8px;
     }
@@ -172,7 +172,7 @@ import { IndividualJsonDTO } from '../../studies/JsonResults/IndividualJsonDTO';
     .event-form__table--mobile {
       max-height: 300px;
     }
-    
+
     .event-form__submit-button {
       margin-top: 1rem;
     }
@@ -194,10 +194,10 @@ export class AnimalSelectionFormComponent {
   @Input() toggleAllRows!: () => void;
   @Input() toggleRow!: (index: number) => void;
 
-  @Output() submit = new EventEmitter<void>();
+  @Output() submitEmitter = new EventEmitter<void>();
 
 
   onSubmit() {
-    this.submit.emit();
+    this.submitEmitter.emit();
   }
-} 
+}

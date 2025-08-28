@@ -1,27 +1,28 @@
 ﻿using Amazon.SecretsManager;
 using Amazon.SecretsManager.Extensions.Caching;
+using Amazon.SecretsManager.Model;
+using CsvHelper;
+using Mapster;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
-using WildlifeTrackerAPI.DTO;
-using Amazon.SecretsManager.Model;
-using System.Globalization;
-using System.Security.Cryptography;
-using Mapster;
-using System.Linq.Expressions;
-using WildlifeTrackerAPI.Models;
-using WildlifeTrackerAPI.DTO.GeoJSON;
 using Microsoft.EntityFrameworkCore;
-using CsvHelper;
+using System;
+using System.Globalization;
+using System.Linq.Expressions;
+using System.Security.Cryptography;
 using System.Text;
-using WildlifeTrackerAPI.DTO.MoveBankAttributes.DirectReadRecords;
-using WildlifeTrackerAPI.DTO.MoveBankAttributes.JsonDTOs;
+using WildlifeTrackerAPI.DTO;
+using WildlifeTrackerAPI.DTO.GeoJSON;
 using WildlifeTrackerAPI.DTO.MoveBankAttributes;
 using WildlifeTrackerAPI.DTO.MoveBankAttributes.DirectReadDTOs;
-using JsonSerializer = System.Text.Json.JsonSerializer;
-using EventRequest = WildlifeTrackerAPI.DTO.MoveBankAttributes.EventRequest;
+using WildlifeTrackerAPI.DTO.MoveBankAttributes.DirectReadRecords;
+using WildlifeTrackerAPI.DTO.MoveBankAttributes.JsonDTOs;
 using WildlifeTrackerAPI.Enums;
 using WildlifeTrackerAPI.Interfaces;
+using WildlifeTrackerAPI.Models;
 using WildlifeTrackerAPI.Repositories;
+using EventRequest = WildlifeTrackerAPI.DTO.MoveBankAttributes.EventRequest;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace WildlifeTrackerAPI.Services
 {
@@ -31,7 +32,7 @@ namespace WildlifeTrackerAPI.Services
         Task<ApiResult<StudyDTO>> GetStudiesAsync(int pageIndex, int pageSize, string? sortColumn, string? sortOrder, string? filterColumn, string? filterQuery, bool isUserAdmin);
         Task<StudyDTO?> GetStudyAsync(long studyId, bool isUserAdmin);
         Task<object> GetAllStudiesAsync(bool isUserAdmin, bool geojsonFormat);
-        Task<string> GetJsonDataAsync(MoveBankEntityType entityType, long studyId, string sortOrder, bool isUserAdmin);
+        Task<string> GetJsonDataAsync(string entityType, long studyId, string sortOrder, bool isUserAdmin);
         Task<object> GetEventDataAsync(EventRequest request);
         DateTime? GetDateTime(string? dateString);
 
@@ -130,7 +131,7 @@ namespace WildlifeTrackerAPI.Services
         public async Task<object> GetAllStudiesAsync(bool isUserAdmin, bool geojsonFormat)
         {
             var cacheKey = $"GetAllStudies:{isUserAdmin}-{geojsonFormat}";
-            return await _cachingService.GetOrCreateAsync(cacheKey, async () =>
+            return await _cachingService.GetOrCreateAsync<object>(cacheKey, async () =>
             {
                 var query = _studyRepository.GetStudiesQuery()
                     .Where(s => s.IHaveDownloadAccess);
@@ -142,8 +143,17 @@ namespace WildlifeTrackerAPI.Services
 
                 var dtoArray = await query.ProjectToType<StudyDTO>().ToArrayAsync();
 
+                if (geojsonFormat)
+                {
+                    var studies = await query.ToArrayAsync();
+                    var collection = PointFeatureCollection<StudyDTO>.CreateFromStudies(dtoArray, Func);
+                    return collection;
+                }
+
                 return dtoArray;
             });
+
+            static StudyDTO Func(StudyDTO study) => study;
         }
 
         public async Task<ApiResult<StudyDTO>> GetStudiesAsync(int pageIndex, int pageSize, string? sortColumn, string? sortOrder, string? filterColumn, string? filterQuery, bool isUserAdmin)
@@ -173,7 +183,9 @@ namespace WildlifeTrackerAPI.Services
             });
         }
 
-        public async Task<string> GetJsonDataAsync(MoveBankEntityType entityType, long studyId, string sortOrder, bool isUserAdmin)
+        // This method is used primary to retrieve individual from the study
+        // TODO: Fix this method
+        public async Task<string> GetJsonDataAsync(string entityType, long studyId, string sortOrder, bool isUserAdmin)
         {
             var cacheKey = $"GetJsonData:{entityType}-{studyId}";
             return await _cachingService.GetOrCreateAsync(cacheKey, async () =>
@@ -184,12 +196,11 @@ namespace WildlifeTrackerAPI.Services
                     entityType: entityType.ToString().ToLower(),
                     parameters: parameters,
                     headers: null,
-                    authorizedUser: isUserAdmin);
-
-                if (response == null) throw new Exception("Json request yielded a null response");
+                    authorizedUser: isUserAdmin) ?? throw new Exception("Json request yielded a null response");
 
                 var returnType = "json";
                 var responseContentArray = await response.Content.ReadAsByteArrayAsync();
+
                 if (responseContentArray.Length == 0)
                 {
                     response = await DirectRequest(
@@ -215,21 +226,21 @@ namespace WildlifeTrackerAPI.Services
                     using var stream = new StreamReader(memStream, Encoding.UTF8);
                     using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
 
-                    data = entityType switch
+                    data = entityType.ToLower() switch
                     {
-                        MoveBankEntityType.Study => csvReader.GetRecords<StudiesRecord>().AsQueryable().ProjectToType<StudyJsonDTO>().ToList(),
-                        MoveBankEntityType.Individual => csvReader.GetRecords<IndividualRecord>().AsQueryable().ProjectToType<IndividualJsonDTO>().ToList(),
-                        MoveBankEntityType.Tag => csvReader.GetRecords<TagRecord>().AsQueryable().ProjectToType<TagJsonDTO>().ToList(),
+                        "study" => csvReader.GetRecords<StudiesRecord>().AsQueryable().ProjectToType<StudyJsonDTO>().ToList(),
+                        "individual" => csvReader.GetRecords<IndividualRecord>().AsQueryable().ProjectToType<IndividualJsonDTO>().ToList(),
+                        "tag" => csvReader.GetRecords<TagRecord>().AsQueryable().ProjectToType<TagJsonDTO>().ToList(),
                         _ => null
                     };
                 }
                 else
                 {
-                    data = entityType switch
+                    data = entityType.ToLower() switch
                     {
-                        MoveBankEntityType.Study => JsonSerializer.Deserialize<List<StudyJsonDTO>>(responseContentArray),
-                        MoveBankEntityType.Individual => JsonSerializer.Deserialize<List<IndividualJsonDTO>>(responseContentArray),
-                        MoveBankEntityType.Tag => JsonSerializer.Deserialize<List<TagJsonDTO>>(responseContentArray),
+                        "study" => JsonSerializer.Deserialize<List<StudyJsonDTO>>(responseContentArray),
+                        "individual" => JsonSerializer.Deserialize<List<IndividualJsonDTO>>(responseContentArray),
+                        "tag" => JsonSerializer.Deserialize<List<TagJsonDTO>>(responseContentArray),
                         _ => null
                     };
                 }
@@ -244,6 +255,7 @@ namespace WildlifeTrackerAPI.Services
                 {
                     throw new Exception("Invalid object passed to SortObjects method.");
                 }
+
 
                 return JsonSerializer.Serialize(sorted);
             });

@@ -15,7 +15,6 @@ namespace WildlifeTrackerAPI.Attributes
 
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
         {
-            // TODO: This validation object is unfinished and untested.
             if (value is EventRequest request)
             {
                 //Console.WriteLine(JsonCon);
