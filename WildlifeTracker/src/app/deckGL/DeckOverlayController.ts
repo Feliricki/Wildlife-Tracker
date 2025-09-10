@@ -164,12 +164,12 @@ export class DeckOverlayController {
   dataChunks: Array<BinaryFeatureWithAttributes> = [];
 
   currentLayers: Array<Layer | null> = [];
+  // This a helper variable to speed up re-renders for aggregation layers
+  updateRange?: { startRow: number, endRow: number };
   // Contains a template for metadata about each event that was calculated on the backend
   contentArray: ArrayBufferLike[][] = [];
 
   private textDecoder = new TextDecoder();
-  private textEncoder = new TextEncoder();
-
 
   handleBinaryResponse(binaryData: BinaryAnimalMovementLineResponse<AnimalMovementEvent>): void {
     const binaryLineFeatures = DataProcessor.processBinaryData(binaryData);
@@ -177,7 +177,12 @@ export class DeckOverlayController {
 
     this.dataChunks.push({ points: pointsFeatures, lines: binaryLineFeatures, polygons: polygonFeatures });
     this.contentArray.push(binaryLineFeatures.content.contentArray);
-    this.aggregatedPoints = DataProcessor.aggregatePoints(this.aggregatedPoints, binaryData);
+    const newAggragationPoints = DataProcessor.aggregatePoints(this.aggregatedPoints, binaryData);
+    if (this.dataChunks.length > 1) {
+      // TODO:Make sure no records is being left not updated
+      this.updateRange = { startRow: this.aggregatedPoints.length - 1, endRow: newAggragationPoints.length };
+    }
+    this.aggregatedPoints = newAggragationPoints;
 
     this.currentIndividuals.update(prev => {
       prev.add(binaryLineFeatures.individualLocalIdentifier);
@@ -198,14 +203,16 @@ export class DeckOverlayController {
 
     let layers: Array<Layer | null> = [];
     if (this.isAggregationLayer(this.currentLayer)) {
-
       if (!this.aggregatedPoints) return;
-      layers = [this.createActiveLayer(
-        this.currentLayer,
-        this.aggregatedPoints, 0)];
-
+      layers = [
+        this.createActiveLayerHelper(
+          this.currentLayer,
+          this.aggregatedPoints,
+          this.updateRange
+        )
+      ];
     } else {
-      layers = this.dataChunks.map((chunk, index) => this.createActiveLayer(this.currentLayer, chunk.lines, index));
+      layers = this.dataChunks.map((chunk, index) => this.createActiveLayerHelper(this.currentLayer, chunk.lines, undefined, index));
     }
 
     this.currentLayers = layers;
@@ -399,6 +406,7 @@ export class DeckOverlayController {
     this.contentArray = [];
     this.currentLayers = [];
     this.aggregatedPoints = [];
+    this.updateRange = undefined;
     LayerFactory.clearColors();
     this.currentMetaData.set(structuredClone(this.MetadataDefaultOptions));
     this.currentIndividuals.set(new Set());
@@ -616,17 +624,14 @@ export class DeckOverlayController {
     if (this.isAggregationLayer(layer)) {
       if (!this.aggregatedPoints) return;
       layers = [
-        this.createActiveLayer(
-          layer,
-          this.aggregatedPoints, 0)
+        this.createActiveLayerHelper(layer, this.aggregatedPoints)
       ];
-
     } else {
       layers = this.dataChunks
-        .map((chunk, index) => this.createActiveLayer(layer, chunk.lines, index));
+        .map((chunk, index) => this.createActiveLayerHelper(layer, chunk.lines, undefined, index));
     }
     this.currentLayers = layers;
-    this.deckOverlay?.setProps({ layers: layers });
+    this.deckOverlay?.setProps({ layers: this.currentLayers });
   }
 
   isPointLayer(layer: LayerTypes): boolean {
@@ -641,15 +646,30 @@ export class DeckOverlayController {
     return this.aggregationLayers.has(layer);
   }
 
-  createActiveLayer(layer: LayerTypes, data: (BinaryLineFeature & DeckGlRenderingAttributes) | AnimalPointEvent[], layerId: number): Layer | null {
+  private createActiveLayer(
+    layer: LayerTypes,
+    data: (BinaryLineFeature & DeckGlRenderingAttributes) | AnimalPointEvent[]) {
+  }
+
+  // make this the helper functions
+  private createActiveLayerHelper(
+    layer: LayerTypes,
+    data: (BinaryLineFeature & DeckGlRenderingAttributes) | AnimalPointEvent[],
+    updateRange?: { startRow: number, endRow: number },
+    layerId: number = 0,
+  ): Layer | null {
     this.currentLayer = layer;
-    const newLayer = LayerFactory.createLayer(layer, data, layerId);
+    const newLayer: Layer | null = this.isAggregationLayer(layer) ?
+      LayerFactory.createAggregationLayer(layer, data as AnimalPointEvent[], updateRange) :
+      LayerFactory.createMultiLayer(layer, data as (BinaryLineFeature & DeckGlRenderingAttributes), layerId);
+
     if (newLayer) {
       return newLayer.clone({
-        visible: this.currentLayer === layer,
-        pickable: this.currentLayer === layer
-      });
+        visible: this.currentLayer == layer,
+        pickable: this.currentLayer == layer
+      })
     }
+
     return newLayer;
   }
 

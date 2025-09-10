@@ -87,7 +87,6 @@ export class FormDataSource implements DataSource<FormControl<boolean>> {
         const individuals = results[0] as IndividualJsonDTO[];
         const taggedAnimals = results[1] as TagJsonDTO[];
 
-        console.log(results);
         const filteredIndividuals = individuals.filter(val => val.local_identifier && val.local_identifier.length > 0);
         const filteredTaggedAnimals = taggedAnimals.filter(val => val.local_identifier && val.local_identifier.length > 0);
 

@@ -21,27 +21,38 @@ export class LayerFactory {
 
     private static individualColors = new Map<string, [Color, Color]>();
 
-    public static createLayer(
+    // TODO:Finish this method
+    public static createAggregationLayer(
         layerType: LayerTypes,
-        data: (BinaryLineFeature & DeckGlRenderingAttributes) | AnimalPointEvent[],
+        data: AnimalPointEvent[],
+        updateRange?: { startRow: number, endRow: number }
+    ): Layer | null {
+        switch (layerType) {
+            case LayerTypes.HeatmapLayer:
+                return this.createHeatmapLayer(data, 0, updateRange);
+            case LayerTypes.HexagonLayer:
+                return this.createHexagonLayer(data, 0, updateRange);
+            case LayerTypes.ScreenGridLayer:
+                return this.createScreenGridLayer(data, 0, updateRange);
+            case LayerTypes.GridLayer:
+                return this.createGridLayer(data, 0);
+            default:
+                return null;
+        }
+    }
+
+    public static createMultiLayer(
+        layerType: LayerTypes,
+        data: (BinaryLineFeature & DeckGlRenderingAttributes),
         layerId: number,
     ): Layer | null {
-
         switch (layerType) {
             case LayerTypes.ArcLayer:
-                return this.createArcLayer(data as BinaryLineFeature & DeckGlRenderingAttributes, layerId);
+                return this.createArcLayer(data, layerId);
             case LayerTypes.ScatterplotLayer:
-                return this.createScatterplotLayer(data as BinaryLineFeature & DeckGlRenderingAttributes, layerId);
-            case LayerTypes.HexagonLayer:
-                return this.createHexagonLayer(data as AnimalPointEvent[], layerId);
+                return this.createScatterplotLayer(data, layerId);
             case LayerTypes.LineLayer:
-                return this.createLineLayer(data as BinaryLineFeature & DeckGlRenderingAttributes, layerId);
-            case LayerTypes.ScreenGridLayer:
-                return this.createScreenGridLayer(data as AnimalPointEvent[], layerId);
-            case LayerTypes.GridLayer:
-                return this.createGridLayer(data as AnimalPointEvent[], layerId);
-            case LayerTypes.HeatmapLayer:
-                return this.createHeatmapLayer(data as AnimalPointEvent[], layerId);
+                return this.createLineLayer(data, layerId);
             default:
                 return null;
         }
@@ -113,7 +124,11 @@ export class LayerFactory {
         return new ScatterplotLayer(scatterplotProps);
     }
 
-    private static createHeatmapLayer(data: AnimalPointEvent[], layerId: number): HeatmapLayer {
+    private static createHeatmapLayer(
+        data: AnimalPointEvent[],
+        layerId: number,
+        updateRange?: { startRow: number, endRow: number }
+    ): HeatmapLayer {
         return new HeatmapLayer<AnimalPointEvent>({
             id: `${LayerTypes.HeatmapLayer}-${layerId}`,
             data: data,
@@ -124,21 +139,25 @@ export class LayerFactory {
             intensity: 1,
             threshold: 0.3,
             getWeight: 1,
+            _dataDiff: updateRange === undefined ? undefined : () => [updateRange]
         });
     }
 
-    // Temporarily disabled due to compilation issues and user request.
+    // Temporarily disabled due to compilation issues
     private static createHexagonLayer(
         data: AnimalPointEvent[],
         layerId: number,
+        updateRange?: { startRow: number, endRow: number }
     ): HexagonLayer {
         return new HexagonLayer<AnimalPointEvent>({
             id: `${LayerTypes.HexagonLayer}-${layerId}`,
             data: data,
-            getPosition: point => point.location
+            getPosition: point => point.location,
+            _dataDiff: updateRange === undefined ? undefined : () => [updateRange]
         });
     }
 
+    // TODO:Look up the documentation on getting this up and running
     private static createGridLayer(
         data: AnimalPointEvent[],
         layerId: number,
@@ -154,7 +173,10 @@ export class LayerFactory {
         });
     }
 
-    private static createScreenGridLayer(data: AnimalPointEvent[], layerId: number): ScreenGridLayer {
+    private static createScreenGridLayer(
+        data: AnimalPointEvent[],
+        layerId: number,
+        updateRange?: { startRow: number, endRow: number }): ScreenGridLayer {
         return new ScreenGridLayer<AnimalPointEvent>({
             id: `${LayerTypes.ScreenGridLayer}-${layerId}`,
             data: data,
@@ -162,6 +184,8 @@ export class LayerFactory {
             pickable: true,
             cellSizePixels: 20,
             opacity: 0.8,
+            _dataDiff: updateRange === undefined ? undefined :
+                () => [updateRange]
         });
     }
 

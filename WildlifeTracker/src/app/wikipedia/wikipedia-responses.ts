@@ -22,11 +22,4 @@ export interface Thumbnail {
 }
 
 
-// export interface SearchResult {
-//   [index: 0]: string;
-//   [index: 1]: string[];
-//   [index: 2]: string[];
-//   [index: 3]: string[];
-// }
-
 export type SearchResult = [string, string[], string[], string[]];

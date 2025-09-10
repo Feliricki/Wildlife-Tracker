@@ -53,8 +53,6 @@ builder.Services.AddControllers(options =>
         new CacheProfile() { Location = ResponseCacheLocation.Any, Duration = 60 * 5 });
 });
 
-//builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
-//builder.Services.Configure<MailRecipient>(builder.Configuration.GetSection("MailRecipient"));
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -75,9 +73,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     // SECURITY: Determine connection string based on environment
-    var connectionString = builder.Environment.IsDevelopment() 
+    var connectionString = builder.Environment.IsDevelopment()
         ? builder.Configuration["TestConnectionStrings:DefaultConnection"]
-        : builder.Configuration.GetConnectionString("DefaultConnection");
+        : builder.Configuration["ConnectionStrings:DefaultConnection"];
     
     if (string.IsNullOrEmpty(connectionString))
     {
@@ -171,7 +169,6 @@ builder.Services.AddAWSService<IAmazonSecretsManager>();
 builder.Services.AddSignalR(options =>
 {
     options.DisableImplicitFromServicesParameters = true;
-    //options.StatefulReconnectBufferSize = 4096;
     // Set up the client to send pings every second.
     options.KeepAliveInterval = TimeSpan.FromSeconds(10);
     options.MaximumParallelInvocationsPerClient = 1;
