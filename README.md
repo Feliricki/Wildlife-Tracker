@@ -5,7 +5,8 @@ A full-stack web application that fetches and visualizes animal tracking data fr
 * **Live Site:** [wildlife-tracker.com](https://wildlife-tracker.com)
 * **Data Source:** [MoveBank.org](https://www.movebank.org)
 
-![Wildlife Tracker Demonstration](https://wildlife-tracker.com/demo.gif)
+# Demonstration
+![Wildlife Tracker Demonstration](/assets/1080p_demo.gif)
 
 ## Technical Features
 
