@@ -8,7 +8,9 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "prestart": "node aspnetcore-https",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "deploy": "firebase deploy",
+    "build-and-deploy": "ng build && firebase deploy"
   },
   "private": true,
   "dependencies": {
