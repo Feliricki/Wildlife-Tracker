@@ -595,10 +595,12 @@ export class DeckOverlayController {
         <p>Latitude: ${info.coordinate?.at(1)}</p>
       `;
     }
+    if (layerType === LayerTypes.HeatmapLayer){
+      // INFO:Not much info is provided for heatmap layers
+    }
     else if (layerType === LayerTypes.ScreenGridLayer) {
-      const layerObject = info.object as { cellCount: number };
       return `
-        <p>Events: ${layerObject.cellCount}</p>
+        <p>Events: ${info.object.count}</p>
       `;
     }
 

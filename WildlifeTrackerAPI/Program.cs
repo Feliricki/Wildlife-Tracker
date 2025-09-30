@@ -143,12 +143,6 @@ builder.Services.AddScoped<JwtHandler>();
 // Amazon Key Vault Services
 var awsOptions = builder.Configuration.GetAWSOptions();
 
-// SECURITY WARNING: Using BasicAWSCredentials with configuration values
-// For production, consider using:
-// - AWS IAM roles for EC2/ECS
-// - AWS credential profiles
-// - Environment variables
-// - AWS Systems Manager Parameter Store
 var accessKey = builder.Configuration["AWS:AccessKey"];
 var secretKey = builder.Configuration["AWS:SecretKey"];
 
@@ -161,11 +155,6 @@ awsOptions.Credentials = new BasicAWSCredentials(accessKey, secretKey);
 builder.Services.AddDefaultAWSOptions(awsOptions);
 builder.Services.AddAWSService<IAmazonSecretsManager>();
 
-// TODO: Use MessagePack protocol.
-// When serializing data, use indexed key as opposed to string keys.
-// Consider a custom formatter resolver for datetime objects.
-
-
 builder.Services.AddSignalR(options =>
 {
     options.DisableImplicitFromServicesParameters = true;
@@ -177,7 +166,6 @@ builder.Services.AddSignalR(options =>
 }).AddMessagePackProtocol(options =>
 {
     options.SerializerOptions = MessagePack.MessagePackSerializerOptions.Standard
-        //.WithResolver(new CustomResolver)
         .WithSecurity(MessagePack.MessagePackSecurity.UntrustedData);
 });
 
