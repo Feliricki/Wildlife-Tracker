@@ -25,14 +25,13 @@ jobs:
       - name: Build Angular Project
         run: npm run build -- --configuration production
 
+      - name: Install Firebase CLI
+        # We install the official command-line tool
+        run: npm install -g firebase-tools
+
       - name: Deploy to Firebase
-        uses: w9jds/firebase-action@v2.2.2 # Using a stable version
-        with:
-          args: deploy --only hosting
-          project_path: ./WildlifeTracker # Path to your firebase.json
-        env:
-          # Recommended: Use a service account key
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        # We run the deploy command directly
+        run: firebase deploy --only hosting --token "${{ secrets.FIREBASE_TOKEN }}"
 
   deploy-backend:
     runs-on: ubuntu-latest
