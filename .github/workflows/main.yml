@@ -39,5 +39,54 @@ jobs:
   deploy-backend:
     runs-on: ubuntu-latest
     steps:
-      - name: Backend Message
-        run: echo "Backend deployment is not yet implemented."
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.x'
+
+      - name: Build and publish the backend
+        run: dotnet publish ./WildlifeTrackerAPI/WildlifeTrackerAPI.csproj --configuration Release --os linux --arch x64 --self-contained true -o ./publish
+
+      - name: Prepare Server by Stopping Services and Clearing Directory
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            # Stop the services before making changes
+            sudo systemctl stop nginx.service
+            sudo systemctl stop kestral-WildlifeTrackerAPI.service
+            
+            # Clear the directory
+            sudo rm -rf /var/www/WildlifeTrackerAPI/*
+
+      - name: Copy New Files to Server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          source: "./publish/*"
+          target: "/var/www/WildlifeTrackerAPI"
+          strip_components: 1
+
+      - name: Create AppSettings and Restart Services
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            # Create the production appsettings from your secret
+            echo "${{ secrets.DOTNET_PRODUCTION_APPSETTINGS }}" > /var/www/WildlifeTrackerAPI/appsettings.Production.json
+
+            # Restart the services with the new files
+            sudo systemctl start kestral-WildlifeTrackerAPI.service
+            sudo systemctl start nginx.service
