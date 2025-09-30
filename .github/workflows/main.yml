@@ -1,11 +1,15 @@
 name: Deploy Frontend and Backend
-on: 
-  push: 
+on:
+  push:
     branches:
       - master
 jobs:
   deploy-frontend:
     runs-on: ubuntu-latest
+    # Set a default working directory for all run commands in this job
+    defaults:
+      run:
+        working-directory: ./WildlifeTracker
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -16,19 +20,23 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        working-directory: ./WildlifeTracker
         run: npm install
 
       - name: Build Angular Project
-        working-directory: ./WildlifeTracker
-        run: ng build --configuration production
+        # Use the 'build' script from your package.json
+        run: ng build
+
+      - name: Build Angular Project
+        # Use the 'build' script from your package.json
+        run: npm run build -- --configuration production
 
       - name: Deploy to Firebase
-        uses: w9jds/firebase-action@master
+        uses: w9jds/firebase-action@v2.2.2 # Using a stable version
         with:
           args: deploy --only hosting
-          project_path: ./WildlifeTracker
+          project_path: ./WildlifeTracker # Path to your firebase.json
         env:
+          # Recommended: Use a service account key
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
   deploy-backend:
