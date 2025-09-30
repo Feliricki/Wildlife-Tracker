@@ -58,12 +58,16 @@ jobs:
           key: ${{ secrets.LIGHTSAIL_SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            # Stop the services before making changes
+            # Stop services
             sudo systemctl stop nginx.service
             sudo systemctl stop kestral-WildlifeTrackerAPI.service
             
-            # Clear the directory
+            # Clear directory
             sudo rm -rf /var/www/WildlifeTrackerAPI/*
+            
+            # Ensure the directory exists and give our user ownership
+            sudo mkdir -p /var/www/WildlifeTrackerAPI
+            sudo chown -R ${{ secrets.LIGHTSAIL_SSH_USERNAME }}:${{ secrets.LIGHTSAIL_SSH_USERNAME }} /var/www/WildlifeTrackerAPI
 
       - name: Copy New Files to Server
         uses: appleboy/scp-action@master
