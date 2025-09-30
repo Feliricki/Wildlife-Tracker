@@ -3,9 +3,42 @@ on:
   push:
     branches:
       - master
+
 jobs:
-  deploy-frontend:
+  # This job always runs first to check which paths have changed
+  check_paths:
     runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.changes.outputs.frontend }}
+      backend: ${{ steps.changes.outputs.backend }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all history for git diff to work
+
+      - name: Check for file changes
+        id: changes
+        run: |
+          # Check for changes in the frontend directory
+          if git diff --quiet HEAD^ HEAD -- ./WildlifeTracker; then
+            echo "frontend=false" >> $GITHUB_OUTPUT
+          else
+            echo "frontend=true" >> $GITHUB_OUTPUT
+          fi
+
+          # Check for changes in the backend directory
+          if git diff --quiet HEAD^ HEAD -- ./WildlifeTrackerAPI; then
+            echo "backend=false" >> $GITHUB_OUTPUT
+          else
+            echo "backend=true" >> $GITHUB_OUTPUT
+          fi
+
+  deploy-frontend:
+    needs: check_paths # Depends on the path checker job
+    if: needs.check_paths.outputs.frontend == 'true' # Only runs if frontend files changed
+    runs-on: ubuntu-latest
+    
     # Set a default working directory for all run commands in this job
     defaults:
       run:
@@ -37,6 +70,8 @@ jobs:
         run: firebase deploy --only hosting --token "${{ secrets.FIREBASE_TOKEN }}"
 
   deploy-backend:
+    needs: check_paths # Depends on the path checker job
+    if: needs.check_paths.outputs.backend == 'true' # Only runs if backend files changed
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
