@@ -8,26 +8,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '22' # Specify your Node.js version
+          node-version: '22'
 
       - name: Install dependencies
+        working-directory: ./WildlifeTracker
         run: npm install
 
       - name: Build Angular Project
+        working-directory: ./WildlifeTracker
         run: ng build --configuration production
-
-      - name: Move files to public directory
-        run: cp -r ./WildlifeTracker/public/browser/* ./public/
 
       - name: Deploy to Firebase
         uses: w9jds/firebase-action@master
         with:
           args: deploy --only hosting
+          project_path: ./WildlifeTracker
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
