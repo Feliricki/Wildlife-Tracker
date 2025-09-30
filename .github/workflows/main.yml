@@ -89,7 +89,7 @@ jobs:
           port: 22
           script: |
             # Create the production appsettings from your secret
-            echo "${{ secrets.DOTNET_PRODUCTION_APPSETTINGS }}" > /var/www/WildlifeTrackerAPI/appsettings.Production.json
+            echo '${{ secrets.DOTNET_PRODUCTION_APPSETTINGS }}' > /var/www/WildlifeTrackerAPI/appsettings.Production.json
 
             # Restart the services with the new files
             sudo systemctl start kestral-WildlifeTrackerAPI.service
