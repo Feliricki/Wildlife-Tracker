@@ -29,8 +29,8 @@ check_command() {
 }
 
 # Check if we're in the right directory
-if [ ! -f "WildlifeTracker.sln" ]; then
-    print_color "❌ Error: WildlifeTracker.sln not found. Please run this script from the project root directory." "$RED"
+if [ ! -f "WildlifeTrackerProject.sln" ]; then
+    print_color "❌ Error: WildlifeTrackerProject.sln not found. Please run this script from the project root directory." "$RED"
     exit 1
 fi
 

@@ -124,8 +124,8 @@ Write-ColorText "🎯 Wildlife Tracker Development Startup Script" $InfoColor
 Write-ColorText "===============================================" $InfoColor
 
 # Check if we're in the right directory
-if (-not (Test-Path "WildlifeTracker.sln")) {
-    Write-ColorText "❌ Error: WildlifeTracker.sln not found. Please run this script from the project root directory." $ErrorColor
+if (-not (Test-Path "WildlifeTrackerProject.sln")) {
+    Write-ColorText "❌ Error: WildlifeTrackerProject.sln not found. Please run this script from the project root directory." $ErrorColor
     exit 1
 }
 
