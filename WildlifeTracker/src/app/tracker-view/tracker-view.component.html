@@ -85,6 +85,7 @@
             <mat-menu #mainMenu="matMenu" xPosition="after" yPosition="below">
               <button mat-menu-item [matMenuTriggerFor]="settingsMenu">Settings</button>
               <button mat-menu-item (click)="gotoReferences()">Acknowledgements</button>
+              <a mat-menu-item href="https://github.com/Feliricki/Wildlife-Tracker" target="_blank">GitHub</a>
               <button mat-menu-item (click)="gotoLoginPage()">Login</button>
               @if (isAdmin()){
                   <button mat-menu-item (click)="gotoAdminPage()">Admin Page</button>
@@ -195,6 +196,7 @@
         <mat-menu #mainMenu="matMenu" xPosition="after" yPosition="below">
           <button mat-menu-item [matMenuTriggerFor]="settingsMenu">Settings</button>
           <button mat-menu-item (click)="gotoReferences()">References</button>
+          <a mat-menu-item href="https://github.com/Feliricki/Wildlife-Tracker" target="_blank">GitHub</a>
         </mat-menu>
 
         <mat-menu #settingsMenu="matMenu">
