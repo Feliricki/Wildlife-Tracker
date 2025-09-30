@@ -50,7 +50,7 @@ jobs:
       - name: Build and publish the backend
         run: dotnet publish ./WildlifeTrackerAPI/WildlifeTrackerAPI.csproj --configuration Release --os linux --arch x64 --self-contained true -o ./publish
 
-      - name: Prepare Server by Stopping Services and Clearing Directory
+      - name: Prepare Server by Stopping Services and Clearing Directory 
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.LIGHTSAIL_SSH_HOST }}
