@@ -2,7 +2,7 @@ name: Deploy Frontend and Backend
 on: 
   push: 
     branches:
-      - main
+      - master
 jobs:
   deploy-frontend:
     runs-on: ubuntu-latest
