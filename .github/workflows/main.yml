@@ -88,9 +88,10 @@ jobs:
           key: ${{ secrets.LIGHTSAIL_SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            # Create the production appsettings from your secret
-            echo '${{ secrets.DOTNET_PRODUCTION_APPSETTINGS }}' > /var/www/WildlifeTrackerAPI/appsettings.Production.json
-
-            # Restart the services with the new files
+            # Use a 'here document' to safely write the multi-line secret to the file
+            cat <<'EOF' > /var/www/WildlifeTrackerAPI/appsettings.Production.json
+            ${{ secrets.DOTNET_PRODUCTION_APPSETTINGS }}
+            EOF
+            
             sudo systemctl start kestral-WildlifeTrackerAPI.service
             sudo systemctl start nginx.service
