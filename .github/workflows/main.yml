@@ -1,0 +1,38 @@
+name: Deploy Frontend and Backend
+on: 
+  push: 
+    branches:
+      - main
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22' # Specify your Node.js version
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Angular Project
+        run: ng build --configuration production
+
+      - name: Move files to public directory
+        run: cp -r ./WildlifeTracker/public/browser/* ./public/
+
+      - name: Deploy to Firebase
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only hosting
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Backend Message
+        run: echo "Backend deployment is not yet implemented."
