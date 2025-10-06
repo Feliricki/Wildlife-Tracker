@@ -1,4 +1,4 @@
-# Wildlife Tracker
+# [Wildlife Tracker](https://wildlife-tracker.com)
 
 A full-stack web application that fetches and visualizes animal tracking data from [MoveBank.org](https://www.movebank.org). The application provides an interface for searching specific studies and displays the corresponding location data on an interactive 3D map.
 
