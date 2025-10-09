@@ -194,23 +194,24 @@
         </button>
         }
         <mat-menu #mainMenu="matMenu" xPosition="after" yPosition="below">
-          <button mat-menu-item [matMenuTriggerFor]="settingsMenu">Settings</button>
+            <!-- TODO: Fix the Google map implementation down the line -->
+          <!-- <button mat-menu-item [matMenuTriggerFor]="settingsMenu">Settings</button> -->
           <button mat-menu-item (click)="gotoReferences()">References</button>
           <a mat-menu-item href="https://github.com/Feliricki/Wildlife-Tracker" target="_blank">GitHub</a>
         </mat-menu>
 
-        <mat-menu #settingsMenu="matMenu">
-          <button mat-menu-item [matMenuTriggerFor]="basemaps">Change Base Map</button>
-        </mat-menu>
+        <!-- <mat-menu #settingsMenu="matMenu"> -->
+        <!--   <button mat-menu-item [matMenuTriggerFor]="basemaps">Change Base Map</button> -->
+        <!-- </mat-menu> -->
 
-        <mat-menu #basemaps="matMenu" XPosition="before" yPosition="below">
-          <button mat-menu-item (click)="setBaseMap('google')">
-            Google Maps
-          </button>
-          <button mat-menu-item (click)="setBaseMap('mapbox')">
-            Mapbox
-          </button>
-        </mat-menu>
+        <!-- <mat-menu #basemaps="matMenu" XPosition="before" yPosition="below"> -->
+        <!--   <button mat-menu-item (click)="setBaseMap('google')"> -->
+        <!--     Google Maps -->
+        <!--   </button> -->
+        <!--   <button mat-menu-item (click)="setBaseMap('mapbox')"> -->
+        <!--     Mapbox -->
+        <!--   </button> -->
+        <!-- </mat-menu> -->
 
       </mat-toolbar>
       }
