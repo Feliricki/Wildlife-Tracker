@@ -53,8 +53,8 @@
             <mat-label>Sort By</mat-label>
             <mat-select  formControlName="sortColumn" (change)="selectSortBy($event)">
               <mat-option value="name">Name</mat-option>
-              <mat-option value="timestampFirstDeployedLocation">First Deployment Date</mat-option>
-              <mat-option value="timestampLastDeployedLocation">Last Deployment Date</mat-option>
+              <!-- <mat-option value="timestampFirstDeployedLocation">First Deployment Date</mat-option> -->
+              <!-- <mat-option value="timestampLastDeployedLocation">Last Deployment Date</mat-option> -->
             </mat-select>
           </mat-form-field>
 
@@ -170,6 +170,6 @@
 
 </div>
 
-<mat-paginator class="paginator dense-5" (page)="getData($event)" [pageSize]="15"
+<mat-paginator class="paginator dense-5" (page)="getData($event)" [length]="paginatorLength()" [pageSize]="15"
   [pageSizeOptions]="[20,30,50]" showFirstLastButtons>
 </mat-paginator>

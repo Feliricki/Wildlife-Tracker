@@ -183,108 +183,166 @@ namespace WildlifeTrackerAPI.Services
             });
         }
 
-        // This method is used primary to retrieve individual from the study
-        // TODO: Fix this method
+        // This method retrieves entity data from MoveBank API and returns it as JSON
         public async Task<string> GetJsonDataAsync(string entityType, long studyId, string sortOrder, bool isUserAdmin)
         {
             var cacheKey = $"GetJsonData:{entityType}-{studyId}";
             return await _cachingService.GetOrCreateAsync(cacheKey, async () =>
             {
-                Dictionary<string, string?> parameters = [];
-                var response = await JsonRequest(
-                    studyId: studyId,
-                    entityType: entityType.ToString().ToLower(),
-                    parameters: parameters,
-                    headers: null,
-                    authorizedUser: isUserAdmin) ?? throw new Exception("Json request yielded a null response");
-
-                var returnType = "json";
-                var responseContentArray = await response.Content.ReadAsByteArrayAsync();
-
-                if (responseContentArray.Length == 0)
-                {
-                    response = await DirectRequest(
-                        studyId: studyId,
-                        entityType: entityType.ToString().ToLower(),
-                        parameters: parameters,
-                        headers: null,
-                        authorizedUser: isUserAdmin);
-
-                    if (response == null) throw new Exception("Null return value on DirectRequest.");
-                    responseContentArray = await response.Content.ReadAsByteArrayAsync();
-                    returnType = responseContentArray.Length > 0 ? "csv" : null;
-                }
-                if (returnType == null)
-                {
-                    throw new UnauthorizedAccessException("GetJsonData: Did not receive a valid response from external api.");
-                }
-
-                object? data;
-                if (returnType == "csv")
-                {
-                    using var memStream = new MemoryStream(responseContentArray);
-                    using var stream = new StreamReader(memStream, Encoding.UTF8);
-                    using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
-
-                    data = entityType.ToLower() switch
-                    {
-                        "study" => csvReader.GetRecords<StudiesRecord>().AsQueryable().ProjectToType<StudyJsonDTO>().ToList(),
-                        "individual" => csvReader.GetRecords<IndividualRecord>().AsQueryable().ProjectToType<IndividualJsonDTO>().ToList(),
-                        "tag" => csvReader.GetRecords<TagRecord>().AsQueryable().ProjectToType<TagJsonDTO>().ToList(),
-                        _ => null
-                    };
-                }
-                else
-                {
-                    data = entityType.ToLower() switch
-                    {
-                        "study" => JsonSerializer.Deserialize<List<StudyJsonDTO>>(responseContentArray),
-                        "individual" => JsonSerializer.Deserialize<List<IndividualJsonDTO>>(responseContentArray),
-                        "tag" => JsonSerializer.Deserialize<List<TagJsonDTO>>(responseContentArray),
-                        _ => null
-                    };
-                }
-
-                if (data == null)
-                {
-                    throw new InvalidOperationException("Invalid return type");
-                }
-
-                var sorted = SortObjects(sortOrder, data);
-                if (sorted == null)
-                {
-                    throw new Exception("Invalid object passed to SortObjects method.");
-                }
-
-
-                return JsonSerializer.Serialize(sorted);
+                var data = await GetEntityDataAsync(entityType, studyId, isUserAdmin);
+                var sortedData = SortEntityData(sortOrder, data);
+                return JsonSerializer.Serialize(sortedData);
             });
         }
 
-        private static object? SortObjects(string sortOrder, object? jsonObjects)
+        private async Task<object> GetEntityDataAsync(string entityType, long studyId, bool isUserAdmin)
         {
-            if (jsonObjects is null)
+            var responseContent = await GetResponseContentAsync(entityType, studyId, isUserAdmin);
+            return ParseResponseContent(entityType, responseContent);
+        }
+
+        private async Task<byte[]> GetResponseContentAsync(string entityType, long studyId, bool isUserAdmin)
+        {
+            var parameters = new Dictionary<string, string?>();
+
+            // Try JSON request first
+            var response = await JsonRequest(
+                studyId: studyId,
+                entityType: entityType.ToLower(),
+                parameters: parameters,
+                headers: null,
+                authorizedUser: isUserAdmin);
+
+            if (response?.Content != null)
+            {
+                var responseContentArray = await response.Content.ReadAsByteArrayAsync();
+                if (responseContentArray.Length > 0)
+                {
+                    return responseContentArray;
+                }
+            }
+
+            // Fallback to direct request if JSON request fails or returns empty content
+            response = await DirectRequest(
+                studyId: studyId,
+                entityType: entityType.ToLower(),
+                parameters: parameters,
+                headers: null,
+                authorizedUser: isUserAdmin);
+
+            if (response == null)
+            {
+                throw new InvalidOperationException("Failed to retrieve data from MoveBank API");
+            }
+
+            var contentArray = await response.Content.ReadAsByteArrayAsync();
+            if (contentArray.Length == 0)
+            {
+                throw new UnauthorizedAccessException("Did not receive valid response from external API");
+            }
+
+            return contentArray;
+        }
+
+        private object ParseResponseContent(string entityType, byte[] responseContent)
+        {
+            var parser = GetEntityParser(entityType);
+            if (parser == null)
+            {
+                throw new ArgumentException($"Unsupported entity type: {entityType}", nameof(entityType));
+            }
+
+            return parser(responseContent);
+        }
+
+        private Func<byte[], object>? GetEntityParser(string entityType)
+        {
+            return entityType.ToLower() switch
+            {
+                "study" => ParseStudyData,
+                "individual" => ParseIndividualData,
+                "tag" => ParseTagData,
+                _ => null
+            };
+        }
+
+        private object ParseStudyData(byte[] content)
+        {
+            try
+            {
+                // Try parsing as JSON first
+                return JsonSerializer.Deserialize<List<StudyJsonDTO>>(content) ?? new List<StudyJsonDTO>();
+            }
+            catch
+            {
+                // Fallback to CSV parsing if JSON parsing fails
+                return ParseCsvData<StudiesRecord, StudyJsonDTO>(content);
+            }
+        }
+
+        private object ParseIndividualData(byte[] content)
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<List<IndividualJsonDTO>>(content) ?? new List<IndividualJsonDTO>();
+            }
+            catch
+            {
+                return ParseCsvData<IndividualRecord, IndividualJsonDTO>(content);
+            }
+        }
+
+        private object ParseTagData(byte[] content)
+        {
+            try
+            {
+                return JsonSerializer.Deserialize<List<TagJsonDTO>>(content) ?? new List<TagJsonDTO>();
+            }
+            catch
+            {
+                return ParseCsvData<TagRecord, TagJsonDTO>(content);
+            }
+        }
+
+        private List<TDto> ParseCsvData<TRecord, TDto>(byte[] content)
+            where TRecord : class
+            where TDto : class
+        {
+            using var memStream = new MemoryStream(content);
+            using var stream = new StreamReader(memStream, Encoding.UTF8);
+            using var csvReader = new CsvReader(stream, CultureInfo.InvariantCulture);
+
+            var records = csvReader.GetRecords<TRecord>().AsQueryable();
+            return records.ProjectToType<TDto>().ToList();
+        }
+
+        private object? SortEntityData(string sortOrder, object data)
+        {
+            if (data == null)
             {
                 return null;
             }
-            if (sortOrder.Equals("ASC", StringComparison.CurrentCultureIgnoreCase))
+
+            var sortAscending = sortOrder.Equals("ASC", StringComparison.OrdinalIgnoreCase);
+
+            return data switch
             {
-                return jsonObjects switch
-                {
-                    List<StudyJsonDTO> studies => studies.OrderBy(s => s.Name).ToList(),
-                    List<IndividualJsonDTO> individuals => individuals.OrderBy(i => i.LocalIdentifier).ToList(),
-                    List<TagJsonDTO> tagged => tagged.OrderBy(t => t.LocalIdentifier).ToList(),
-                    _ => null,
-                };
-            }
-            return jsonObjects switch
-            {
-                List<StudyJsonDTO> studies => studies.OrderByDescending(s => s.Name).ToList(),
-                List<IndividualJsonDTO> individuals => individuals.OrderByDescending(i => i.LocalIdentifier).ToList(),
-                List<TagJsonDTO> tagged => tagged.OrderByDescending(t => t.LocalIdentifier).ToList(),
-                _ => null,
+                List<StudyJsonDTO> studies => sortAscending
+                    ? studies.OrderBy(s => s.Name).Cast<object>().ToList()
+                    : studies.OrderByDescending(s => s.Name).Cast<object>().ToList(),
+
+                List<IndividualJsonDTO> individuals => sortAscending
+                    ? individuals.OrderBy(i => i.LocalIdentifier).Cast<object>().ToList()
+                    : individuals.OrderByDescending(i => i.LocalIdentifier).Cast<object>().ToList(),
+
+                List<TagJsonDTO> tags => sortAscending
+                    ? tags.OrderBy(t => t.LocalIdentifier).Cast<object>().ToList()
+                    : tags.OrderByDescending(t => t.LocalIdentifier).Cast<object>().ToList(),
+
+                _ => throw new ArgumentException($"Unsupported data type for sorting: {data.GetType()}", nameof(data))
             };
         }
+
 
         public async Task<object> GetEventDataAsync(EventRequest request)
         {
