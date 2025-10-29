@@ -29,7 +29,7 @@ This project was built to demonstrate proficiency in full-stack development, wit
 
 ### Back-End
 
-* **Framework:** ASP.NET Core 8 Web API
+* **Framework:** ASP.NET Core 9 Web API
 * **Database:** Entity Framework Core & SQL Server
 * **Authentication:** ASP.NET Core Identity (JWT Bearer)
 * **Real-time Communication:** SignalR, MessagePack
