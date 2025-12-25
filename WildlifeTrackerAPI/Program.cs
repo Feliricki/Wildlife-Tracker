@@ -182,7 +182,7 @@ builder.Services.AddMemoryCache(options =>
 });
 
 builder.Services.AddScoped<IStudyRepository, StudyRepository>();
-builder.Services.AddScoped<IApiCachingService, ApiCachingService>();
+//builder.Services.AddScoped<IApiCachingService, ApiCachingService>();
 builder.Services.AddScoped<ICachingService, CachingService>();
 
 var app = builder.Build();

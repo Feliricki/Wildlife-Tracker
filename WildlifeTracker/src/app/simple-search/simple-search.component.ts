@@ -6,8 +6,8 @@ import { FormControl, FormsModule, ReactiveFormsModule, FormBuilder } from '@ang
 import { PageEvent, MatPaginatorModule } from '@angular/material/paginator';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table'
-import { ENAAPIService } from '../ENA-API/ena-api.service';
-import { WikipediaSearchService } from '../wikipedia/wikipedia-search.service';
+import { ENAAPIService } from '../external services/ENA-API/ena-api.service';
+import { WikipediaSearchService } from '../external services/wikipedia/wikipedia-search.service';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatOptionModule } from '@angular/material/core';
 import { MatInputModule } from '@angular/material/input';
