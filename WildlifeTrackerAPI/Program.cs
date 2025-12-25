@@ -72,7 +72,6 @@ builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    // SECURITY: Determine connection string based on environment
     var connectionString = builder.Environment.IsDevelopment()
         ? builder.Configuration["TestConnectionStrings:DefaultConnection"]
         : builder.Configuration["ConnectionStrings:DefaultConnection"];
@@ -182,7 +181,6 @@ builder.Services.AddMemoryCache(options =>
 });
 
 builder.Services.AddScoped<IStudyRepository, StudyRepository>();
-//builder.Services.AddScoped<IApiCachingService, ApiCachingService>();
 builder.Services.AddScoped<ICachingService, CachingService>();
 
 var app = builder.Build();
