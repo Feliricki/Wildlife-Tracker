@@ -1,6 +1,7 @@
 import * as GeoJSON from "geojson";
 import { EventRequest } from '../studies/EventRequest';
-import { TypedArray } from "@loaders.gl/schema/dist/lib/table/arrow-api";
+import  { TypedArray } from '@loaders.gl/schema';
+
 
 // #region Animal Movement Data Types
 

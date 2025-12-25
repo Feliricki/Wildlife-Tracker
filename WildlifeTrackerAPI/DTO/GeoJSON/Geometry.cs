@@ -5,8 +5,7 @@ namespace WildlifeTrackerAPI.DTO.GeoJSON;
 
 [Union(0, typeof(LineStringGeometry))]
 [Union(1, typeof(Point))]
-[MessagePackObject]
-public abstract class Geometry<TCoord>
+public abstract partial class Geometry<TCoord>
 {
     [Key(0)]
     [JsonPropertyName(name: "type")]
@@ -20,6 +19,7 @@ public abstract class Geometry<TCoord>
 [MessagePackObject]
 public class LineStringGeometry : Geometry<List<float>>
 {
+    public LineStringGeometry() { }
     public LineStringGeometry(
         string type,
         List<List<float>> path)
@@ -33,6 +33,7 @@ public class LineStringGeometry : Geometry<List<float>>
 [MessagePackObject]
 public class Point : Geometry<float>
 {
+    public Point() { }
     public Point(
         List<float> newCoordinate) 
     {

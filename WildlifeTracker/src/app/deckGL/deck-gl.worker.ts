@@ -19,8 +19,7 @@ import * as signalR from '@microsoft/signalr';
 import { MessagePackHubProtocol } from '@microsoft/signalr-protocol-msgpack';
 import * as msgPack from '@msgpack/msgpack';
 import { isDevMode } from "@angular/core";
-import { TypedArray } from '@loaders.gl/schema/dist/lib/table/arrow-api';
-import { BinaryLineFeature } from "@loaders.gl/schema";
+import { BinaryLineFeature, TypedArray } from "@loaders.gl/schema";
 
 
 let streamSubscription: signalR.ISubscription<AnimalMovementLineFeature<AnimalMovementEvent>> | null = null;

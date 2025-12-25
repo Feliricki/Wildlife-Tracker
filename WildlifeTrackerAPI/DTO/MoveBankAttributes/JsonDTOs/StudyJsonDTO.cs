@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
-using ThirdParty.Json.LitJson;
 
 namespace WildlifeTrackerAPI.DTO.MoveBankAttributes.JsonDTOs
 {
