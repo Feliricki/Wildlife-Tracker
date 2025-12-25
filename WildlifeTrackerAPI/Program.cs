@@ -215,18 +215,14 @@ app.UseMiddleware<ExceptionHandlerMiddleware>();
 
 app.UseRouting();
 
-//app.UseCors("AnyOrigin");
 app.UseCors("Angular");
 
-//var websocketOptions = new WebSocketOptions();
 app.UseWebSockets();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseRateLimiter();
-
-//});
 
 app.MapControllers().RequireCors("Angular");
 app.MapHub<MoveBankHub>("/api/MoveBank-Hub", options =>
