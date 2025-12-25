@@ -26,6 +26,7 @@ builder.Services.AddLogging(option =>
 
 builder.Services.AddCors(options =>
 {
+    // NOTE:Change this in the future
     options.AddPolicy(name: "Angular", cfg =>
     {
         cfg.WithOrigins(builder.Configuration["AllowedCORS"]!);
