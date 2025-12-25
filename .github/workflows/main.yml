@@ -125,6 +125,7 @@ jobs:
           script: |
             # Create the Data Protection directory
             sudo mkdir -p /var/www/WildlifeTrackerAPI/.aspnet/DataProtection-Keys
+            sudo mkdir -p /var/www/.dotnet
             # Set the correct ownership for the web server user
             sudo chown -R www-data:www-data /var/www/WildlifeTrackerAPI/.aspnet
             sudo chown -R www-data:www-data /var/www/.dotnet
