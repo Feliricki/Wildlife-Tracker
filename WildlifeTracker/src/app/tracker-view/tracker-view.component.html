@@ -92,9 +92,9 @@
               }
             </mat-menu>
 
-            <mat-menu #settingsMenu="matMenu">
-              <button mat-menu-item [matMenuTriggerFor]="basemaps">Change Base Map</button>
-            </mat-menu>
+            <!-- <mat-menu #settingsMenu="matMenu"> -->
+            <!--   <button mat-menu-item [matMenuTriggerFor]="basemaps">Change Base Map</button> -->
+            <!-- </mat-menu> -->
 
             <mat-menu #basemaps="matMenu" XPosition="before" yPosition="below">
               <button mat-menu-item (click)="setBaseMap('google')">
