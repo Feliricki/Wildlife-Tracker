@@ -83,7 +83,8 @@
 
             <!-- INFO:Main menu section-->
             <mat-menu #mainMenu="matMenu" xPosition="after" yPosition="below">
-              <button mat-menu-item [matMenuTriggerFor]="settingsMenu">Settings</button>
+                <!-- INFO:Removed the Google Map Option for now -->
+              <!-- <button mat-menu-item [matMenuTriggerFor]="settingsMenu">Settings</button> -->
               <button mat-menu-item (click)="gotoReferences()">Acknowledgements</button>
               <a mat-menu-item href="https://github.com/Feliricki/Wildlife-Tracker" target="_blank">GitHub</a>
               <button mat-menu-item (click)="gotoLoginPage()">Login</button>
