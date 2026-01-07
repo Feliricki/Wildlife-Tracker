@@ -29,7 +29,7 @@ This project was built to demonstrate proficiency in full-stack development, wit
 
 ### Back-End
 
-* **Framework:** ASP.NET Core 9 Web API
+* **Framework:** ASP.NET Core 10 Web API
 * **Database:** Entity Framework Core & SQL Server
 * **Authentication:** ASP.NET Core Identity (JWT Bearer)
 * **Real-time Communication:** SignalR, MessagePack
@@ -57,5 +57,5 @@ Future development will focus on expanding the application's feature set and imp
 
 ## Acknowledgements
 
-* **Data Source:** Wikelski M, Davidson SC, Kays R. [year]. Movebank: archive, analysis and sharing of animal movement data. Hosted by the Max Planck Institute of Animal Behavior. www.movebank.org
+* **Data Source:** Wikelski M, Davidson SC, Kays R. [year]. Movebank: archive, analysis, and sharing of animal movement data. Hosted by the Max Planck Institute of Animal Behavior. www.movebank.org
 * **Research Paper:** Kays R, Davidson SC, Berger M, Bohrer G, et al. 2022. The Movebank system for studying global animal movement and demography. Methods Ecol Evol. https://doi.org/10.1111/2041-210X.13767
